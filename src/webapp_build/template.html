@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Compress PDFs to monochrome CCITT Group 4 format offline">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="PDF G4 Compressor">
+    <title>PDF Monochrome CCITT G4 Compressor</title>
+
+    <!-- Web App Manifest (inline) -->
+    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiUERGIE1vbm9jaHJvbWUgQ0NJVFQgRzQgQ29tcHJlc3NvciIsInNob3J0X25hbWUiOiJQREYgRzQgQ29tcHJlc3NvciIsImRlc2NyaXB0aW9uIjoiQ29tcHJlc3MgUERGcyB0byBtb25vY2hyb21lIENDSVRUIEdyb3VwIDQgZm9ybWF0Iiwic3RhcnRfdXJsIjoiLi8iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjZmZmZmZmIiwidGhlbWVfY29sb3IiOiIjMDA3N2NjIiwiaWNvbnMiOlt7InNyYyI6ImRhdGE6aW1hZ2Uvc3ZnK3htbCwlM0NzdmcgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJyB3aWR0aD0nMTkyJyBoZWlnaHQ9JzE5MiclM0UlM0NyZWN0IHdpZHRoPScxOTInIGhlaWdodD0nMTkyJyBmaWxsPSclMjMwMDc3Y2MnLyUzRSUzQ3RleHQgeD0nOTYnIHk9Jzk2JyBmb250LWZhbWlseT0nQXJpYWwnIGZvbnQtc2l6ZT0nNDgnIGZpbGw9JyUyM2ZmZicgdGV4dC1hbmNob3I9J21pZGRsZScgZG9taW5hbnQtYmFzZWxpbmU9J21pZGRsZSclM0VQREYlM0MvdGV4dCUzRSUzQy9zdmclM0UiLCJzaXplcyI6IjE5MngxOTIiLCJ0eXBlIjoiaW1hZ2Uvc3ZnK3htbCJ9XX0=">
+
+    <!-- NO EXTERNAL REFERENCES - ALL CODE INLINED BELOW -->
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: #f0f3ff;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        label[for="pdfFile"] {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+
+        label[for="pdfFile"]:hover {
+            background: #5568d3;
+        }
+
+        .filename {
+            margin-top: 15px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .options {
+            margin: 20px 0;
+        }
+
+        .option-group {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        .option-label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 640px) {
+            .radio-group {
+                flex-direction: column;
+                gap: 12px;
+            }
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .radio-option input[type="radio"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .radio-option input[type="radio"]:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .radio-option label {
+            cursor: pointer;
+            color: #555;
+        }
+
+        .radio-option input[type="radio"]:disabled + label {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .page-range-input {
+            margin-top: 10px;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            width: 100%;
+            font-family: inherit;
+        }
+
+        .page-range-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .page-range-input:disabled {
+            background: #f5f5f5;
+            color: #999;
+            cursor: not-allowed;
+        }
+
+        .page-range-container {
+            margin-top: 10px;
+            display: none;
+        }
+
+        .page-range-container.show {
+            display: block;
+        }
+
+        .input-hint {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .dpi-control {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .dpi-slider {
+            flex: 1;
+            max-width: calc(100% - 135px);
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .dpi-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+        }
+
+        .dpi-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            border: none;
+        }
+
+        .dpi-slider:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .dpi-slider:disabled::-webkit-slider-thumb {
+            background: #999;
+            cursor: not-allowed;
+        }
+
+        .dpi-slider:disabled::-moz-range-thumb {
+            background: #999;
+            cursor: not-allowed;
+        }
+
+        .dpi-value {
+            min-width: 115px;
+            text-align: right;
+            font-weight: 600;
+            color: #667eea;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .dpi-value input {
+            width: 75px;
+            padding: 4px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #667eea;
+            text-align: right;
+            font-family: inherit;
+        }
+
+        .dpi-value input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .dpi-dimensions {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .dpi-slider-container {
+            margin-top: 10px;
+            display: none;
+        }
+
+        .dpi-slider-container.show {
+            display: block;
+        }
+
+        .dpi-warning {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            line-height: 1.5;
+            display: none;
+        }
+
+        .dpi-warning.show {
+            display: block;
+        }
+
+        .dpi-warning.low-quality {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .dpi-warning.high-filesize {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .dpi-warning.high-compute {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        button {
+            width: 100%;
+            background: #764ba2;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover:not(:disabled) {
+            background: #6a4291;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        #progress {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e3f2fd;
+            border-radius: 6px;
+            color: #1976d2;
+            text-align: center;
+            display: none;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #1976d2;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .credits {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            font-size: 12px;
+            color: #999;
+            text-align: center;
+        }
+
+        .credits a {
+            color: #667eea;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .credits a:hover {
+            text-decoration: underline;
+        }
+
+        .language-switch {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .language-switch.show {
+            display: block;
+        }
+
+        .language-switch label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #555;
+            justify-content: center;
+        }
+
+        .language-switch input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        /* License Modal */
+        #licenseModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            padding: 20px;
+            overflow: auto;
+        }
+
+        #licenseModal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* About Modal */
+        #aboutModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            padding: 20px;
+            overflow: auto;
+        }
+
+        #aboutModal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            max-width: 800px;
+            width: 100%;
+            max-height: 90vh;
+            overflow: auto;
+            padding: 30px;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 28px;
+            color: #999;
+            cursor: pointer;
+            width: auto;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: #333;
+        }
+
+        .modal-content h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 24px;
+        }
+
+        .modal-content h3 {
+            color: #555;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .modal-content p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .modal-content ul {
+            margin-left: 20px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .modal-content pre {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+
+        .license-section {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .source-section {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 2px solid #667eea;
+        }
+
+        .source-toggle {
+            display: inline-block;
+            color: #667eea;
+            cursor: pointer;
+            font-weight: 500;
+            text-decoration: none;
+            margin-bottom: 15px;
+        }
+
+        .source-toggle:hover {
+            text-decoration: underline;
+        }
+
+        .source-content {
+            display: none;
+            margin-top: 15px;
+        }
+
+        .source-content.show {
+            display: block;
+        }
+
+        .source-textarea {
+            width: 100%;
+            height: 300px;
+            font-family: monospace;
+            font-size: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+            overflow: auto;
+            background: #f9f9f9;
+        }
+
+        .source-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .source-download {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .source-download:hover {
+            background: #5568d3;
+        }
+
+        .source-hint {
+            font-size: 12px;
+            color: #888;
+        }
+
+        /* GitHub Corner */
+        .github-corner {
+            position: fixed;
+            top: 0;
+            right: 0;
+            z-index: 10000;
+            border: 0;
+        }
+
+        .github-corner:hover .octo-arm {
+            animation: octocat-wave 560ms ease-in-out;
+        }
+
+        @keyframes octocat-wave {
+            0%, 100% { transform: rotate(0); }
+            20%, 60% { transform: rotate(-25deg); }
+            40%, 80% { transform: rotate(10deg); }
+        }
+
+        @media (max-width: 640px) {
+            .github-corner:hover .octo-arm {
+                animation: none;
+            }
+            .github-corner .octo-arm {
+                animation: octocat-wave 560ms ease-in-out;
+            }
+        }
+
+        /* RTL language support */
+        body[dir="rtl"] {
+            direction: rtl;
+        }
+        body[dir="rtl"] .container {
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <!-- GitHub Corner -->
+    <a href="https://github.com/SvobodaJakub/pdf-to-g4-compressor" class="github-corner" aria-label="View source on GitHub" target="_blank" rel="noopener noreferrer">
+        <svg width="40" height="40" viewBox="0 0 250 250" style="fill:#667eea; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true">
+            <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+            <path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+            <path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path>
+        </svg>
+    </a>
+
+    <div class="container">
+        <h1 data-i18n="title">PDF Monochrome G4 Compressor</h1>
+        <p class="subtitle"><span data-i18n="subtitle">Compress PDFs by reducing colors to bilevel monochrome, by reducing DPI resolution, and by using the efficient CCITT Group 4 compression inside PDF, also known as ITU-T T.6 or MMR or Fax compression.</span><br><strong data-i18n="outputFormat">Output format: A4 portrait (8.27" × 11.69")</strong></p>
+        <p class="subtitle" style="color: #667eea; font-weight: 500;"><span data-i18n="privacyNotice">🔒 Works 100% offline. Your PDFs never leave your device.</span></p>
+
+        <div class="upload-area" id="uploadArea">
+            <input type="file" id="pdfFile" accept="application/pdf">
+            <label for="pdfFile" data-i18n="chooseFile">Choose PDF File</label>
+            <div class="filename" id="filename"></div>
+        </div>
+
+        <div class="options">
+            <div class="option-group">
+                <span class="option-label" data-i18n="conversionMode">Conversion Mode:</span>
+                <div class="radio-group">
+                    <div class="radio-option">
+                        <input type="radio" id="noDither" name="mode" value="nodither" checked>
+                        <label for="noDither" data-i18n="noDither">Non-dithered (Sharp)</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="dither" name="mode" value="dither">
+                        <label for="dither" data-i18n="dither">Dithered (Smooth)</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="ditherSelected" name="mode" value="dither-selected">
+                        <label for="ditherSelected" data-i18n="ditherSelected">Dither only selected pages</label>
+                    </div>
+                </div>
+                <div class="page-range-container" id="pageRangeContainer">
+                    <input type="text" id="pageRange" class="page-range-input" data-i18n="pageRangePlaceholder" placeholder="e.g., 1, 3-5, 8, 10-12">
+                    <div class="input-hint" data-i18n="pageRangeHint">Enter page numbers and ranges separated by commas</div>
+                </div>
+            </div>
+
+            <div class="option-group">
+                <span class="option-label" data-i18n="outputDpi">Output DPI (Resolution):</span>
+                <div class="radio-group">
+                    <div class="radio-option">
+                        <input type="radio" id="dpiStandard" name="dpiMode" value="standard" checked>
+                        <label for="dpiStandard" data-i18n="dpiStandard">Standard (310 DPI)</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="dpiCustom" name="dpiMode" value="custom">
+                        <label for="dpiCustom" data-i18n="dpiCustom">Custom DPI</label>
+                    </div>
+                </div>
+                <div class="dpi-slider-container" id="dpiSliderContainer">
+                    <div class="dpi-control">
+                        <input type="range" id="dpiSlider" class="dpi-slider" min="72" max="1200" value="310" step="1">
+                        <span class="dpi-value"><input type="number" id="dpiValue" min="72" max="1200" value="310"> DPI</span>
+                    </div>
+                    <div class="dpi-dimensions" id="dpiDimensions" data-i18n-template="dpiDimensions">A4 output: 2478×3507 pixels (portrait)</div>
+                    <div class="input-hint" data-i18n="dpiHint">Higher DPI = larger file size but better quality. 310 DPI recommended.</div>
+                </div>
+                <div id="dpiWarning" class="dpi-warning"></div>
+            </div>
+        </div>
+
+        <button id="convertBtn" data-i18n="compressButton" disabled>Compress to CCITT G4</button>
+
+        <div id="progress">
+            <span class="spinner"></span>
+            <span id="progressText" data-i18n="processing">Processing...</span>
+        </div>
+
+        <!-- Debug canvas for viewing rendered pages -->
+        <div id="debugPreview" style="display:none; margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;">
+            <h3 style="color: #333; font-size: 16px; margin-bottom: 10px;">Preview (for debugging)</h3>
+            <div style="overflow: auto; max-height: 400px; border: 1px solid #ddd; border-radius: 4px; background: #f5f5f5; padding: 10px;">
+                <canvas id="previewCanvas" style="display: block; max-width: 100%; height: auto; background: white;"></canvas>
+            </div>
+            <div id="previewInfo" style="margin-top: 10px; font-size: 12px; color: #666;"></div>
+        </div>
+
+        <div class="credits">
+            <p data-i18n="credits">Built with PDF.js • pako • G4Enc</p>
+            <p><a href="javascript:void(0)" id="showLicense" data-i18n="license">Licensed under Apache 2.0 • View Licenses & Attributions</a></p>
+            <p><a href="javascript:void(0)" id="showAbout" data-i18n="about">About This Project • A Study in Questionable Decisions</a></p>
+            <div class="language-switch" id="languageSwitch">
+                <label>
+                    <input type="checkbox" id="useEnglishCheckbox">
+                    Use English
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- License Modal -->
+    <div id="licenseModal">
+        <div class="modal-content">
+            <button class="modal-close" id="closeLicense">&times;</button>
+            <h2>License & Attributions</h2>
+
+            <div class="license-section">
+                <h3>PDF Monochrome CCITT G4 Compressor</h3>
+                <p><strong>Copyright 2026 PDF Monochrome CCITT G4 Compressor Contributors</strong></p>
+                <p><strong>License:</strong> Apache License 2.0</p>
+                <p>Original code generated by Claude AI</p>
+            </div>
+
+            <div class="license-section">
+                <h3>Third-Party Components</h3>
+
+                <p><strong>1. PDF.js</strong> - Mozilla PDF renderer</p>
+                <ul>
+                    <li>Copyright 2012 Mozilla Foundation</li>
+                    <li>License: Apache 2.0</li>
+                    <li>URL: https://github.com/mozilla/pdf.js</li>
+                </ul>
+
+                <p style="margin-top: 15px;"><strong>2. pako</strong> - zlib port to JavaScript</p>
+                <ul>
+                    <li>Copyright (C) 2014-2017 Vitaly Puzrin and Andrei Tuputcyn</li>
+                    <li>License: MIT</li>
+                    <li>URL: https://github.com/nodeca/pako</li>
+                </ul>
+
+                <p style="margin-top: 15px;"><strong>3. G4Enc</strong> - CCITT Group 4 Encoder</p>
+                <ul>
+                    <li>Copyright 2020-2022 BitBank Software, Inc. (Larry Bank)</li>
+                    <li>License: Apache 2.0</li>
+                    <li>URL: https://github.com/bitbank2/G4ENC</li>
+                    <li>Ported from C to JavaScript for this project</li>
+                </ul>
+
+                <p style="margin-top: 15px;"><strong>4. LibTIFF</strong> - TIFFBitRevTable</p>
+                <ul>
+                    <li>Copyright © 1988-1997 Sam Leffler, © 1991-1997 Silicon Graphics, Inc.</li>
+                    <li>License: LibTIFF License (BSD-style)</li>
+                    <li>URL: https://gitlab.com/libtiff/libtiff</li>
+                </ul>
+            </div>
+
+            <div class="license-section">
+                <h3>Projects Studied (No Code Copied)</h3>
+                <p><strong>img2pdf</strong> - by Johannes Schauer Marin Rodrigues</p>
+                <ul>
+                    <li>Copyright (C) 2012-2021 Johannes Schauer Marin Rodrigues</li>
+                    <li>License: GNU LGPL v3+</li>
+                    <li>URL: https://gitlab.mister-muffin.de/josch/img2pdf</li>
+                    <li><strong>Important:</strong> We studied img2pdf to understand CCITT embedding concepts, but did NOT copy any source code. All our implementations are original.</li>
+                </ul>
+            </div>
+
+            <div class="license-section">
+                <h3>Apache License 2.0</h3>
+                <pre style="max-height: 200px; overflow-y: auto;">Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.</pre>
+            </div>
+
+            <p style="text-align: center; margin-top: 20px; color: #999;">
+                For complete license texts and attribution details, see LICENSES.md in the source repository.
+            </p>
+
+            <div class="source-section">
+                <a href="#" id="sourceToggle" class="source-toggle">▶ Get the source tarball in base64</a>
+                <div id="sourceContent" class="source-content">
+                    <p style="color: #666; margin-bottom: 10px;">
+                        <strong>Source Code (tar.xz encoded as base64)</strong><br>
+                        Copy the text below to extract the complete source code.
+                    </p>
+                    <textarea id="sourceTextarea" class="source-textarea" readonly></textarea>
+                    <div class="source-actions">
+                        <a href="#" id="sourceDownload" class="source-download" download="pdf-g4-compressor-source-base64.txt">Download as .txt file</a>
+                        <span class="source-hint">To extract: base64 -d file.txt > source.tar.xz && tar -xJf source.tar.xz</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Modal -->
+    <div id="aboutModal">
+        <div class="modal-content">
+            <button class="modal-close" id="closeAbout">&times;</button>
+            <h2>About This Project</h2>
+            <p style="text-align: center; font-style: italic; color: #667eea; margin-bottom: 20px;">
+                "We were so preoccupied with whether we could, we didn't stop to think if we should."
+            </p>
+
+            <div class="license-section">
+                <h3>Why This Exists</h3>
+                <p>There are plenty of nice apps for scanning paper documents to PDFs, and plenty of apps for rotating PDF pages. But very few nice apps let you drastically compress scanned PDFs with the highly efficient CCITT Group 4 compression - which can shrink files by 95%+ while maintaining perfect black-and-white clarity.</p>
+                <p>Also, someone asked "can we make a single HTML file that contains its own source code as a compressed tarball?" and instead of saying "no, that's absurd," we said "hold my coffee."</p>
+            </div>
+
+            <div class="license-section">
+                <h3>Architecture: A Study in Questionable Decisions</h3>
+                <p>The app works, but let's talk about the elephant in the HTML file: <strong>it contains its own source code as a base64-encoded tar.xz archive</strong>.</p>
+                <p>Why? Because when you're compressing PDFs, why not compress your own source code too? It's compression all the way down.</p>
+                <p>The file structure is essentially:</p>
+                <pre style="background: #f5f5f5; padding: 15px; border-radius: 4px; overflow-x: auto; font-size: 11px; line-height: 1.4;">┌─────────────────────────────────────┐
+│ HTML file (1.47 MB)                 │
+│ ┌─────────────────────────────────┐ │
+│ │ Decompression loader            │ │
+│ │ (shows purple spinner)          │ │
+│ └─────────────────────────────────┘ │
+│ ┌─────────────────────────────────┐ │
+│ │ gzip'd base64 application       │ │
+│ │ ┌─────────────────────────────┐ │ │
+│ │ │ The actual app              │ │ │
+│ │ │ ┌─────────────────────────┐ │ │ │
+│ │ │ │ tar.xz base64 source    │ │ │ │
+│ │ │ │ (for rebuilding this)   │ │ │ │
+│ │ │ └─────────────────────────┘ │ │ │
+│ │ └─────────────────────────────┘ │ │
+│ └─────────────────────────────────┘ │
+└─────────────────────────────────────┘</pre>
+                <p>It's like a turducken, but for web apps, and somehow <strong>smaller than the original version without the source code</strong>. Don't ask us how. We're still processing it ourselves.</p>
+            </div>
+
+            <div class="license-section">
+                <h3>What It Actually Does</h3>
+                <p>Despite the architectural absurdity, this project actually works and is production-ready:</p>
+                <ul style="margin-left: 20px; color: #666; line-height: 1.6;">
+                    <li>Converts any PDF to high-compression bilevel format</li>
+                    <li>Renders pages at 310 DPI (configurable 72-1200)</li>
+                    <li>Compresses with CCITT Group 4 (ITU-T T.6)</li>
+                    <li>Outputs PDF/A-1B compliant files</li>
+                    <li>Typical result: 10-15 KB per text page</li>
+                </ul>
+            </div>
+
+            <div class="license-section" style="border-bottom: none;">
+                <h3>Disclaimer</h3>
+                <p><strong>This project actually works and is production-ready.</strong> The absurdity is purely architectural. Use responsibly, or don't. We're not your supervisor.</p>
+                <p style="text-align: center; margin-top: 20px; font-style: italic; color: #999;">
+                    Generated with Claude on April 1, 2026 🤖<br>
+                    <em>Source code may contain nuts (and tarballs)</em>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript will be inserted here by build script -->
+    {{JAVASCRIPT}}
+
+</body>
+</html>

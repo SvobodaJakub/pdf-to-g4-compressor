@@ -1,0 +1,38 @@
+<!--
+  PDF Compression Icon
+  Public Domain - Created for PDF CCITT G4 Compressor
+  Simple geometric shapes - no trademark or copyright issues
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <!-- Background -->
+  <rect width="192" height="192" fill="#667eea"/>
+
+  <!-- Top stack of papers (before compression) - thicker -->
+  <g transform="translate(96, 50)">
+    <!-- Back pages (darker) -->
+    <rect x="-45" y="-8" width="90" height="16" fill="#ffffff" opacity="0.6"/>
+    <rect x="-45" y="-4" width="90" height="16" fill="#ffffff" opacity="0.7"/>
+    <!-- Front page (brightest) -->
+    <rect x="-45" y="0" width="90" height="16" fill="#ffffff" opacity="0.9"/>
+  </g>
+
+  <!-- Compression arrows -->
+  <g transform="translate(96, 96)">
+    <!-- Left arrow -->
+    <path d="M -60 -10 L -60 10 L -50 10 L -50 20 L -35 0 L -50 -20 L -50 -10 Z" fill="#ffffff" opacity="0.8"/>
+    <!-- Right arrow -->
+    <path d="M 60 -10 L 60 10 L 50 10 L 50 20 L 35 0 L 50 -20 L 50 -10 Z" fill="#ffffff" opacity="0.8"/>
+  </g>
+
+  <!-- Bottom stack of papers (after compression) - much thinner -->
+  <g transform="translate(96, 142)">
+    <!-- Back pages (darker) -->
+    <rect x="-45" y="-4" width="90" height="4" fill="#ffffff" opacity="0.6"/>
+    <rect x="-45" y="-2" width="90" height="4" fill="#ffffff" opacity="0.7"/>
+    <!-- Front page (brightest) -->
+    <rect x="-45" y="0" width="90" height="4" fill="#ffffff" opacity="0.9"/>
+  </g>
+
+  <!-- Small "G4" label to indicate CCITT G4 compression -->
+  <text x="96" y="178" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#ffffff" text-anchor="middle" opacity="0.9">G4</text>
+</svg>
