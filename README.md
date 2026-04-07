@@ -18,7 +18,7 @@ Converts any PDF to high-compression bilevel format:
 - Converts to grayscale → normalizes → bilevel (1-bit)
 - Compresses with CCITT Group 4 (ITU-T T.6)
 - Outputs PDF/A-1B compliant files
-- Typical result: 10-15 KB per text page
+- Typical result: 10-80 KB per text page
 
 ## Usage
 
@@ -39,7 +39,7 @@ python3 -m http.server 8000
 
 ## Features
 
-- **Single HTML file** (1.47 MB) - completely self-contained
+- **Single HTML file** (1.67 MB) - completely self-contained
 - **Zero dependencies** - works from `file://` protocol
 - **Offline-first** - no external requests
 - **Dithering modes** - sharp (text) or smooth (photos)
