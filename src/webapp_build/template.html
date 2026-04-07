@@ -635,7 +635,7 @@
 
     <div class="container">
         <h1 data-i18n="title">PDF Monochrome G4 Compressor</h1>
-        <p class="subtitle"><span data-i18n="subtitle">Compress PDFs by reducing colors to bilevel monochrome, by reducing DPI resolution, and by using the efficient CCITT Group 4 compression inside PDF, also known as ITU-T T.6 or MMR or Fax compression.</span><br><strong data-i18n="outputFormat">Output format: A4 portrait (8.27" × 11.69")</strong></p>
+        <p class="subtitle" data-i18n="subtitle">Compress PDFs by reducing colors to bilevel monochrome, by reducing DPI resolution, and by using the efficient CCITT Group 4 compression inside PDF, also known as ITU-T T.6 or MMR or Fax compression.</p>
         <p class="subtitle" style="color: #667eea; font-weight: 500;"><span data-i18n="privacyNotice">🔒 Works 100% offline. Your PDFs never leave your device.</span></p>
 
         <div class="upload-area" id="uploadArea">
@@ -668,6 +668,32 @@
             </div>
 
             <div class="option-group">
+                <span class="option-label" data-i18n="pageSize">Page Size:</span>
+                <div class="radio-group">
+                    <div class="radio-option">
+                        <input type="radio" id="pageSizeA4Portrait" name="pageSize" value="a4-portrait" checked>
+                        <label for="pageSizeA4Portrait" data-i18n="pageSizeA4Portrait">A4 Portrait</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="pageSizeA4Landscape" name="pageSize" value="a4-landscape">
+                        <label for="pageSizeA4Landscape" data-i18n="pageSizeA4Landscape">A4 Landscape</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="pageSizeLetterPortrait" name="pageSize" value="letter-portrait">
+                        <label for="pageSizeLetterPortrait" data-i18n="pageSizeLetterPortrait">Letter Portrait</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="pageSizeLetterLandscape" name="pageSize" value="letter-landscape">
+                        <label for="pageSizeLetterLandscape" data-i18n="pageSizeLetterLandscape">Letter Landscape</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="pageSizeLegalPortrait" name="pageSize" value="legal-portrait">
+                        <label for="pageSizeLegalPortrait" data-i18n="pageSizeLegalPortrait">US Legal Portrait</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="option-group">
                 <span class="option-label" data-i18n="outputDpi">Output DPI (Resolution):</span>
                 <div class="radio-group">
                     <div class="radio-option">
@@ -684,7 +710,6 @@
                         <input type="range" id="dpiSlider" class="dpi-slider" min="72" max="1200" value="310" step="1">
                         <span class="dpi-value"><input type="number" id="dpiValue" min="72" max="1200" value="310"> DPI</span>
                     </div>
-                    <div class="dpi-dimensions" id="dpiDimensions" data-i18n-template="dpiDimensions">A4 output: 2478×3507 pixels (portrait)</div>
                     <div class="input-hint" data-i18n="dpiHint">Higher DPI = larger file size but better quality. 310 DPI recommended.</div>
                 </div>
                 <div id="dpiWarning" class="dpi-warning"></div>
@@ -872,6 +897,23 @@ limitations under the License.</pre>
                     Generated with Claude on April 1, 2026 🤖<br>
                     <em>Source code may contain nuts (and tarballs)</em>
                 </p>
+            </div>
+
+            <div class="source-section">
+                <a href="#" id="appDownloadToggle" class="source-toggle">▶ The ultimate inception: download this app itself</a>
+                <div id="appDownloadContent" class="source-content">
+                    <p style="color: #666; margin-bottom: 15px;">
+                        <strong>Wait, what?</strong><br>
+                        Yes, you can download this entire app as a standalone HTML file. It's like looking in a mirror that's also a photocopier. The file will be identical to the one you're using right now, because it literally <em>is</em> the one you're using right now.
+                    </p>
+                    <p style="color: #666; margin-bottom: 15px;">
+                        This is 100% standards-compliant web technology doing exactly what it was designed to do. Nothing sketchy here, just the DOM being incredibly literal about the phrase "view source."
+                    </p>
+                    <div class="source-actions">
+                        <a href="#" id="appDownloadBtn" class="source-download">Download this app as .html file</a>
+                        <span class="source-hint">Works in browsers and Android WebView. Share it, archive it, or just marvel at the recursion.</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

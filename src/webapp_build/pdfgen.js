@@ -48,6 +48,10 @@ function createPDF(pages) {
     for (let i = 0; i < pages.length; i++) {
         const page = pages[i];
 
+        // Get page dimensions (use provided dimensions or fall back to A4)
+        const pageWidthPt = page.pageWidthPt || A4_WIDTH_PT;
+        const pageHeightPt = page.pageHeightPt || A4_HEIGHT_PT;
+
         // ====================================================================
         // Image XObject
         // ====================================================================
@@ -85,25 +89,25 @@ function createPDF(pages) {
         objects.push(imgObj);
 
         // ====================================================================
-        // Content Stream - Scale and center image on A4
+        // Content Stream - Scale and center image on page
         // ====================================================================
         const contentObjNum = objNum++;
 
         // Calculate scaling
         const imgAspect = page.width / page.height;
-        const pageAspect = A4_WIDTH_PT / A4_HEIGHT_PT;
+        const pageAspect = pageWidthPt / pageHeightPt;
 
         let scale;
         if (imgAspect > pageAspect) {
-            scale = A4_WIDTH_PT / page.width;
+            scale = pageWidthPt / page.width;
         } else {
-            scale = A4_HEIGHT_PT / page.height;
+            scale = pageHeightPt / page.height;
         }
 
         const scaledWidth = page.width * scale;
         const scaledHeight = page.height * scale;
-        const xOffset = (A4_WIDTH_PT - scaledWidth) / 2;
-        const yOffset = (A4_HEIGHT_PT - scaledHeight) / 2;
+        const xOffset = (pageWidthPt - scaledWidth) / 2;
+        const yOffset = (pageHeightPt - scaledHeight) / 2;
 
         const contentStream = encoder.encode(
             `q\n${scaledWidth.toFixed(4)} 0 0 ${scaledHeight.toFixed(4)} ` +
@@ -138,7 +142,7 @@ function createPDF(pages) {
 
         const pageObj = encoder.encode(
             `<< /Type /Page /Parent ${pagesObjNum} 0 R ` +
-            `/MediaBox [0 0 ${A4_WIDTH_PT} ${A4_HEIGHT_PT}] ` +
+            `/MediaBox [0 0 ${pageWidthPt} ${pageHeightPt}] ` +
             `/Resources << /XObject << /Im${i} ${imgObjNum} 0 R >> >> ` +
             `/Contents ${contentObjNum} 0 R >>`
         );

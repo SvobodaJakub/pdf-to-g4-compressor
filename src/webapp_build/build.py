@@ -187,6 +187,20 @@ const COMPRESSED_HTML_BASE64 = '{compressed_b64}';
         // Decompress with pako (gzip/deflate)
         const decompressed = pako.inflate(bytes, {{ to: 'string' }});
 
+        // Save the LOADER HTML (the compressed version) BEFORE clearing document
+        // This creates a perfect fixed point: downloaded app = byte-for-byte identical
+        // Strip out browser extension pollution (Dark Reader, etc.) for truly pristine output
+        const pristineDOM = document.documentElement.cloneNode(true);
+
+        // Remove all injected extension styles/scripts
+        pristineDOM.querySelectorAll('.darkreader, [class*="darkreader"]').forEach(el => el.remove());
+        pristineDOM.querySelectorAll('style[class*="extension"], script[class*="extension"]').forEach(el => el.remove());
+
+        // Serialize to HTML
+        const tempDiv = document.createElement('div');
+        tempDiv.appendChild(pristineDOM);
+        window.PRISTINE_HTML = '<!DOCTYPE html>\\n' + pristineDOM.outerHTML;
+
         // Clear existing document content completely
         while (document.head.firstChild) {{
             document.head.removeChild(document.head.firstChild);
@@ -414,6 +428,27 @@ const SOURCE_TARBALL_BASE64 = '{source_tarball_b64}';
 {pdfcompress}
 
 // ============================================================================
+// Pristine HTML (for self-download feature)
+// ============================================================================
+// The loader sets window.PRISTINE_HTML with the decompressed full HTML
+// before writing it to the document. This pristine copy has no user state,
+// no form values, no open modals - just the fresh HTML as built.
+// Note: If running directly (not through loader), fall back to current HTML
+if (typeof window.PRISTINE_HTML === 'undefined') {{
+    window.PRISTINE_HTML = document.documentElement.outerHTML;
+}}
+
+// Detect navigation back from browser cache (bfcache)
+// This can leave the app in a weird state with errors - reload if detected
+window.addEventListener('pageshow', function(event) {{
+    if (event.persisted) {{
+        // Page was loaded from back-forward cache (Ctrl+Shift+T or back button)
+        console.log('Page loaded from bfcache - reloading fresh to avoid state corruption');
+        location.reload(true);
+    }}
+}});
+
+// ============================================================================
 // Main Application Logic
 // ============================================================================
 document.addEventListener('DOMContentLoaded', function() {{
@@ -474,7 +509,6 @@ document.addEventListener('DOMContentLoaded', function() {{
     const dpiSliderContainer = document.getElementById('dpiSliderContainer');
     const dpiSlider = document.getElementById('dpiSlider');
     const dpiValue = document.getElementById('dpiValue');
-    const dpiDimensions = document.getElementById('dpiDimensions');
     const dpiWarning = document.getElementById('dpiWarning');
 
     console.log('DOM elements loaded:', {{
@@ -490,15 +524,31 @@ document.addEventListener('DOMContentLoaded', function() {{
         const dpi = parseInt(dpiSlider.value);
         dpiValue.value = dpi;
 
-        // Calculate A4 dimensions at this DPI (A4 = 8.27" × 11.69")
-        const widthPx = Math.round(8.27 * dpi);
-        const heightPx = Math.round(11.69 * dpi);
-        // Use translated template with parameters
-        const currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
-        const template = currentT.dpiDimensions || 'A4 output: {{width}}×{{height}} pixels (portrait)';
-        dpiDimensions.textContent = template.replace('{{width}}', widthPx).replace('{{height}}', heightPx);
-
         updateDPIWarning();
+        validateControls();
+    }}
+
+    // Validate controls and update button state
+    function validateControls() {{
+        // Only validate when custom DPI is selected and we have a file
+        if (!selectedFile) return;
+
+        const currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
+
+        if (dpiCustomRadio.checked) {{
+            const dpi = parseInt(dpiValue.value);
+            // Disable button if DPI is out of valid range
+            if (isNaN(dpi) || dpi < 72 || dpi > 1200) {{
+                convertBtn.disabled = true;
+            }} else {{
+                convertBtn.disabled = false;
+                convertBtn.textContent = currentT.compressButton || 'Compress to G4';
+            }}
+        }} else {{
+            // Standard DPI mode - always valid if file is selected
+            convertBtn.disabled = false;
+            convertBtn.textContent = currentT.compressButton || 'Compress to G4';
+        }}
     }}
 
     // Check DPI and dithering mode, show appropriate warnings
@@ -534,14 +584,27 @@ document.addEventListener('DOMContentLoaded', function() {{
 
     // Sync slider when user types in DPI input
     dpiValue.addEventListener('input', function() {{
-        let val = parseInt(this.value);
-        // Clamp to valid range
-        if (val < 72) val = 72;
-        if (val > 1200) val = 1200;
-        if (!isNaN(val)) {{
-            dpiSlider.value = val;
-            updateDPIDisplay();
+        // Filter out non-digit characters
+        let cleaned = this.value.replace(/[^0-9]/g, '');
+        if (cleaned !== this.value) {{
+            this.value = cleaned;
         }}
+
+        let val = parseInt(this.value);
+        if (!isNaN(val)) {{
+            // Update slider position (clamped to slider bounds)
+            if (val < 72) {{
+                dpiSlider.value = 72;
+            }} else if (val > 1200) {{
+                dpiSlider.value = 1200;
+            }} else {{
+                dpiSlider.value = val;
+            }}
+            updateDPIWarning();
+        }}
+
+        // Validate controls to disable/enable convert button
+        validateControls();
     }});
 
     dpiSlider.addEventListener('input', updateDPIDisplay);
@@ -556,6 +619,7 @@ document.addEventListener('DOMContentLoaded', function() {{
                 dpiSliderContainer.classList.remove('show');
             }}
             updateDPIWarning();
+            validateControls();
         }});
     }});
 
@@ -576,9 +640,10 @@ document.addEventListener('DOMContentLoaded', function() {{
         console.log('File selected:', e.target.files[0]);
         selectedFile = e.target.files[0];
         if (selectedFile) {{
+            const currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
             filenameDisplay.textContent = selectedFile.name;
-            convertBtn.disabled = false;
-            convertBtn.textContent = 'Compress to CCITT G4';
+            convertBtn.textContent = currentT.compressButton || 'Compress to G4';
+            validateControls();
             console.log('Button enabled');
         }}
     }});
@@ -600,9 +665,10 @@ document.addEventListener('DOMContentLoaded', function() {{
         if (e.dataTransfer.files.length > 0) {{
             selectedFile = e.dataTransfer.files[0];
             if (selectedFile.type === 'application/pdf') {{
+                const currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
                 filenameDisplay.textContent = selectedFile.name;
-                convertBtn.disabled = false;
-                convertBtn.textContent = 'Compress to CCITT G4';
+                convertBtn.textContent = currentT.compressButton || 'Compress to G4';
+                validateControls();
             }} else {{
                 alert('Please select a PDF file');
             }}
@@ -650,12 +716,18 @@ document.addEventListener('DOMContentLoaded', function() {{
             document.querySelectorAll('input[name="dpiMode"]').forEach(radio => {{
                 radio.disabled = true;
             }});
+            document.querySelectorAll('input[name="pageSize"]').forEach(radio => {{
+                radio.disabled = true;
+            }});
 
             // Get selected DPI (use 310 if standard mode is selected)
             const targetDPI = dpiStandardRadio.checked ? 310 : parseInt(dpiSlider.value);
 
+            // Get selected page size
+            const pageSize = document.querySelector('input[name="pageSize"]:checked').value;
+
             // Process the PDF
-            await convertPDF(selectedFile, ditherConfig, targetDPI);
+            await convertPDF(selectedFile, ditherConfig, targetDPI, pageSize);
 
         }} catch (error) {{
             console.error('Conversion error:', error);
@@ -670,6 +742,9 @@ document.addEventListener('DOMContentLoaded', function() {{
                 radio.disabled = false;
             }});
             document.querySelectorAll('input[name="dpiMode"]').forEach(radio => {{
+                radio.disabled = false;
+            }});
+            document.querySelectorAll('input[name="pageSize"]').forEach(radio => {{
                 radio.disabled = false;
             }});
         }}
@@ -708,7 +783,7 @@ document.addEventListener('DOMContentLoaded', function() {{
     }}
 
     // Main conversion function
-    async function convertPDF(file, ditherConfig, targetDPI) {{
+    async function convertPDF(file, ditherConfig, targetDPI, pageSize) {{
         progressText.textContent = 'Reading PDF file...';
 
         // Read file as ArrayBuffer
@@ -719,7 +794,7 @@ document.addEventListener('DOMContentLoaded', function() {{
         console.log('Loading PDF, size:', pdfData.length, 'bytes');
 
         // Render PDF pages to images
-        const pages = await renderPDFPages(pdfData, ditherConfig, targetDPI);
+        const pages = await renderPDFPages(pdfData, ditherConfig, targetDPI, pageSize);
 
         if (!pages || pages.length === 0) {{
             throw new Error('No pages rendered from PDF');
@@ -745,7 +820,7 @@ document.addEventListener('DOMContentLoaded', function() {{
     }}
 
     // Render PDF pages using PDF.js
-    async function renderPDFPages(pdfData, ditherConfig, targetDPI) {{
+    async function renderPDFPages(pdfData, ditherConfig, targetDPI, pageSize) {{
         // Load PDF document
         const loadingTask = pdfjsLib.getDocument({{ data: pdfData }});
         const pdf = await loadingTask.promise;
@@ -760,9 +835,25 @@ document.addEventListener('DOMContentLoaded', function() {{
             }}
         }}
 
-        // Calculate A4 dimensions at target DPI (A4 = 8.27" × 11.69")
-        const A4_WIDTH_PX = Math.round(8.27 * targetDPI);
-        const A4_HEIGHT_PX = Math.round(11.69 * targetDPI);
+        // Define page sizes in inches (width × height)
+        const PAGE_SIZES = {{
+            'a4-portrait': {{ width: 8.27, height: 11.69 }},
+            'a4-landscape': {{ width: 11.69, height: 8.27 }},
+            'letter-portrait': {{ width: 8.5, height: 11 }},
+            'letter-landscape': {{ width: 11, height: 8.5 }},
+            'legal-portrait': {{ width: 8.5, height: 14 }}
+        }};
+
+        // Get selected page dimensions
+        const pageDimensions = PAGE_SIZES[pageSize] || PAGE_SIZES['a4-portrait'];
+
+        // Calculate page dimensions at target DPI
+        const PAGE_WIDTH_PX = Math.round(pageDimensions.width * targetDPI);
+        const PAGE_HEIGHT_PX = Math.round(pageDimensions.height * targetDPI);
+
+        // For backward compatibility, keep A4 variables pointing to current page size
+        const A4_WIDTH_PX = PAGE_WIDTH_PX;
+        const A4_HEIGHT_PX = PAGE_HEIGHT_PX;
 
         const pages = [];
 
@@ -878,7 +969,9 @@ document.addEventListener('DOMContentLoaded', function() {{
             pages.push({{
                 width: processed.width,
                 height: processed.height,
-                data: compressedData
+                data: compressedData,
+                pageWidthPt: Math.round(pageDimensions.width * 72),   // Convert inches to points (1 inch = 72 points)
+                pageHeightPt: Math.round(pageDimensions.height * 72)
             }});
         }}
 
@@ -1014,6 +1107,54 @@ document.addEventListener('DOMContentLoaded', function() {{
                 // Hide content
                 sourceContent.classList.remove('show');
                 sourceToggle.textContent = '▶ Get the source tarball in base64';
+            }}
+        }});
+    }}
+
+    // App self-download functionality
+    const appDownloadToggle = document.getElementById('appDownloadToggle');
+    const appDownloadContent = document.getElementById('appDownloadContent');
+    const appDownloadBtn = document.getElementById('appDownloadBtn');
+
+    if (appDownloadToggle) {{
+        appDownloadToggle.addEventListener('click', function(e) {{
+            e.preventDefault();
+            const isShown = appDownloadContent.classList.contains('show');
+
+            if (!isShown) {{
+                appDownloadContent.classList.add('show');
+                appDownloadToggle.textContent = '▼ The ultimate inception: download this app itself';
+            }} else {{
+                appDownloadContent.classList.remove('show');
+                appDownloadToggle.textContent = '▶ The ultimate inception: download this app itself';
+            }}
+        }});
+    }}
+
+    if (appDownloadBtn) {{
+        appDownloadBtn.addEventListener('click', function(e) {{
+            e.preventDefault();
+
+            // Use the pristine HTML saved by the loader (not the live DOM state)
+            // This ensures the downloaded file is fresh, without form values or modal state
+            const html = window.PRISTINE_HTML;
+
+            // Check if running in Android WebView with file handler
+            if (typeof AndroidFileHandler !== 'undefined') {{
+                // Convert to base64 for Android
+                const base64Html = btoa(unescape(encodeURIComponent(html)));
+                AndroidFileHandler.saveFile('pdf-to-g4-compressor.html', base64Html, 'text/html');
+            }} else {{
+                // Standard browser download
+                const blob = new Blob([html], {{ type: 'text/html' }});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'pdf-to-g4-compressor.html';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
             }}
         }});
     }}
