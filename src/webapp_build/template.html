@@ -858,8 +858,8 @@ limitations under the License.</pre>
                 <p>The app works, but let's talk about the elephant in the HTML file: <strong>it contains its own source code as a base64-encoded tar.xz archive</strong>.</p>
                 <p>Why? Because when you're compressing PDFs, why not compress your own source code too? It's compression all the way down.</p>
                 <p>The file structure is essentially:</p>
-                <pre style="background: #f5f5f5; padding: 15px; border-radius: 4px; overflow-x: auto; font-size: 11px; line-height: 1.4;">┌─────────────────────────────────────┐
-│ HTML file (1.47 MB)                 │
+                <pre style="background: #f5f5f5; padding: 15px; border-radius: 4px; overflow-x: auto; font-size: 9px; line-height: 1.4;">┌─────────────────────────────────────┐
+│ HTML file (1.9  MB)                 │
 │ ┌─────────────────────────────────┐ │
 │ │ Decompression loader            │ │
 │ │ (shows purple spinner)          │ │
@@ -886,7 +886,7 @@ limitations under the License.</pre>
                     <li>Renders pages at 310 DPI (configurable 72-1200)</li>
                     <li>Compresses with CCITT Group 4 (ITU-T T.6)</li>
                     <li>Outputs PDF/A-1B compliant files</li>
-                    <li>Typical result: 10-15 KB per text page</li>
+                    <li>Typical result: 10-80 KB per text page</li>
                 </ul>
             </div>
 

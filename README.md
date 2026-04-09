@@ -5,6 +5,9 @@
 
 A single-file web app that compresses PDFs to monochrome (1-bit black/white) with CCITT Group 4 encoding. Works completely offline in your browser. Also contains its own source code as a base64-encoded tarball inside itself, because apparently that's a thing we do now.
 
+**Live Demo:** https://svobodajakub.github.io/  
+**GitHub:** https://github.com/SvobodaJakub/pdf-to-g4-compressor
+
 ## Why
 
 There are plenty of nice apps for scanning paper documents to PDFs, and plenty of apps for rotating PDF pages. But very few nice apps let you drastically compress scanned PDFs with the highly efficient CCITT Group 4 compression - which can shrink files by 95%+ while maintaining perfect black-and-white clarity.
@@ -39,7 +42,7 @@ python3 -m http.server 8000
 
 ## Features
 
-- **Single HTML file** (1.67 MB) - completely self-contained
+- **Single HTML file** (1.9 MB) - completely self-contained
 - **Zero dependencies** - works from `file://` protocol
 - **Offline-first** - no external requests
 - **Dithering modes** - sharp (text) or smooth (photos)

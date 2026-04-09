@@ -113,6 +113,13 @@ const TRANSLATIONS = {
         lowQualityWarning: "Warning: Low DPI may result in poor quality output. Text may be difficult to read and fine details may be lost.",
         highFilesizeWarning: "Warning: High DPI will result in larger file sizes. Processing may also take longer.",
         highComputeWarning: "Warning: Processing at DPI above 600 is computationally intensive. Your device may become hot, run slowly, or run out of memory. This high DPI setting is typically only needed when converting PDFs to a barebones format to work around printing stack issues with accented or non-Latin characters on simple printers or devices.",
+        resultSaveButton: "Save the result PDF",
+        resultRecommendIgnore: "For this particular PDF, we recommend using your original PDF and ignoring this app.",
+        resultDidntCompressWell: " The PDF didn't compress well.",
+        resultBecameBigger: " The PDF became bigger.",
+        resultAppPurpose: "This app is best used with scanned documents with high-contrast black and white look (you have to use another app for the scanning). If the PDF was already optimized well, this app can't help. This app exists only because most available PDF scanner apps save the nicely-looking result with inefficient JPEG compression instead of the efficient CCITT G4 compression.",
+        resultDitheringNote: "Dithering makes the compression worse but is sometimes necessary for graphics or low-contrast text.",
+        resultDitheringAdvice: " Consider not using dithering, or using dithering only with selected pages, e.g. where some graphics are. Text is usually best without dithering.",
     },
 
     // German
@@ -142,7 +149,15 @@ const TRANSLATIONS = {
         license: "Lizenziert unter Apache 2.0 • Lizenzen & Zuordnungen ansehen",
         about: "Über dieses Projekt • Eine Studie fragwürdiger Entscheidungen",        lowQualityWarning: "Warnung: Niedrige DPI können zu schlechter Qualität führen. Text kann schwer lesbar sein und feine Details können verloren gehen.",
         highFilesizeWarning: "Warnung: Hohe DPI führen zu größeren Dateien. Die Verarbeitung kann auch länger dauern.",
-        highComputeWarning: "Warnung: Verarbeitung bei über 600 DPI ist rechenintensiv. Ihr Gerät kann heiß werden, langsam laufen oder der Speicher kann voll werden. Diese hohe DPI-Einstellung ist normalerweise nur erforderlich, wenn PDFs in ein Basis-Format konvertiert werden müssen, um Druckprobleme mit Akzenten oder nicht-lateinischen Zeichen zu umgehen.",    },
+        highComputeWarning: "Warnung: Verarbeitung bei über 600 DPI ist rechenintensiv. Ihr Gerät kann heiß werden, langsam laufen oder der Speicher kann voll werden. Diese hohe DPI-Einstellung ist normalerweise nur erforderlich, wenn PDFs in ein Basis-Format konvertiert werden müssen, um Druckprobleme mit Akzenten oder nicht-lateinischen Zeichen zu umgehen.",
+        resultSaveButton: "Ergebnis-PDF speichern",
+        resultRecommendIgnore: "Für diese spezielle PDF empfehlen wir, Ihre Original-PDF zu verwenden und diese App zu ignorieren.",
+        resultDidntCompressWell: " Die PDF wurde nicht gut komprimiert.",
+        resultBecameBigger: " Die PDF wurde größer.",
+        resultAppPurpose: "Diese App eignet sich am besten für gescannte Dokumente mit einem kontrastreichen Schwarz-Weiß-Erscheinungsbild (Sie müssen eine andere App zum Scannen verwenden). Wenn die PDF bereits gut optimiert wurde, kann diese App nicht helfen. Diese App existiert nur, weil die meisten verfügbaren PDF-Scanner-Apps das schön aussehende Ergebnis mit ineffizienter JPEG-Kompression anstelle der effizienten CCITT G4-Kompression speichern.",
+        resultDitheringNote: "Dithering verschlechtert die Kompression, ist aber manchmal für Grafiken oder kontrastarmen Text notwendig.",
+        resultDitheringAdvice: " Erwägen Sie, kein Dithering zu verwenden oder Dithering nur bei ausgewählten Seiten zu verwenden, z.B. wo Grafiken vorhanden sind. Text ist normalerweise ohne Dithering am besten.",
+    },
 
     // Spanish
     es: {
@@ -171,7 +186,15 @@ const TRANSLATIONS = {
         license: "Licenciado bajo Apache 2.0 • Ver licencias y atribuciones",
         about: "Sobre este proyecto • Un estudio de decisiones cuestionables",        lowQualityWarning: "Advertencia: Un DPI bajo puede resultar en mala calidad. El texto puede ser difícil de leer y se pueden perder detalles finos.",
         highFilesizeWarning: "Advertencia: Un DPI alto resultará en archivos más grandes. El procesamiento también puede tardar más.",
-        highComputeWarning: "Advertencia: El procesamiento a más de 600 DPI es intensivo computacionalmente. Su dispositivo puede calentarse, funcionar lentamente o quedarse sin memoria. Esta configuración de DPI alto solo suele ser necesaria al convertir PDFs a un formato básico para evitar problemas de impresión con caracteres acentuados o no latinos.",    },
+        highComputeWarning: "Advertencia: El procesamiento a más de 600 DPI es intensivo computacionalmente. Su dispositivo puede calentarse, funcionar lentamente o quedarse sin memoria. Esta configuración de DPI alto solo suele ser necesaria al convertir PDFs a un formato básico para evitar problemas de impresión con caracteres acentuados o no latinos.",
+        resultSaveButton: "Guardar el PDF resultante",
+        resultRecommendIgnore: "Para este PDF en particular, recomendamos usar su PDF original e ignorar esta aplicación.",
+        resultDidntCompressWell: " El PDF no se comprimió bien.",
+        resultBecameBigger: " El PDF se hizo más grande.",
+        resultAppPurpose: "Esta aplicación se utiliza mejor con documentos escaneados con apariencia de alto contraste en blanco y negro (debe usar otra aplicación para escanear). Si el PDF ya estaba bien optimizado, esta aplicación no puede ayudar. Esta aplicación existe solo porque la mayoría de las aplicaciones de escaneo PDF disponibles guardan el resultado de aspecto agradable con compresión JPEG ineficiente en lugar de la eficiente compresión CCITT G4.",
+        resultDitheringNote: "El tramado empeora la compresión pero a veces es necesario para gráficos o texto de bajo contraste.",
+        resultDitheringAdvice: " Considere no usar tramado, o usar tramado solo en páginas seleccionadas, por ejemplo, donde hay gráficos. El texto generalmente es mejor sin tramado.",
+    },
 
     // Portuguese
     pt: {
@@ -186,9 +209,9 @@ const TRANSLATIONS = {
         pageRangeHint: "Digite números de página e intervalos separados por vírgulas",
         pageSize: "Tamanho da página:",
         pageSizeA4Portrait: "A4 Retrato",
-        pageSizeA4Landscape: "A4 Paisagem",
+        pageSizeA4Landscape: "A4 Horizontal",
         pageSizeLetterPortrait: "Letter Retrato",
-        pageSizeLetterLandscape: "Letter Paisagem",
+        pageSizeLetterLandscape: "Letter Horizontal",
         pageSizeLegalPortrait: "US Legal Retrato",
         outputDpi: "DPI de saída (Resolução):",
         dpiStandard: "Padrão (310 DPI)",
@@ -200,7 +223,15 @@ const TRANSLATIONS = {
         license: "Licenciado sob Apache 2.0 • Ver licenças e atribuições",
         about: "Sobre este projeto • Um estudo de decisões questionáveis",        lowQualityWarning: "Aviso: DPI baixo pode resultar em má qualidade. O texto pode ser difícil de ler e detalhes finos podem ser perdidos.",
         highFilesizeWarning: "Aviso: DPI alto resultará em arquivos maiores. O processamento também pode demorar mais.",
-        highComputeWarning: "Aviso: O processamento acima de 600 DPI é intensivo computacionalmente. Seu dispositivo pode esquentar, ficar lento ou ficar sem memória. Esta configuração de DPI alto normalmente só é necessária ao converter PDFs para um formato básico para contornar problemas de impressão com caracteres acentuados ou não latinos.",    },
+        highComputeWarning: "Aviso: O processamento acima de 600 DPI é intensivo computacionalmente. Seu dispositivo pode esquentar, ficar lento ou ficar sem memória. Esta configuração de DPI alto normalmente só é necessária ao converter PDFs para um formato básico para contornar problemas de impressão com caracteres acentuados ou não latinos.",
+        resultSaveButton: "Salvar o PDF resultante",
+        resultRecommendIgnore: "Para este PDF em particular, recomendamos usar seu PDF original e ignorar este aplicativo.",
+        resultDidntCompressWell: " O PDF não comprimiu bem.",
+        resultBecameBigger: " O PDF ficou maior.",
+        resultAppPurpose: "Este aplicativo é melhor usado com documentos digitalizados com aparência de alto contraste em preto e branco (você precisa usar outro aplicativo para digitalizar). Se o PDF já estava bem otimizado, este aplicativo não pode ajudar. Este aplicativo existe apenas porque a maioria dos aplicativos de scanner PDF disponíveis salva o resultado de boa aparência com compressão JPEG ineficiente em vez da eficiente compressão CCITT G4.",
+        resultDitheringNote: "O pontilhamento piora a compressão, mas às vezes é necessário para gráficos ou texto de baixo contraste.",
+        resultDitheringAdvice: " Considere não usar pontilhamento, ou usar pontilhamento apenas em páginas selecionadas, por exemplo, onde há gráficos. O texto geralmente é melhor sem pontilhamento.",
+    },
 
     // Czech
     cs: {
@@ -229,7 +260,15 @@ const TRANSLATIONS = {
         license: "Licencováno pod Apache 2.0 • Zobrazit licence a uvedení autorů",
         about: "O tomto projektu • Studie pochybných rozhodnutí",        lowQualityWarning: "Varování: Nízké DPI může vést ke špatné kvalitě. Text může být obtížně čitelný a jemné detaily mohou být ztraceny.",
         highFilesizeWarning: "Varování: Vysoké DPI povede k větším souborům. Zpracování může také trvat déle.",
-        highComputeWarning: "Varování: Zpracování nad 600 DPI je výpočetně náročné. Vaše zařízení se může zahřát, zpomalit nebo dojít paměť. Toto vysoké nastavení DPI je obvykle potřeba pouze při převodu PDF do základního formátu pro obejití problémů s tiskem u akcentovaných nebo ne-latinských znaků.",    },
+        highComputeWarning: "Varování: Zpracování nad 600 DPI je výpočetně náročné. Vaše zařízení se může zahřát, zpomalit nebo dojít paměť. Toto vysoké nastavení DPI je obvykle potřeba pouze při převodu PDF do základního formátu pro obejití problémů s tiskem u akcentovaných nebo ne-latinských znaků.",
+        resultSaveButton: "Uložit výsledné PDF",
+        resultRecommendIgnore: "Pro tento konkrétní PDF doporučujeme použít váš původní PDF a tuto aplikaci ignorovat.",
+        resultDidntCompressWell: " PDF se dobře nekomprimovalo.",
+        resultBecameBigger: " PDF se zvětšilo.",
+        resultAppPurpose: "Tato aplikace se nejlépe používá se skenovanými dokumenty s kontrastním černobílým vzhledem (musíte použít jinou aplikaci pro skenování). Pokud byl PDF již dobře optimalizován, tato aplikace nemůže pomoci. Tato aplikace existuje pouze proto, že většina dostupných aplikací pro skenování PDF ukládá pěkně vypadající výsledek s neefektivní kompresí JPEG místo efektivní komprese CCITT G4.",
+        resultDitheringNote: "Rozptyl zhoršuje kompresi, ale někdy je nutný pro grafiku nebo text s nízkým kontrastem.",
+        resultDitheringAdvice: " Zvažte nepoužívání rozptylu nebo použití rozptylu pouze na vybraných stránkách, např. kde jsou grafiky. Text je obvykle nejlepší bez rozptylu.",
+    },
 
     // Slovak
     sk: {
@@ -258,7 +297,15 @@ const TRANSLATIONS = {
         license: "Licencované pod Apache 2.0 • Zobraziť licencie a uvedenie autorov",
         about: "O tomto projekte • Štúdia pochybných rozhodnutí",        lowQualityWarning: "Varovanie: Nízke DPI môže viesť k zlej kvalite. Text môže byť ťažko čitateľný a jemné detaily môžu byť stratené.",
         highFilesizeWarning: "Varovanie: Vysoké DPI povedie k väčším súborom. Spracovanie môže tiež trvať dlhšie.",
-        highComputeWarning: "Varovanie: Spracovanie nad 600 DPI je výpočtovo náročné. Vaše zariadenie sa môže zahriať, spomaliť alebo dôjsť pamäť. Toto vysoké nastavenie DPI je zvyčajne potrebné len pri prevode PDF do základného formátu pre obídenie problémov s tlačou u akcentovaných alebo ne-latinských znakov.",    },
+        highComputeWarning: "Varovanie: Spracovanie nad 600 DPI je výpočtovo náročné. Vaše zariadenie sa môže zahriať, spomaliť alebo dôjsť pamäť. Toto vysoké nastavenie DPI je zvyčajne potrebné len pri prevode PDF do základného formátu pre obídenie problémov s tlačou u akcentovaných alebo ne-latinských znakov.",
+        resultSaveButton: "Uložiť výsledné PDF",
+        resultRecommendIgnore: "Pre tento konkrétny PDF odporúčame použiť váš pôvodný PDF a túto aplikáciu ignorovať.",
+        resultDidntCompressWell: " PDF sa dobre nekomprimovalo.",
+        resultBecameBigger: " PDF sa zväčšilo.",
+        resultAppPurpose: "Táto aplikácia sa najlepšie používa so skenovanými dokumentmi s kontrastným čierno-bielym vzhľadom (musíte použiť inú aplikáciu na skenovanie). Ak bol PDF už dobre optimalizovaný, táto aplikácia nemôže pomôcť. Táto aplikácia existuje len preto, že väčšina dostupných aplikácií pre skenovanie PDF ukladá pekne vyzerajúci výsledok s neefektívnou kompresiou JPEG namiesto efektívnej kompresie CCITT G4.",
+        resultDitheringNote: "Rozptyl zhoršuje kompresiu, ale niekedy je nutný pre grafiku alebo text s nízkym kontrastom.",
+        resultDitheringAdvice: " Zvážte nepoužívanie rozptylu alebo použitie rozptylu len na vybraných stránkach, napr. kde sú grafiky. Text je zvyčajne najlepší bez rozptylu.",
+    },
 
     // Continue in next file due to length...
 };

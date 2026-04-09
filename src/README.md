@@ -7,11 +7,10 @@ A single-file web application that compresses PDFs to monochrome bilevel format 
 
 ## Features
 
-- ✅ **Single HTML file** (1.47 MB) - no installation needed
+- ✅ **Single HTML file** (1.9 MB) - no installation needed
 - ✅ **Completely self-contained** - includes full source code
 - ✅ **Works offline** - no internet connection required
 - ✅ **Configurable DPI** - 72 to 1200 DPI (310 DPI default)
-- ✅ **A4 portrait output** - all pages normalized to A4 (8.27" × 11.69")
 - ✅ **CCITT Group 4 compression** - efficient bilevel encoding (ITU-T T.6)
 - ✅ **PDF/A-1B output** - archival-quality PDFs
 - ✅ **FlateDecode cascading** - additional compression on CCITT streams (~35% extra reduction)
@@ -53,7 +52,7 @@ python3 -m http.server 8000
 - **150-200 DPI:** Smaller files for web viewing
 - **600-1200 DPI:** Maximum quality for printing
 
-All output is A4 portrait (8.27" × 11.69"). Higher DPI = more pixels = larger files.
+All output is in one of few selectable page sizes. Higher DPI = more pixels = larger files.
 
 ### Dithering Mode
 
@@ -65,8 +64,7 @@ Both modes produce valid PDF/A-1B output with excellent compression.
 ### Performance
 
 - Processing: 1-2 seconds per page @ 310 DPI
-- Output: 10-15 KB per page (typical text documents)
-- Typical compression: 98-99% reduction from uncompressed bilevel
+- Output: 10-80 KB per page (typical text documents)
 
 ## Source Code
 

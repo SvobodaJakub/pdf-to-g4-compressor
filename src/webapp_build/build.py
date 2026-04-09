@@ -438,15 +438,131 @@ if (typeof window.PRISTINE_HTML === 'undefined') {{
     window.PRISTINE_HTML = document.documentElement.outerHTML;
 }}
 
+// Global variables for state management
+var currentLang = 'en';  // Will be set during initialization
+var detectedLang = 'en';  // Original detected language
+var selectedFile = null;
+
+// DOM element references (assigned in DOMContentLoaded)
+var pdfFileInput, filenameDisplay, convertBtn, progressDiv, progressText;
+var uploadArea, pageRangeContainer, pageRangeInput, ditherSelectedRadio;
+var dpiStandardRadio, dpiCustomRadio, dpiSliderContainer, dpiSlider, dpiValue, dpiWarning;
+var useEnglishCheckbox;
+
 // Detect navigation back from browser cache (bfcache)
-// This can leave the app in a weird state with errors - reload if detected
+// This can leave the app in a weird state - reset state instead of reload
+// (reload breaks offline PWA on iOS/Android pull-to-refresh)
 window.addEventListener('pageshow', function(event) {{
     if (event.persisted) {{
-        // Page was loaded from back-forward cache (Ctrl+Shift+T or back button)
-        console.log('Page loaded from bfcache - reloading fresh to avoid state corruption');
-        location.reload(true);
+        console.log('Page loaded from bfcache - resetting state to avoid corruption');
+        resetAppState();
     }}
 }});
+
+// Reset app to pristine state without network reload
+function resetAppState() {{
+    // Clear selected file
+    selectedFile = null;
+
+    if (pdfFileInput) {{
+        pdfFileInput.value = '';
+    }}
+    if (filenameDisplay) {{
+        filenameDisplay.textContent = '';  // Empty, not the button text
+    }}
+
+    // Reset all radio buttons to first option
+    document.querySelectorAll('input[name="mode"]').forEach((radio, index) => {{
+        radio.checked = (index === 0);
+    }});
+    document.querySelectorAll('input[name="dpiMode"]').forEach((radio, index) => {{
+        radio.checked = (index === 0);
+    }});
+    document.querySelectorAll('input[name="pageSize"]').forEach((radio, index) => {{
+        radio.checked = (index === 0);
+    }});
+
+    // Reset DPI to 310
+    if (dpiValue) {{
+        dpiValue.value = '310';
+    }}
+    if (dpiSlider) {{
+        dpiSlider.value = 310;
+    }}
+
+    // Clear page range for selective dithering
+    if (pageRangeInput) {{
+        pageRangeInput.value = '';
+        pageRangeInput.disabled = true;
+    }}
+
+    // Hide DPI warning
+    if (dpiWarning) {{
+        dpiWarning.style.display = 'none';
+    }}
+
+    // Close modals
+    const licenseModal = document.getElementById('licenseModal');
+    const aboutModal = document.getElementById('aboutModal');
+    if (licenseModal) {{
+        licenseModal.style.display = 'none';
+    }}
+    if (aboutModal) {{
+        aboutModal.style.display = 'none';
+    }}
+    // Notify Android that modals are closed
+    if (typeof AndroidModalState !== 'undefined') {{
+        AndroidModalState.setModalOpen(false);
+    }}
+
+    // Hide GitHub corner
+    const githubCorner = document.querySelector('.github-corner');
+    if (githubCorner) {{
+        githubCorner.style.display = 'none';
+    }}
+
+    // Hide progress/result indicator
+    if (progressDiv) {{
+        progressDiv.style.display = 'none';
+        // Reset progress div styling
+        progressDiv.style.background = '#e3f2fd';
+        progressDiv.style.borderColor = '';
+        progressDiv.style.color = '#1976d2';
+        progressDiv.innerHTML = '<span class="spinner"></span><span id="progressText" data-i18n="processing">Processing...</span>';
+    }}
+
+    // Clear stored PDF result
+    window.resultPDF = null;
+    window.resultFilename = null;
+    window.originalSize = null;
+    window.resultSize = null;
+    window.ditherMode = null;
+
+    // Reset language to detected language (uncheck "Use English")
+    if (useEnglishCheckbox) {{
+        useEnglishCheckbox.checked = false;
+    }}
+    currentLang = detectedLang;
+    applyTranslations(currentLang);
+    if (currentLang !== 'en') {{
+        // Ensure correct text direction for RTL languages
+        const rtlLanguages = new Set(['ar', 'he', 'ur', 'yi']);
+        if (rtlLanguages.has(currentLang)) {{
+            document.body.setAttribute('dir', 'rtl');
+        }} else {{
+            document.body.setAttribute('dir', 'ltr');
+        }}
+    }}
+
+    // Grey out conversion button (after language reset to use correct translation)
+    if (convertBtn) {{
+        convertBtn.disabled = true;
+        const currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
+        convertBtn.textContent = currentT.chooseFile || 'Choose PDF File';
+    }}
+
+    console.log('App state reset complete');
+}}
 
 // ============================================================================
 // Main Application Logic
@@ -457,8 +573,8 @@ document.addEventListener('DOMContentLoaded', function() {{
     console.log('PDF Monochrome CCITT G4 Compressor - Initializing...');
 
     // Initialize internationalization
-    const detectedLang = detectLanguage(); // User's preferred language
-    let currentLang = detectedLang;
+    detectedLang = detectLanguage(); // User's preferred language (assign to global)
+    currentLang = detectedLang;  // Assign to global variable
     console.log('Detected language:', currentLang);
     applyTranslations(currentLang);
 
@@ -467,7 +583,7 @@ document.addEventListener('DOMContentLoaded', function() {{
 
     // Show "Use English" checkbox if user's preferred language is not English
     const languageSwitch = document.getElementById('languageSwitch');
-    const useEnglishCheckbox = document.getElementById('useEnglishCheckbox');
+    useEnglishCheckbox = document.getElementById('useEnglishCheckbox');
 
     // Always show the checkbox if detected language is not English
     if (detectedLang !== 'en') {{
@@ -492,24 +608,24 @@ document.addEventListener('DOMContentLoaded', function() {{
         }}
     }});
 
-    let selectedFile = null;
+    // selectedFile is now a global variable (declared above)
 
-    // DOM elements
-    const pdfFileInput = document.getElementById('pdfFile');
-    const filenameDisplay = document.getElementById('filename');
-    const convertBtn = document.getElementById('convertBtn');
-    const progressDiv = document.getElementById('progress');
-    const progressText = document.getElementById('progressText');
-    const uploadArea = document.getElementById('uploadArea');
-    const pageRangeContainer = document.getElementById('pageRangeContainer');
-    const pageRangeInput = document.getElementById('pageRange');
-    const ditherSelectedRadio = document.getElementById('ditherSelected');
-    const dpiStandardRadio = document.getElementById('dpiStandard');
-    const dpiCustomRadio = document.getElementById('dpiCustom');
-    const dpiSliderContainer = document.getElementById('dpiSliderContainer');
-    const dpiSlider = document.getElementById('dpiSlider');
-    const dpiValue = document.getElementById('dpiValue');
-    const dpiWarning = document.getElementById('dpiWarning');
+    // DOM elements (assign to global variables)
+    pdfFileInput = document.getElementById('pdfFile');
+    filenameDisplay = document.getElementById('filename');
+    convertBtn = document.getElementById('convertBtn');
+    progressDiv = document.getElementById('progress');
+    progressText = document.getElementById('progressText');
+    uploadArea = document.getElementById('uploadArea');
+    pageRangeContainer = document.getElementById('pageRangeContainer');
+    pageRangeInput = document.getElementById('pageRange');
+    ditherSelectedRadio = document.getElementById('ditherSelected');
+    dpiStandardRadio = document.getElementById('dpiStandard');
+    dpiCustomRadio = document.getElementById('dpiCustom');
+    dpiSliderContainer = document.getElementById('dpiSliderContainer');
+    dpiSlider = document.getElementById('dpiSlider');
+    dpiValue = document.getElementById('dpiValue');
+    dpiWarning = document.getElementById('dpiWarning');
 
     console.log('DOM elements loaded:', {{
         pdfFileInput: !!pdfFileInput,
@@ -702,8 +818,15 @@ document.addEventListener('DOMContentLoaded', function() {{
         }}
 
         try {{
-            // Show progress
+            // Reset progress box to show processing state (in case result box was displayed)
+            progressDiv.innerHTML = '<span class="spinner"></span><span id="progressText" data-i18n="processing">Processing...</span>';
+            progressDiv.style.background = '#e3f2fd';
+            progressDiv.style.borderColor = '';
+            progressDiv.style.color = '#1976d2';
             progressDiv.style.display = 'block';
+
+            // Update the global progressText reference since we just recreated the element
+            progressText = document.getElementById('progressText');
             progressText.textContent = 'Loading PDF...';
 
             // Disable all controls during conversion
@@ -732,9 +855,12 @@ document.addEventListener('DOMContentLoaded', function() {{
         }} catch (error) {{
             console.error('Conversion error:', error);
             alert('Error during conversion: ' + error.message);
+            // Hide progress on error
+            if (progressDiv) {{
+                progressDiv.style.display = 'none';
+            }}
         }} finally {{
-            // Re-enable all controls
-            progressDiv.style.display = 'none';
+            // Re-enable all controls (but keep result box visible if conversion succeeded)
             convertBtn.disabled = false;
             dpiSlider.disabled = false;
             pageRangeInput.disabled = false;
@@ -789,6 +915,7 @@ document.addEventListener('DOMContentLoaded', function() {{
         // Read file as ArrayBuffer
         const arrayBuffer = await file.arrayBuffer();
         const pdfData = new Uint8Array(arrayBuffer);
+        const originalSize = pdfData.length;
 
         progressText.textContent = 'Loading PDF with PDF.js...';
         console.log('Loading PDF, size:', pdfData.length, 'bytes');
@@ -808,15 +935,97 @@ document.addEventListener('DOMContentLoaded', function() {{
         progressText.textContent = 'Applying FlateDecode compression...';
         const finalPDF = compressPDF(compressedPDF, pako);
 
-        progressText.textContent = 'Downloading...';
+        // Store result for later download
+        window.resultPDF = finalPDF;
+        window.resultFilename = file.name.replace('.pdf', '_ccitt.pdf');
+        window.originalSize = originalSize;
+        window.resultSize = finalPDF.length;
+        window.ditherMode = ditherConfig.mode;
 
-        // Download the result
-        downloadFile(finalPDF, file.name.replace('.pdf', '_ccitt.pdf'));
+        // Show result box instead of downloading
+        showResultBox();
+    }}
 
-        progressText.textContent = 'Done!';
-        setTimeout(() => {{
-            progressDiv.style.display = 'none';
-        }}, 2000);
+    // Show result box with compression results
+    function showResultBox() {{
+        const currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
+        const originalSize = window.originalSize;
+        const resultSize = window.resultSize;
+        const ratio = resultSize / originalSize;
+
+        // Format sizes
+        const formatSize = (bytes) => {{
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' kiB';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' MiB';
+        }};
+
+        // Build the message (handle RTL languages)
+        const rtlLanguages = new Set(['ar', 'he', 'ur', 'yi']);
+        const isRTL = rtlLanguages.has(currentLang);
+
+        // For both LTR and RTL: keep the same logical order (old → new)
+        // But for RTL, explicitly mark the size comparison as LTR text
+        // so numbers and units display correctly left-to-right
+        let message;
+        if (isRTL) {{
+            message = '<span dir="ltr">' + formatSize(originalSize) + ' → ' + formatSize(resultSize) + '</span>';
+        }} else {{
+            message = formatSize(originalSize) + ' → ' + formatSize(resultSize);
+        }}
+
+        // Determine compression result and set box color accordingly
+        if (ratio < 0.6) {{
+            // Success (green)
+            progressDiv.style.background = '#d4edda';
+            progressDiv.style.borderColor = '#c3e6cb';
+            progressDiv.style.color = '#155724';
+        }} else if (ratio <= 1.0) {{
+            // Bad compression (yellow)
+            progressDiv.style.background = '#fff3cd';
+            progressDiv.style.borderColor = '#ffeaa7';
+            progressDiv.style.color = '#856404';
+        }} else {{
+            // Got bigger (orange)
+            progressDiv.style.background = '#ffe5cc';
+            progressDiv.style.borderColor = '#ffb366';
+            progressDiv.style.color = '#8B4513';
+        }}
+
+        const isSuccess = ratio < 0.6;
+
+        // Add additional messages if not successful
+        if (!isSuccess) {{
+            message += '<br><br>';
+            message += currentT.resultRecommendIgnore;
+
+            if (ratio >= 0.6 && ratio <= 1.0) {{
+                message += currentT.resultDidntCompressWell;
+            }} else if (ratio > 1.0) {{
+                message += currentT.resultBecameBigger;
+            }}
+
+            message += '<br><br>' + currentT.resultAppPurpose;
+
+            if (window.ditherMode === 'all') {{
+                message += '<br><br>' + currentT.resultDitheringNote;
+                message += currentT.resultDitheringAdvice;
+            }} else if (window.ditherMode === 'selected') {{
+                message += '<br><br>' + currentT.resultDitheringNote;
+            }}
+        }}
+
+        // Show the result with save button
+        progressDiv.innerHTML = `
+            <div style="font-weight: bold; margin-bottom: 15px;">${{message}}</div>
+            <button id="saveResultBtn" style="width: auto; padding: 10px 20px; background: #667eea; border-radius: 4px;">${{currentT.resultSaveButton}}</button>
+        `;
+        progressDiv.style.display = 'block';
+
+        // Attach save button handler
+        document.getElementById('saveResultBtn').addEventListener('click', function() {{
+            downloadFile(window.resultPDF, window.resultFilename);
+        }});
     }}
 
     // Render PDF pages using PDF.js
@@ -1028,12 +1237,20 @@ document.addEventListener('DOMContentLoaded', function() {{
         showLicenseBtn.addEventListener('click', function(e) {{
             e.preventDefault();
             licenseModal.classList.add('show');
+            // Notify Android that a modal is open (for back button handling)
+            if (typeof AndroidModalState !== 'undefined') {{
+                AndroidModalState.setModalOpen(true);
+            }}
         }});
     }}
 
     if (closeLicenseBtn) {{
         closeLicenseBtn.addEventListener('click', function() {{
             licenseModal.classList.remove('show');
+            // Notify Android that modal is closed
+            if (typeof AndroidModalState !== 'undefined') {{
+                AndroidModalState.setModalOpen(false);
+            }}
         }});
     }}
 
@@ -1053,12 +1270,20 @@ document.addEventListener('DOMContentLoaded', function() {{
         showAboutBtn.addEventListener('click', function(e) {{
             e.preventDefault();
             aboutModal.classList.add('show');
+            // Notify Android that a modal is open (for back button handling)
+            if (typeof AndroidModalState !== 'undefined') {{
+                AndroidModalState.setModalOpen(true);
+            }}
         }});
     }}
 
     if (closeAboutBtn) {{
         closeAboutBtn.addEventListener('click', function() {{
             aboutModal.classList.remove('show');
+            // Notify Android that modal is closed
+            if (typeof AndroidModalState !== 'undefined') {{
+                AndroidModalState.setModalOpen(false);
+            }}
         }});
     }}
 
@@ -1086,11 +1311,14 @@ document.addEventListener('DOMContentLoaded', function() {{
 
                 // Set up download
                 if (typeof AndroidFileHandler !== 'undefined') {{
-                    // On Android, use click handler instead of href
+                    // Android API expects base64-encoded data and will decode before writing
+                    // We have text bytes that need to be written as-is
+                    // So: encode our bytes → API decodes → original bytes written to file
                     sourceDownload.removeAttribute('href');
                     sourceDownload.onclick = function(e) {{
                         e.preventDefault();
-                        AndroidFileHandler.saveFile('pdf-g4-compressor-source-base64.txt', SOURCE_TARBALL_BASE64, 'text/plain');
+                        const encodedData = btoa(SOURCE_TARBALL_BASE64);
+                        AndroidFileHandler.saveFile('pdf-g4-compressor-source-base64.txt', encodedData, 'text/plain');
                         return false;
                     }};
                 }} else {{
@@ -1183,6 +1411,23 @@ document.addEventListener('DOMContentLoaded', function() {{
     }}
 
     console.log('PDF Monochrome CCITT G4 Compressor - Ready!');
+
+    // Check if browser restored form state (desktop Chrome back button)
+    // This doesn't trigger bfcache event but still restores form values
+    setTimeout(function() {{
+        const hasRestoredState =
+            (pdfFileInput && pdfFileInput.files && pdfFileInput.files.length > 0) ||
+            (dpiValue && dpiValue.value !== '310') ||
+            (pageRangeInput && pageRangeInput.value !== '') ||
+            Array.from(document.querySelectorAll('input[name="mode"]')).some((r, i) => r.checked && i !== 0) ||
+            Array.from(document.querySelectorAll('input[name="dpiMode"]')).some((r, i) => r.checked && i !== 0) ||
+            Array.from(document.querySelectorAll('input[name="pageSize"]')).some((r, i) => r.checked && i !== 0);
+
+        if (hasRestoredState) {{
+            console.log('Browser restored form state - resetting to defaults');
+            resetAppState();
+        }}
+    }}, 100);  // Small delay to let browser finish restoring
 }});
 </script>
 """

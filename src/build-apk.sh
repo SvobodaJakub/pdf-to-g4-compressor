@@ -19,8 +19,8 @@ KEYSTORE_DIR="$PROJECT_ROOT/android-private"
 # Increment these for each Google Play release:
 #   versionCode: Integer, must increase with each release (1, 2, 3, ...)
 #   versionName: User-visible version string (e.g., "1.0", "1.1.0", "2.0")
-VERSION_CODE=6
-VERSION_NAME="1.0.5"
+VERSION_CODE=7
+VERSION_NAME="1.0.6"
 
 echo "Script directory: $SCRIPT_DIR"
 echo "Source directory: $SRC_DIR"
@@ -155,10 +155,14 @@ import android.webkit.WebViewClient;
 import android.view.WindowManager;
 import android.widget.Toast;
 import androidx.activity.ComponentActivity;
+import androidx.activity.OnBackPressedCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 
 import java.io.OutputStream;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MainActivity extends ComponentActivity {
     private WebView webView;
@@ -170,6 +174,9 @@ public class MainActivity extends ComponentActivity {
     private String pendingFilename;
     private byte[] pendingFileData;
     private String pendingMimeType;
+
+    // Track modal state
+    private volatile boolean modalIsOpen = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -289,8 +296,41 @@ public class MainActivity extends ComponentActivity {
             }
         });
 
-        // Add JavaScript interface for file saving
+        // Add JavaScript interface for file saving and modal state tracking
         webView.addJavascriptInterface(new FileHandler(), "AndroidFileHandler");
+        webView.addJavascriptInterface(new ModalStateHandler(), "AndroidModalState");
+
+        // Handle back button to close modals first
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (modalIsOpen) {
+                    // Close the modal via JavaScript (using classList, not style.display)
+                    webView.evaluateJavascript(
+                        "(function() {" +
+                            "var aboutModal = document.getElementById('aboutModal');" +
+                            "var licenseModal = document.getElementById('licenseModal');" +
+                            "if (aboutModal && aboutModal.classList.contains('show')) {" +
+                                "aboutModal.classList.remove('show');" +
+                            "}" +
+                            "if (licenseModal && licenseModal.classList.contains('show')) {" +
+                                "licenseModal.classList.remove('show');" +
+                            "}" +
+                        "})()",
+                        null
+                    );
+                    modalIsOpen = false;
+                    // Stay in app, don't exit
+                } else if (webView.canGoBack()) {
+                    // Navigate back in WebView history
+                    webView.goBack();
+                } else {
+                    // Exit app
+                    setEnabled(false);
+                    getOnBackPressedDispatcher().onBackPressed();
+                }
+            }
+        });
 
         // Load HTML from assets
         webView.loadUrl("file:///android_asset/index.html");
@@ -326,12 +366,11 @@ public class MainActivity extends ComponentActivity {
         }
     }
 
-    @Override
-    public void onBackPressed() {
-        if (webView.canGoBack()) {
-            webView.goBack();
-        } else {
-            super.onBackPressed();
+    // JavaScript interface for modal state tracking
+    public class ModalStateHandler {
+        @JavascriptInterface
+        public void setModalOpen(boolean isOpen) {
+            modalIsOpen = isOpen;
         }
     }
 
