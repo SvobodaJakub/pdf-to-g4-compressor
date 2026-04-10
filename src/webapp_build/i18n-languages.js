@@ -628,7 +628,7 @@ const ADDITIONAL_TRANSLATIONS = {
     },
 
     // Simplified Chinese
-    "zh-Hans": {
+    "zh-hans": {
         title: "PDF 单色 G4 压缩器",
         subtitle: "通过将颜色减少为1位单色、调整DPI分辨率并使用高效的CCITT Group 4压缩来压缩PDF。",
         privacyNotice: "🔒 100%离线运行。您的PDF文件不会离开您的设备。",
@@ -667,7 +667,7 @@ const ADDITIONAL_TRANSLATIONS = {
     },
 
     // Traditional Chinese
-    "zh-Hant": {
+    "zh-hant": {
         title: "PDF 單色 G4 壓縮器",
         subtitle: "通過將顏色減少為1位單色、調整DPI解析度並使用高效的CCITT Group 4壓縮來壓縮PDF。",
         privacyNotice: "🔒 100%離線運行。您的PDF檔案不會離開您的裝置。",
@@ -1124,8 +1124,8 @@ const ADDITIONAL_TRANSLATIONS = {
         resultDitheringNote: "Dithering pogoršava kompresiju, ali je ponekad nužan za grafiku ili tekst niskog kontrasta.",
         resultDitheringAdvice: " Razmislite o nekorištenju ditheringa ili korištenju ditheringa samo na odabranim stranicama, npr. gdje ima grafike. Tekst je obično najbolji bez ditheringa.",
     },
-    // Serbian Cyrillic (sr-Cyrl)
-'sr-Cyrl': {
+    // Serbian Cyrillic (sr-cyrl)
+'sr-cyrl': {
     title: "PDF Монохроматски G4 Компресор",
     subtitle: "Компресујте PDF фајлове смањењем боја на 1-битни монохроматски, прилагођавањем DPI резолуције и коришћењем ефикасне CCITT Group 4 компресије.",
     privacyNotice: "🔒 Ради 100% офлајн. Ваши PDF фајлови никада не напуштају уређај.",
@@ -1156,8 +1156,8 @@ const ADDITIONAL_TRANSLATIONS = {
     highComputeWarning: "Упозорење: Обрада изнад 600 DPI је рачунски интензивна.",
 },
 
-    // Serbian Latin (sr-Latn)
-'sr-Latn': {
+    // Serbian Latin (sr-latn)
+'sr-latn': {
     title: "PDF Monohromatski G4 Kompresor",
     subtitle: "Kompresujte PDF fajlove smanjenjem boja na 1-bitni monohromatski, prilagođavanjem DPI rezolucije i korišćenjem efikasne CCITT Group 4 kompresije.",
     privacyNotice: "🔒 Radi 100% oflajn. Vaši PDF fajlovi nikada ne napuštaju uređaj.",
@@ -1915,6 +1915,44 @@ const ADDITIONAL_TRANSLATIONS = {
         resultAppPurpose: "Энэ апп нь өндөр контрасттай хар цагаан харагдалтай сканнердсан баримт бичигтэй хамгийн сайн ажилладаг (та сканнердахдаа өөр апп ашиглах хэрэгтэй). Хэрэв PDF аль хэдийн сайн оновчлогдсон бол энэ апп тусалж чадахгүй. Энэ апп зөвхөн байдаг учир нь ихэнх боломжтой PDF скан апп нар үр дүнг үр ашигтай CCITT G4 шахалтын оронд үр ашиггүй JPEG шахалттайгаар үзэсгэлэнтэй хадгалдаг.",
         resultDitheringNote: "Дитеринг нь шахалтыг муудуулдаг боловч заримдаа график эсвэл бага контрасттай текстэд шаардлагатай.",
         resultDitheringAdvice: " Дитеринг ашиглахгүй байх талаар бодож үзээрэй, эсвэл зөвхөн сонгосон хуудсуудад дитеринг ашиглаарай, жишээ нь зарим график байгаа газар. Текст ихэвчлэн дитерингийг ашиглахгүйгээр хамгийн сайн.",
+    },
+    // Traditional Mongolian Script (ᠮᠣᠩᠭᠣᠯ ᠪᠢᠴᠢᠭ᠌)
+    "mn-mong": {
+        title: "PDF ᠨᠢᠭᠡ ᠦᠩᠭᠡᠲᠦ G4 ᠰᠢᠬᠠᠭᠤᠴᠢ",
+        subtitle: "ᠦᠩᠭᠡ ᠶ᠋ᠢ 1-ᠪᠢᠲ ᠦᠨ ᠨᠢᠭᠡ ᠦᠩᠭᠡᠲᠦ ᠪᠣᠯᠭᠠᠵᠤ ᠪᠠᠭᠤᠷᠠᠭᠤᠯᠬᠤ᠂ DPI ᠨᠢᠭᠲᠠᠷᠠᠯ ᠢ ᠲᠣᠬᠢᠷᠠᠭᠤᠯᠬᠤ᠂ ᠦ᠋ᠷ᠎ᠡ ᠠᠰᠢᠭᠲᠤ CCITT Group 4 ᠰᠢᠬᠠᠯᠲᠠ ᠶ᠋ᠢ ᠠᠰᠢᠭᠯᠠᠨ PDF ᠢ ᠰᠢᠬᠠᠬᠤ᠃",
+        privacyNotice: "🔒 100% ᠣᠹᠯᠠᠶ᠋ᠢᠨ ᠪᠠᠷ ᠠᠵᠢᠯᠯᠠᠳᠠᠭ᠃ ᠲᠠᠨ ᠤ PDF ᠲᠦᠬᠦᠭᠡᠷᠦᠮᠵᠢ ᠶ᠋ᠢ ᠬᠡᠵᠡᠭᠡ ᠴᠤ ᠣᠷᠬᠢᠳᠠᠭᠭᠦᠢ᠃",
+        chooseFile: "PDF ᠹᠠᠶ᠋ᠢᠯ ᠰᠣᠩᠭᠣᠬᠤ",
+        conversionMode: "ᠬᠦᠷᠪᠦᠭᠦᠯᠬᠦ ᠭᠣᠷᠢᠮ:",
+        noDither: "ᠳᠢᠳᠧᠷᠢᠩ ᠦᠭᠡᠢ (ᠬᠤᠷᠴᠤ)",
+        dither: "ᠳᠢᠳᠧᠷᠢᠩ ᠪᠦᠬᠦᠢ (ᠵᠥᠭᠡᠯᠡᠨ)",
+        ditherSelected: "ᠵᠥᠪᠬᠡᠨ ᠰᠣᠩᠭᠣᠭᠰᠠᠨ ᠬᠤᠭᠤᠳᠠᠰᠤ ᠶ᠋ᠢ ᠳᠢᠳᠧᠷ ᠬᠢᠶ᠎ᠡ",
+        pageRangePlaceholder: "ᠵᠢᠱᠢᠶ᠎ᠡ ᠨᠢ 1᠂ 3-5᠂ 8᠂ 10-12",
+        pageRangeHint: "ᠬᠤᠭᠤᠳᠠᠰᠤ ᠶ᠋ᠢᠨ ᠳᠤᠭᠠᠷ ᠪᠣᠯᠣᠨ ᠮᠤᠵᠤᠭᠤᠳ ᠢ ᠲᠠᠰᠤᠯᠠᠭᠠᠷ ᠲᠤᠰᠤᠭᠠᠷᠯᠠᠨ ᠣᠷᠣᠭᠤᠯᠤᠨ᠎ᠠ",
+        pageSize: "ᠬᠤᠭᠤᠳᠠᠰᠤ ᠶ᠋ᠢᠨ ᠬᠡᠮᠵᠢᠶ᠎ᠡ:",
+        pageSizeA4Portrait: "A4 ᠪᠣᠰᠣᠭᠤ",
+        pageSizeA4Landscape: "A4 ᠬᠡᠪᠲᠡᠭᠡ",
+        pageSizeLetterPortrait: "Letter ᠪᠣᠰᠣᠭᠤ",
+        pageSizeLetterLandscape: "Letter ᠬᠡᠪᠲᠡᠭᠡ",
+        pageSizeLegalPortrait: "US Legal ᠪᠣᠰᠣᠭᠤ",
+        outputDpi: "ᠭᠠᠷᠬᠤ DPI (ᠨᠢᠭᠲᠠᠷᠠᠯ):",
+        dpiStandard: "ᠰᠲᠠᠨᠳ᠋ᠠᠷᠲ (310 DPI)",
+        dpiCustom: "ᠵᠠᠬᠢᠶᠠᠯᠭᠠᠲᠤ DPI",
+        dpiHint: "ᠥᠨᠳᠥᠷ DPI = ᠲᠣᠮ ᠹᠠᠶ᠋ᠢᠯ ᠭᠡᠬᠦᠳᠡᠭᠡ ᠰᠠᠶ᠋ᠢᠨ ᠴᠢᠨᠠᠷ᠃ ᠰᠠᠨᠠᠯ ᠪᠣᠯᠭᠠᠬᠤ: 310 DPI᠃",
+        compressButton: "G4 ᠪᠣᠯᠭᠠᠨ ᠰᠢᠬᠠᠬᠤ",
+        processing: "ᠪᠣᠯᠣᠪᠰᠤᠷᠠᠭᠤᠯᠵᠤ ᠪᠠᠶ᠋ᠢᠨ᠎ᠠ...",
+        credits: "PDF.js • pako • G4Enc ᠠᠰᠢᠭᠯᠠᠨ ᠪᠦᠲᠦᠭᠡᠭᠰᠡᠨ",
+        license: "Apache 2.0 ᠤᠨ ᠳᠠᠭᠤᠤ ᠯᠢᠴᠧᠨᠽ ᠣᠯᠭᠣᠭᠰᠠᠨ",
+        about: "ᠡᠨᠡ ᠲᠥᠰᠥᠯ ᠦᠨ ᠲᠤᠬᠠᠢ",
+        lowQualityWarning: "ᠠᠨᠬᠠᠷᠠᠭᠤᠯᠭ᠎ᠠ: ᠪᠠᠭ᠎ᠠ DPI ᠨᠢ ᠮᠠᠭᠤ ᠴᠢᠨᠠᠷᠲᠤ ᠬᠦᠷᠭᠡᠵᠤ ᠪᠣᠯᠤᠨ᠎ᠠ᠃",
+        highFilesizeWarning: "ᠠᠨᠬᠠᠷᠠᠭᠤᠯᠭ᠎ᠠ: ᠥᠨᠳᠥᠷ DPI ᠨᠢ ᠲᠣᠮ ᠹᠠᠶ᠋ᠢᠯᠳᠤ ᠬᠦᠷᠭᠡᠨ᠎ᠡ᠃",
+        highComputeWarning: "ᠠᠨᠬᠠᠷᠠᠭᠤᠯᠭ᠎ᠠ: 600 DPI ᠡᠴᠡ ᠳᠡᠭᠡᠰᠢ ᠪᠣᠯᠣᠪᠰᠤᠷᠠᠯᠲᠠ ᠨᠢ ᠲᠣᠭᠣᠴᠣᠯᠣᠯ ᠤᠨ ᠬᠤᠪᠢ ᠪᠠᠷ ᠡᠷᠴᠢᠮᠲᠡᠢ ᠪᠠᠶ᠋ᠢᠨ᠎ᠠ᠃",
+        resultSaveButton: "ᠦ᠋ᠷ᠎ᠡ ᠳᠦᠩ ᠦᠨ PDF ᠬᠠᠳᠠᠭᠠᠯᠠᠬᠤ",
+        resultRecommendIgnore: "ᠡᠨᠡ ᠲᠣᠳᠣᠷᠬᠠᠢ PDF ᠤᠨ ᠬᠤᠪᠢ ᠪᠠᠷ ᠪᠢᠳᠡ ᠲᠠᠨ ᠳᠤ ᠠᠨᠬᠨᠢ PDF ᠢ ᠠᠰᠢᠭᠯᠠᠬᠤ ᠶ᠋ᠢ ᠵᠥᠪᠯᠡᠵᠤ ᠪᠠᠶ᠋ᠢᠨ᠎ᠠ᠂ ᠡᠨᠡ ᠠᠫᠫ ᠢ ᠦᠯᠤ ᠲᠣᠭᠣᠮᠰᠣᠷᠯᠠᠭᠠᠷᠠᠢ᠃",
+        resultDidntCompressWell: " PDF ᠰᠠᠶ᠋ᠢᠨ ᠰᠢᠬᠠᠭᠳᠠᠭᠰᠠᠩᠭᠦᠢ᠃",
+        resultBecameBigger: " PDF ᠲᠣᠮᠣᠷᠴᠤ᠃",
+        resultAppPurpose: "ᠡᠨᠡ ᠠᠫᠫ ᠨᠢ ᠥᠨᠳᠥᠷ ᠺᠣᠨᠲ᠋ᠷᠠᠰᠲᠤ ᠬᠠᠷ᠎ᠠ ᠴᠠᠭᠠᠨ ᠬᠠᠷᠠᠭᠳᠠᠯᠲᠤ ᠰᠺᠠᠨᠨᠧᠷᠳᠡᠭᠰᠡᠨ ᠪᠠᠷᠢᠮᠲᠤ ᠪᠢᠴᠢᠭ ᠲᠡᠢ ᠬᠠᠮᠤᠭ ᠤᠨ ᠰᠠᠶ᠋ᠢᠨ ᠠᠵᠢᠯᠯᠠᠳᠠᠭ...",
+        resultDitheringNote: "ᠳᠢᠲᠧᠷᠢᠩ ᠨᠢ ᠰᠢᠬᠠᠯᠲᠠ ᠶ᠋ᠢ ᠮᠠᠭᠤᠳᠤᠯᠳᠠᠭ ᠪᠣᠯᠣᠪᠠᠴᠤ ᠵᠠᠷᠢᠮᠳᠠᠭ᠎ᠠ ᠭᠷᠠᠹᠢᠺ ᠡᠰᠡᠭᠦᠯ᠎ᠡ ᠪᠠᠭ᠎ᠠ ᠺᠣᠨᠲ᠋ᠷᠠᠰᠲᠤ ᠲᠡᠺᠰᠲ ᠲᠤ ᠰᠢᠶᠠᠷᠳᠯᠠᠭᠠᠲᠠᠢ᠃",
+        resultDitheringAdvice: " ᠳᠢᠲᠧᠷᠢᠩ ᠠᠰᠢᠭᠯᠠᠬᠤ ᠦᠭᠡᠢ ᠪᠠᠶ᠋ᠢᠬᠤ ᠲᠠᠯ᠎ᠠ ᠪᠠᠷ ᠪᠣᠳᠣᠵᠤ ᠦᠵᠡᠭᠡᠷᠡᠢ..."
     },
     // Azerbaijani (Azərbaycan)
     az: {

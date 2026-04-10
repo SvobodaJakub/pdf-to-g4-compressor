@@ -114,6 +114,8 @@ Third-party components:
 - PDF.js (Apache 2.0) - Mozilla Foundation
 - pako (MIT) - Vitaly Puzrin
 - G4Enc (Apache 2.0) - BitBank Software, Inc.
+- libtiff (BSD-style) - Sam Leffler, Silicon Graphics, Inc.
+- Noto Sans Mongolian (SIL OFL 1.1) - The Noto Project Authors
 
 See `src/LICENSES.md` for complete attribution.
 

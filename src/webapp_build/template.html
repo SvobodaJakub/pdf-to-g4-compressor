@@ -21,6 +21,15 @@
             padding: 0;
         }
 
+        /* Noto Sans Mongolian font for traditional Mongolian script */
+        @font-face {
+            font-family: 'Noto Sans Mongolian';
+            src: url(data:font/otf;base64,{{MONGOLIAN_FONT_BASE64}}) format('opentype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -409,6 +418,23 @@
             cursor: pointer;
         }
 
+        /* Mongolian checkbox - display vertically */
+        .mongolian-switch {
+            margin-top: 10px;
+        }
+
+        .mongolian-label {
+            writing-mode: vertical-lr;
+            text-orientation: sideways;
+            font-family: 'Noto Sans Mongolian', serif;
+            min-height: 100px;
+        }
+
+        .mongolian-text {
+            font-size: 14px;
+            letter-spacing: 0.05em;
+        }
+
         /* License Modal */
         #licenseModal {
             display: none;
@@ -421,6 +447,10 @@
             z-index: 1000;
             padding: 20px;
             overflow: auto;
+            /* Always LTR horizontal for English-only content */
+            direction: ltr !important;
+            writing-mode: horizontal-tb !important;
+            text-orientation: mixed !important;
         }
 
         #licenseModal.show {
@@ -441,6 +471,10 @@
             z-index: 1000;
             padding: 20px;
             overflow: auto;
+            /* Always LTR horizontal for English-only content */
+            direction: ltr !important;
+            writing-mode: horizontal-tb !important;
+            text-orientation: mixed !important;
         }
 
         #aboutModal.show {
@@ -458,6 +492,10 @@
             overflow: auto;
             padding: 30px;
             position: relative;
+            /* Always LTR horizontal for modal content */
+            direction: ltr !important;
+            writing-mode: horizontal-tb !important;
+            text-orientation: mixed !important;
         }
 
         .modal-close {
@@ -621,6 +659,156 @@
         body[dir="rtl"] .container {
             text-align: right;
         }
+
+        /* Traditional Mongolian script support */
+        body.mongolian-script {
+            writing-mode: vertical-lr;
+            text-orientation: sideways;
+            font-family: 'Noto Sans Mongolian', serif;
+            /* Adjust gradient for vertical layout - flows left to right */
+            background: linear-gradient(to right, #667eea 0%, #764ba2 100%);
+            /* Ensure body extends full width to prevent gradient tiling */
+            min-width: 100vw;
+        }
+        body.mongolian-script .container {
+            max-width: none;
+            max-height: 600px;
+            height: 100vh;
+            width: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        body.mongolian-script button,
+        body.mongolian-script input,
+        body.mongolian-script select,
+        body.mongolian-script textarea {
+            font-family: 'Noto Sans Mongolian', serif;
+        }
+        body.mongolian-script button {
+            /* In vertical mode, width becomes height, so reset and use auto width */
+            width: auto;
+            align-self: center;
+        }
+
+        /* Language selector button */
+        .language-selector-button {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 50px;
+            height: 50px;
+            background: rgba(102, 126, 234, 0.15);
+            border-radius: 50%;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: background 0.3s, transform 0.2s, border-color 0.3s;
+            /* Always keep button in LTR horizontal mode regardless of page writing mode */
+            direction: ltr !important;
+            writing-mode: horizontal-tb !important;
+            text-orientation: mixed !important;
+        }
+
+        .language-selector-button:hover {
+            background: rgba(102, 126, 234, 0.25);
+            border-color: rgba(102, 126, 234, 0.5);
+            transform: scale(1.05);
+        }
+
+        .language-selector-button svg {
+            width: 46px;
+            height: 46px;
+        }
+
+        /* Fix button staying circular in Mongolian vertical mode */
+        body.mongolian-script .language-selector-button {
+            width: 50px;
+            height: 50px;
+            min-width: 50px;
+            min-height: 50px;
+        }
+
+        body.mongolian-script .language-selector-button svg {
+            width: 46px;
+            height: 46px;
+        }
+
+        /* Language selector modal */
+        #languageModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 10000;
+            padding: 20px;
+            overflow: auto;
+            /* Always LTR horizontal for modal container (language names flow naturally within) */
+            direction: ltr !important;
+            writing-mode: horizontal-tb !important;
+            text-orientation: mixed !important;
+        }
+
+        #languageModal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .language-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .language-item {
+            padding: 10px 15px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 14px;
+        }
+
+        .language-item:hover {
+            background: #e0e0e0;
+        }
+
+        .language-item.active {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+
+        .language-code {
+            font-family: monospace;
+            color: #666;
+            margin-right: 8px;
+        }
+
+        .language-item.active .language-code {
+            color: #ddd;
+        }
+
+        /* Traditional Mongolian in language selector - display vertically */
+        .language-item.mongolian-vertical {
+            writing-mode: vertical-lr;
+            text-orientation: sideways;
+            font-family: 'Noto Sans Mongolian', serif;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
     </style>
 </head>
 <body>
@@ -742,6 +930,12 @@
                     Use English
                 </label>
             </div>
+            <div class="language-switch mongolian-switch" id="mongolianSwitch">
+                <label class="mongolian-label">
+                    <input type="checkbox" id="useMongolianCheckbox">
+                    <span class="mongolian-text">ᠮᠣᠩᠭᠣᠯ ᠬᠡᠷᠡᠭᠯᠡᠬᠦ</span>
+                </label>
+            </div>
         </div>
     </div>
 
@@ -788,6 +982,14 @@
                     <li>Copyright © 1988-1997 Sam Leffler, © 1991-1997 Silicon Graphics, Inc.</li>
                     <li>License: LibTIFF License (BSD-style)</li>
                     <li>URL: https://gitlab.com/libtiff/libtiff</li>
+                </ul>
+
+                <p style="margin-top: 15px;"><strong>5. Noto Sans Mongolian Font</strong> - Traditional Mongolian script support</p>
+                <ul>
+                    <li>Copyright 2022 The Noto Project Authors</li>
+                    <li>License: SIL Open Font License 1.1 (OFL 1.1)</li>
+                    <li>URL: https://github.com/notofonts/mongolian</li>
+                    <li>Embedded as base64-encoded font data</li>
                 </ul>
             </div>
 
@@ -914,6 +1116,32 @@ limitations under the License.</pre>
                         <span class="source-hint">Works in browsers and Android WebView. Share it, archive it, or just marvel at the recursion.</span>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Language Selector Button -->
+    <button class="language-selector-button" id="languageSelectorBtn" aria-label="Select Language">
+        <svg viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Latin A (bottom layer) -->
+            <text x="4" y="29" font-family="serif" font-size="40" font-weight="bold" fill="rgba(255, 255, 255, 0.9)">A</text>
+            <!-- Chinese 文 (overlapping) -->
+            <text x="22" y="27" font-family="serif" font-size="36" fill="rgba(255, 255, 255, 0.95)">文</text>
+            <!-- Arabic ع (overlapping) -->
+            <text x="6" y="47" font-family="serif" font-size="32" fill="rgba(255, 255, 255, 0.85)">ع</text>
+            <!-- Devanagari अ (overlapping) -->
+            <text x="30" y="47" font-family="serif" font-size="32" fill="rgba(255, 255, 255, 1)">अ</text>
+            <!-- Classical Mongolian ᠮ (rotated 90° clockwise, overlapping) -->
+            <text x="42" y="31" font-family="'Noto Sans Mongolian', serif" font-size="28" fill="rgba(255, 255, 255, 0.9)" transform="rotate(90 42 31)">ᠮ</text>
+        </svg>
+    </button>
+
+    <!-- Language Selector Modal -->
+    <div id="languageModal">
+        <div class="modal-content">
+            <button class="modal-close" id="closeLanguageModal">&times;</button>
+            <div class="language-list" id="languageList">
+                <!-- Languages will be populated by JavaScript -->
             </div>
         </div>
     </div>

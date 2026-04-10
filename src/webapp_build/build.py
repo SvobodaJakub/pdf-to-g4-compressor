@@ -259,10 +259,18 @@ def main():
     pdfgen = read_file('pdfgen.js')
     pdfcompress = read_file('pdfcompress.js')
 
+    # Read and encode Mongolian font
+    print("Reading Mongolian font...")
+    with open('NotoSansMongolian-Regular.otf', 'rb') as f:
+        mongolian_font = f.read()
+    mongolian_font_b64 = to_base64(mongolian_font)
+
     print(f"  pako: {len(pako):,} bytes")
     print(f"  pdf.js: {len(pdfjslib):,} bytes")
     print(f"  pdf.worker: {len(pdfjsworker):,} bytes")
     print(f"  pdf.worker (base64): {len(pdfjsworker_b64):,} bytes")
+    print(f"  Mongolian font: {len(mongolian_font):,} bytes")
+    print(f"  Mongolian font (base64): {len(mongolian_font_b64):,} bytes")
 
     # Merge i18n files
     print("Merging i18n modules...")
@@ -578,6 +586,11 @@ document.addEventListener('DOMContentLoaded', function() {{
     console.log('Detected language:', currentLang);
     applyTranslations(currentLang);
 
+    // Apply Mongolian script class if needed
+    if (currentLang === 'mn-mong') {{
+        document.body.classList.add('mongolian-script');
+    }}
+
     // Get current translations for dynamic content
     let t = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
 
@@ -585,9 +598,28 @@ document.addEventListener('DOMContentLoaded', function() {{
     const languageSwitch = document.getElementById('languageSwitch');
     useEnglishCheckbox = document.getElementById('useEnglishCheckbox');
 
+    // Mongolian checkbox for regions where traditional Mongolian might be relevant
+    const mongolianSwitch = document.getElementById('mongolianSwitch');
+    const useMongolianCheckbox = document.getElementById('useMongolianCheckbox');
+
+    // Regions where traditional Mongolian script might be relevant
+    // Mongolia + mainland China (Inner Mongolia), but NOT Taiwan, Hong Kong, Macau, Singapore
+    const mongolianRelevantRegions = ['mn', 'mn-mn', 'mn-mong', 'mn-mong-mn', 'mn-mong-cn',
+                                      'zh-cn', 'zh-hans', 'zh-hans-cn'];
+    const isMongolianRelevant = mongolianRelevantRegions.some(region =>
+        detectedLang === region || detectedLang.startsWith(region + '-'));
+
     // Always show the checkbox if detected language is not English
     if (detectedLang !== 'en') {{
         languageSwitch.classList.add('show');
+    }}
+
+    // Show Mongolian checkbox if in relevant region or if currently using mn-Mong
+    if (isMongolianRelevant || currentLang === 'mn-mong') {{
+        mongolianSwitch.classList.add('show');
+        if (currentLang === 'mn-mong') {{
+            useMongolianCheckbox.checked = true;
+        }}
     }}
 
     // Handle language switch
@@ -598,13 +630,93 @@ document.addEventListener('DOMContentLoaded', function() {{
             applyTranslations('en');
             t = TRANSLATIONS.en;
             document.body.setAttribute('dir', 'ltr');
+            document.body.classList.remove('mongolian-script');
             updateDPIDisplay(); // Refresh DPI display with new language
+
+            // Uncheck Mongolian checkbox if checked
+            if (useMongolianCheckbox.checked) {{
+                useMongolianCheckbox.checked = false;
+            }}
+
+            // If OS default is English, hide the checkbox (we're back to default state)
+            if (detectedLang === 'en') {{
+                languageSwitch.classList.remove('show');
+                this.checked = false; // Uncheck for clean state
+            }}
         }} else {{
             // Switch back to detected language
             currentLang = detectedLang;
             applyTranslations(detectedLang);
             t = TRANSLATIONS[detectedLang] || TRANSLATIONS.en;
+
+            // Handle Mongolian script
+            if (detectedLang === 'mn-mong') {{
+                document.body.classList.add('mongolian-script');
+                // Check Mongolian checkbox if returning to mn-Mong
+                if (useMongolianCheckbox) {{
+                    useMongolianCheckbox.checked = true;
+                }}
+            }} else {{
+                document.body.classList.remove('mongolian-script');
+            }}
+
             updateDPIDisplay(); // Refresh DPI display with new language
+        }}
+
+        // If result box is shown, regenerate it in the new language
+        if (window.resultPDF) {{
+            showResultBox();
+        }}
+    }});
+
+    // Handle Mongolian script switch
+    useMongolianCheckbox.addEventListener('change', function() {{
+        if (this.checked) {{
+            // Switch to traditional Mongolian
+            currentLang = 'mn-mong';
+            applyTranslations('mn-mong');
+            t = TRANSLATIONS['mn-mong'] || TRANSLATIONS.en;
+            document.body.setAttribute('dir', 'ltr');
+            document.body.classList.add('mongolian-script');
+            updateDPIDisplay();
+
+            // Uncheck "Use English" if it was checked
+            if (useEnglishCheckbox.checked) {{
+                useEnglishCheckbox.checked = false;
+            }}
+
+            // Show "Use English" checkbox
+            languageSwitch.classList.add('show');
+        }} else {{
+            // Switch back to detected language
+            currentLang = detectedLang;
+            applyTranslations(detectedLang);
+            t = TRANSLATIONS[detectedLang] || TRANSLATIONS.en;
+
+            // Remove Mongolian script if switching away
+            if (detectedLang !== 'mn-mong') {{
+                document.body.classList.remove('mongolian-script');
+            }}
+
+            // Handle RTL for detected language
+            const rtlLanguages = new Set(['ar', 'he', 'ur', 'yi']);
+            if (rtlLanguages.has(detectedLang)) {{
+                document.body.setAttribute('dir', 'rtl');
+            }} else {{
+                document.body.setAttribute('dir', 'ltr');
+            }}
+
+            updateDPIDisplay();
+
+            // Hide Mongolian checkbox if OS language is not Mongolian-relevant
+            if (!isMongolianRelevant && detectedLang !== 'mn-mong') {{
+                mongolianSwitch.classList.remove('show');
+            }}
+        }}
+
+        // If result box is shown, regenerate it in the new language
+        if (window.resultPDF) {{
+            showResultBox();
         }}
     }});
 
@@ -1294,6 +1406,173 @@ document.addEventListener('DOMContentLoaded', function() {{
         }}
     }});
 
+    // Language selector modal functionality
+    const LANGUAGE_NAMES = {{
+        'af': 'Afrikaans', 'am': 'አማርኛ', 'ar': 'العربية', 'as': 'অসমীয়া', 'az': 'Azərbaycan',
+        'be': 'Беларуская', 'bg': 'Български', 'bn': 'বাংলা', 'bo': 'བོད་ཡིག', 'bs': 'Bosanski',
+        'ca': 'Català', 'cs': 'Čeština', 'da': 'Dansk', 'de': 'Deutsch', 'el': 'Ελληνικά',
+        'en': 'English', 'es': 'Español', 'et': 'Eesti', 'eu': 'Euskara', 'fa': 'فارسی',
+        'fi': 'Suomi', 'fr': 'Français', 'gl': 'Galego', 'gu': 'ગુજરાતી', 'he': 'עברית',
+        'hi': 'हिन्दी', 'hr': 'Hrvatski', 'hu': 'Magyar', 'hy': 'Հայերեն', 'id': 'Indonesia',
+        'is': 'Íslenska', 'it': 'Italiano', 'ja': '日本語', 'jv': 'Jawa', 'ka': 'ქართული',
+        'kk': 'Қазақ', 'km': 'ខ្មែរ', 'kn': 'ಕನ್ನಡ', 'ko': '한국어', 'ky': 'Кыргызча',
+        'lo': 'ລາວ', 'lt': 'Lietuvių', 'lv': 'Latviešu', 'mk': 'Македонски', 'ml': 'മലയാളം',
+        'mn': 'Монгол', 'mn-mong': 'ᠮᠣᠩᠭᠣᠯ', 'mr': 'मराठी', 'ms': 'Melayu', 'my': 'မြန်မာ', 'nb': 'Norsk (Bokmål)',
+        'ne': 'नेपाली', 'nl': 'Nederlands', 'nn': 'Norsk (Nynorsk)', 'or': 'ଓଡ଼ିଆ', 'pa': 'ਪੰਜਾਬੀ',
+        'pl': 'Polski', 'pt': 'Português', 'ro': 'Română', 'ru': 'Русский', 'si': 'සිංහල',
+        'sk': 'Slovenčina', 'sl': 'Slovenščina', 'sq': 'Shqip', 'sr-cyrl': 'Српски', 'sr-latn': 'Srpski',
+        'sv': 'Svenska', 'sw': 'Kiswahili',
+        'ta': 'தமிழ்', 'te': 'తెలుగు', 'tg': 'Тоҷикӣ', 'th': 'ไทย', 'tk': 'Türkmen',
+        'tl': 'Tagalog', 'tr': 'Türkçe', 'tt': 'Татар', 'uk': 'Українська', 'ur': 'اردو',
+        'uz': 'Oʻzbek', 'vi': 'Tiếng Việt', 'yi': 'ייִדיש', 'zh-hans': '简体中文', 'zh-hant': '繁體中文',
+        'zu': 'isiZulu'
+    }};
+
+    const languageModal = document.getElementById('languageModal');
+    const languageSelectorBtn = document.getElementById('languageSelectorBtn');
+    const closeLanguageModal = document.getElementById('closeLanguageModal');
+    const languageList = document.getElementById('languageList');
+
+    // Populate language list
+    function populateLanguageList() {{
+        languageList.innerHTML = '';
+
+        // Get all available languages and sort by code
+        const allLanguages = Object.keys(TRANSLATIONS).sort();
+
+        allLanguages.forEach(code => {{
+            const item = document.createElement('div');
+            item.className = 'language-item';
+            if (code === currentLang) {{
+                item.classList.add('active');
+            }}
+            // Make Mongolian script display vertically in the selector
+            if (code === 'mn-mong') {{
+                item.classList.add('mongolian-vertical');
+            }}
+
+            const nativeName = LANGUAGE_NAMES[code] || code.toUpperCase();
+            item.innerHTML = `<span class="language-code">${{code}}</span>${{nativeName}}`;
+
+            item.addEventListener('click', function() {{
+                // Switch language
+                currentLang = code;
+                applyTranslations(code);
+
+                // Handle "Use English" checkbox visibility and state
+                const languageSwitch = document.getElementById('languageSwitch');
+                if (code !== 'en') {{
+                    // Show and uncheck "Use English" checkbox for non-English languages
+                    if (languageSwitch) {{
+                        languageSwitch.classList.add('show');
+                    }}
+                    if (useEnglishCheckbox) {{
+                        useEnglishCheckbox.checked = false;
+                    }}
+                }} else {{
+                    // Hide checkbox when English is selected
+                    if (languageSwitch) {{
+                        languageSwitch.classList.remove('show');
+                    }}
+                }}
+
+                // Update RTL if needed
+                const rtlLanguages = new Set(['ar', 'he', 'ur', 'yi']);
+                if (rtlLanguages.has(code)) {{
+                    document.body.setAttribute('dir', 'rtl');
+                    document.body.classList.remove('mongolian-script');
+                }} else if (code === 'mn-mong') {{
+                    // Traditional Mongolian script - vertical writing
+                    document.body.setAttribute('dir', 'ltr');
+                    document.body.classList.add('mongolian-script');
+                }} else {{
+                    document.body.setAttribute('dir', 'ltr');
+                    document.body.classList.remove('mongolian-script');
+                }}
+
+                // Handle "Use Mongolian" checkbox visibility and state
+                const mongolianSwitch = document.getElementById('mongolianSwitch');
+                const useMongolianCheckbox = document.getElementById('useMongolianCheckbox');
+                if (code === 'mn-mong') {{
+                    // Show and check Mongolian checkbox when mn-Mong is selected
+                    if (mongolianSwitch) {{
+                        mongolianSwitch.classList.add('show');
+                    }}
+                    if (useMongolianCheckbox) {{
+                        useMongolianCheckbox.checked = true;
+                    }}
+                }} else {{
+                    // Uncheck Mongolian checkbox when other language is selected
+                    if (useMongolianCheckbox) {{
+                        useMongolianCheckbox.checked = false;
+                    }}
+                    // Keep showing if in Mongolian-relevant region
+                    // Mongolia + mainland China (Inner Mongolia), NOT Taiwan/HK/Macau/Singapore
+                    const mongolianRelevantRegions = ['mn', 'mn-mn', 'mn-mong', 'mn-mong-mn', 'mn-mong-cn',
+                                                      'zh', 'zh-cn', 'zh-hans', 'zh-hans-cn'];
+                    const isMongolianRelevant = mongolianRelevantRegions.some(region =>
+                        detectedLang === region || detectedLang.startsWith(region + '-'));
+                    if (!isMongolianRelevant && mongolianSwitch) {{
+                        mongolianSwitch.classList.remove('show');
+                    }}
+                }}
+
+                // Refresh DPI warning in new language
+                updateDPIWarning();
+
+                // If result box is shown, regenerate it in the new language
+                if (window.resultPDF) {{
+                    showResultBox();
+                }}
+
+                // Close all modals
+                const aboutModal = document.getElementById('aboutModal');
+                const licenseModal = document.getElementById('licenseModal');
+                if (aboutModal) {{
+                    aboutModal.classList.remove('show');
+                }}
+                if (licenseModal) {{
+                    licenseModal.classList.remove('show');
+                }}
+                languageModal.classList.remove('show');
+                if (typeof AndroidModalState !== 'undefined') {{
+                    AndroidModalState.setModalOpen(false);
+                }}
+            }});
+
+            languageList.appendChild(item);
+        }});
+    }}
+
+    if (languageSelectorBtn) {{
+        languageSelectorBtn.addEventListener('click', function() {{
+            populateLanguageList();
+            languageModal.classList.add('show');
+            if (typeof AndroidModalState !== 'undefined') {{
+                AndroidModalState.setModalOpen(true);
+            }}
+        }});
+    }}
+
+    if (closeLanguageModal) {{
+        closeLanguageModal.addEventListener('click', function() {{
+            languageModal.classList.remove('show');
+            if (typeof AndroidModalState !== 'undefined') {{
+                AndroidModalState.setModalOpen(false);
+            }}
+        }});
+    }}
+
+    // Close language modal when clicking outside
+    languageModal.addEventListener('click', function(e) {{
+        if (e.target === languageModal) {{
+            languageModal.classList.remove('show');
+            if (typeof AndroidModalState !== 'undefined') {{
+                AndroidModalState.setModalOpen(false);
+            }}
+        }}
+    }});
+
     // Source tarball functionality
     const sourceToggle = document.getElementById('sourceToggle');
     const sourceContent = document.getElementById('sourceContent');
@@ -1432,8 +1711,9 @@ document.addEventListener('DOMContentLoaded', function() {{
 </script>
 """
 
-    # Replace the JavaScript placeholder
+    # Replace placeholders
     full_html = html_template.replace('{{JAVASCRIPT}}', js_section)
+    full_html = full_html.replace('{{MONGOLIAN_FONT_BASE64}}', mongolian_font_b64)
 
     print(f"Full application HTML: {len(full_html):,} bytes")
 

@@ -99,6 +99,7 @@ python3 build.py
 - **PDF.js** - Mozilla PDF renderer (Apache 2.0)
 - **pako** - zlib compression (MIT)
 - **G4Enc** - CCITT encoder ported from C (Apache 2.0)
+- **Noto Sans Mongolian** - Traditional Mongolian script support (SIL OFL 1.1)
 
 ## License
 
@@ -111,6 +112,7 @@ Third-party components:
 - **pako** (MIT) - Vitaly Puzrin and Andrei Tuputcyn
 - **G4Enc** (Apache 2.0) - BitBank Software, Inc.
 - **libtiff** (BSD-style) - Sam Leffler, Silicon Graphics, Inc.
+- **Noto Sans Mongolian** (SIL OFL 1.1) - The Noto Project Authors
 
 See `LICENSES.md` for complete license texts and attribution.
 

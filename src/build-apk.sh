@@ -19,8 +19,8 @@ KEYSTORE_DIR="$PROJECT_ROOT/android-private"
 # Increment these for each Google Play release:
 #   versionCode: Integer, must increase with each release (1, 2, 3, ...)
 #   versionName: User-visible version string (e.g., "1.0", "1.1.0", "2.0")
-VERSION_CODE=7
-VERSION_NAME="1.0.6"
+VERSION_CODE=8
+VERSION_NAME="1.0.7"
 
 echo "Script directory: $SCRIPT_DIR"
 echo "Source directory: $SRC_DIR"
@@ -310,11 +310,15 @@ public class MainActivity extends ComponentActivity {
                         "(function() {" +
                             "var aboutModal = document.getElementById('aboutModal');" +
                             "var licenseModal = document.getElementById('licenseModal');" +
+                            "var languageModal = document.getElementById('languageModal');" +
                             "if (aboutModal && aboutModal.classList.contains('show')) {" +
                                 "aboutModal.classList.remove('show');" +
                             "}" +
                             "if (licenseModal && licenseModal.classList.contains('show')) {" +
                                 "licenseModal.classList.remove('show');" +
+                            "}" +
+                            "if (languageModal && languageModal.classList.contains('show')) {" +
+                                "languageModal.classList.remove('show');" +
                             "}" +
                         "})()",
                         null
@@ -1843,11 +1847,11 @@ from pathlib import Path
 # Android uses different codes for some languages
 LOCALE_MAPPING = {
     # Chinese
-    'zh-Hans': 'zh-rCN',  # Simplified Chinese
-    'zh-Hant': 'zh-rTW',  # Traditional Chinese
+    'zh-hans': 'zh-rCN',  # Simplified Chinese
+    'zh-hant': 'zh-rTW',  # Traditional Chinese
     # Serbian
-    'sr-Cyrl': 'sr',      # Serbian Cyrillic (default)
-    'sr-Latn': 'b+sr+Latn',  # Serbian Latin (BCP 47)
+    'sr-cyrl': 'sr',      # Serbian Cyrillic (default)
+    'sr-latn': 'b+sr+Latn',  # Serbian Latin (BCP 47)
     # Hebrew (Android legacy code)
     'he': 'iw',
     # Indonesian (Android legacy code)
@@ -1856,6 +1860,7 @@ LOCALE_MAPPING = {
     'yi': 'ji',
     # Filipino = Tagalog in Android
     'fil': 'tl',
+    # Note: mn-mong (Traditional Mongolian) is skipped - Android resource system doesn't support it
 }
 
 def extract_languages_from_i18n(i18n_dir):
@@ -1905,6 +1910,10 @@ def create_android_resources(languages, res_dir):
     created_count = 0
 
     for js_code, app_name in sorted(languages.items()):
+        # Skip mn-mong - Android resource system doesn't support it
+        if js_code == 'mn-mong':
+            continue
+
         android_code = js_to_android_locale(js_code)
 
         # Create directory name

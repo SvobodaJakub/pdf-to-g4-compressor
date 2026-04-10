@@ -13,73 +13,76 @@ const RTL_LANGUAGES = new Set(['ar', 'he', 'ur', 'yi']);
 // Locale fallback map: specific locale → fallback chain
 const LOCALE_FALLBACK = {
     // German variants
-    'de-AT': 'de', 'de-CH': 'de', 'de-BE': 'de', 'de-LI': 'de',
+    'de-at': 'de', 'de-ch': 'de', 'de-be': 'de', 'de-li': 'de',
     // English variants
-    'en-GB': 'en', 'en-US': 'en', 'en-AU': 'en', 'en-NZ': 'en', 'en-CA': 'en', 'en-IN': 'en', 'en-ZA': 'en',
+    'en-gb': 'en', 'en-us': 'en', 'en-au': 'en', 'en-nz': 'en', 'en-ca': 'en', 'en-in': 'en', 'en-za': 'en',
     // Spanish variants
-    'es-MX': 'es', 'es-AR': 'es', 'es-CO': 'es', 'es-CL': 'es', 'es-PE': 'es', 'es-VE': 'es',
+    'es-mx': 'es', 'es-ar': 'es', 'es-co': 'es', 'es-cl': 'es', 'es-pe': 'es', 'es-ve': 'es',
     // Portuguese variants
-    'pt-BR': 'pt', 'pt-PT': 'pt',
+    'pt-br': 'pt', 'pt-pt': 'pt',
     // French variants
-    'fr-CA': 'fr', 'fr-BE': 'fr', 'fr-CH': 'fr',
-    // Chinese variants
-    'zh-CN': 'zh-Hans', 'zh-SG': 'zh-Hans', 'zh-Hans-CN': 'zh-Hans', 'zh-Hans-SG': 'zh-Hans',
-    'zh-TW': 'zh-Hant', 'zh-HK': 'zh-Hant', 'zh-MO': 'zh-Hant', 'zh-Hant-TW': 'zh-Hant', 'zh-Hant-HK': 'zh-Hant',
+    'fr-ca': 'fr', 'fr-be': 'fr', 'fr-ch': 'fr',
+    // Chinese variants (keys must be lowercase to match detectLanguage)
+    'zh': 'zh-hans',  // Plain 'zh' defaults to Simplified Chinese
+    'zh-cn': 'zh-hans', 'zh-sg': 'zh-hans', 'zh-hans-cn': 'zh-hans', 'zh-hans-sg': 'zh-hans',
+    'zh-tw': 'zh-hant', 'zh-hk': 'zh-hant', 'zh-mo': 'zh-hant', 'zh-hant-tw': 'zh-hant', 'zh-hant-hk': 'zh-hant',
     // Arabic variants
-    'ar-EG': 'ar', 'ar-SA': 'ar', 'ar-MA': 'ar', 'ar-DZ': 'ar', 'ar-TN': 'ar', 'ar-SY': 'ar', 'ar-IQ': 'ar',
+    'ar-eg': 'ar', 'ar-sa': 'ar', 'ar-ma': 'ar', 'ar-dz': 'ar', 'ar-tn': 'ar', 'ar-sy': 'ar', 'ar-iq': 'ar',
     // Swedish variants
-    'sv-SE': 'sv', 'sv-FI': 'sv',
+    'sv-se': 'sv', 'sv-fi': 'sv',
     // Norwegian variants
-    'nb-NO': 'nb', 'nn-NO': 'nn', 'no-NO': 'nb',
+    'nb-no': 'nb', 'nn-no': 'nn', 'no-no': 'nb',
     // Polish variants
-    'pl-PL': 'pl', 'pl-US': 'pl',
+    'pl-pl': 'pl', 'pl-us': 'pl',
     // Urdu variants
-    'ur-PK': 'ur', 'ur-IN': 'ur',
+    'ur-pk': 'ur', 'ur-in': 'ur',
     // Punjabi variants
-    'pa-IN': 'pa', 'pa-PK': 'pa',
+    'pa-in': 'pa', 'pa-pk': 'pa',
     // Indonesian variants
-    'id-ID': 'id',
+    'id-id': 'id',
     // Tagalog/Filipino variants
-    'tl-PH': 'tl', 'fil-PH': 'fil',
+    'tl-ph': 'tl', 'fil-ph': 'tl', 'fil': 'tl',  // Android uses 'fil' but we have 'tl' translation
     // Vietnamese variants
-    'vi-VN': 'vi',
+    'vi-vn': 'vi',
     // Thai variants
-    'th-TH': 'th',
+    'th-th': 'th',
     // Azerbaijani variants
-    'az-AZ': 'az',
+    'az-az': 'az',
     // Uzbek variants
-    'uz-UZ': 'uz',
+    'uz-uz': 'uz',
     // Kazakh variants
-    'kk-KZ': 'kk',
+    'kk-kz': 'kk',
     // Georgian variants
-    'ka-GE': 'ka',
+    'ka-ge': 'ka',
     // Armenian variants
-    'hy-AM': 'hy',
+    'hy-am': 'hy',
     // Belarusian variants
-    'be-BY': 'be',
+    'be-by': 'be',
     // Mongolian variants
-    'mn-MN': 'mn',
+    'mn-mn': 'mn',
+    'mn-mong-mn': 'mn-mong', 'mn-mong-cn': 'mn-mong',
+    // Note: Plain 'mn-Mong' without region is handled by exact match, but listed here for clarity
     // Amharic variants
-    'am-ET': 'am',
+    'am-et': 'am',
     // Sinhala variants
-    'si-LK': 'si',
+    'si-lk': 'si',
     // Bosnian variants
-    'bs-BA': 'bs',
+    'bs-ba': 'bs',
     // Macedonian variants
-    'mk-MK': 'mk',
+    'mk-mk': 'mk',
     // Croatian variants
-    'hr-HR': 'hr', 'hr-BA': 'hr',
+    'hr-hr': 'hr', 'hr-ba': 'hr',
     // Serbian variants - Cyrillic (default)
-    'sr': 'sr-Cyrl', 'sr-RS': 'sr-Cyrl', 'sr-BA': 'sr-Cyrl', 'sr-ME': 'sr-Cyrl',
-    'sr-Cyrl-RS': 'sr-Cyrl', 'sr-Cyrl-BA': 'sr-Cyrl', 'sr-Cyrl-ME': 'sr-Cyrl',
+    'sr': 'sr-cyrl', 'sr-rs': 'sr-cyrl', 'sr-ba': 'sr-cyrl', 'sr-me': 'sr-cyrl',
+    'sr-cyrl-rs': 'sr-cyrl', 'sr-cyrl-ba': 'sr-cyrl', 'sr-cyrl-me': 'sr-cyrl',
     // Serbian variants - Latin
-    'sr-Latn-RS': 'sr-Latn', 'sr-Latn-BA': 'sr-Latn', 'sr-Latn-ME': 'sr-Latn',
+    'sr-latn-rs': 'sr-latn', 'sr-latn-ba': 'sr-latn', 'sr-latn-me': 'sr-latn',
     // Catalan variants
-    'ca-ES': 'ca', 'ca-AD': 'ca',
+    'ca-es': 'ca', 'ca-ad': 'ca',
     // Basque variants
-    'eu-ES': 'eu',
+    'eu-es': 'eu',
     // Tibetan variants
-    'bo-CN': 'bo', 'bo-IN': 'bo',
+    'bo-cn': 'bo', 'bo-in': 'bo',
 };
 
 const TRANSLATIONS = {
