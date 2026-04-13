@@ -11,78 +11,81 @@
 const RTL_LANGUAGES = new Set(['ar', 'he', 'ur', 'yi']);
 
 // Locale fallback map: specific locale → fallback chain
+// Keys use proper BCP 47 casing: language-Script-REGION
 const LOCALE_FALLBACK = {
     // German variants
-    'de-at': 'de', 'de-ch': 'de', 'de-be': 'de', 'de-li': 'de',
+    'de-AT': 'de', 'de-CH': 'de', 'de-BE': 'de', 'de-LI': 'de',
     // English variants
-    'en-gb': 'en', 'en-us': 'en', 'en-au': 'en', 'en-nz': 'en', 'en-ca': 'en', 'en-in': 'en', 'en-za': 'en',
+    'en-GB': 'en', 'en-US': 'en', 'en-AU': 'en', 'en-NZ': 'en', 'en-CA': 'en', 'en-IN': 'en', 'en-ZA': 'en',
     // Spanish variants
-    'es-mx': 'es', 'es-ar': 'es', 'es-co': 'es', 'es-cl': 'es', 'es-pe': 'es', 'es-ve': 'es',
+    'es-MX': 'es', 'es-AR': 'es', 'es-CO': 'es', 'es-CL': 'es', 'es-PE': 'es', 'es-VE': 'es',
     // Portuguese variants
-    'pt-br': 'pt', 'pt-pt': 'pt',
+    'pt-BR': 'pt', 'pt-PT': 'pt',
     // French variants
-    'fr-ca': 'fr', 'fr-be': 'fr', 'fr-ch': 'fr',
-    // Chinese variants (keys must be lowercase to match detectLanguage)
-    'zh': 'zh-hans',  // Plain 'zh' defaults to Simplified Chinese
-    'zh-cn': 'zh-hans', 'zh-sg': 'zh-hans', 'zh-hans-cn': 'zh-hans', 'zh-hans-sg': 'zh-hans',
-    'zh-tw': 'zh-hant', 'zh-hk': 'zh-hant', 'zh-mo': 'zh-hant', 'zh-hant-tw': 'zh-hant', 'zh-hant-hk': 'zh-hant',
+    'fr-CA': 'fr', 'fr-BE': 'fr', 'fr-CH': 'fr',
+    // Chinese variants
+    'zh': 'zh-Hans',  // Plain 'zh' defaults to Simplified Chinese
+    'zh-CN': 'zh-Hans', 'zh-SG': 'zh-Hans', 'zh-Hans-CN': 'zh-Hans', 'zh-Hans-SG': 'zh-Hans',
+    'zh-TW': 'zh-Hant', 'zh-HK': 'zh-Hant', 'zh-MO': 'zh-Hant', 'zh-Hant-TW': 'zh-Hant', 'zh-Hant-HK': 'zh-Hant',
     // Arabic variants
-    'ar-eg': 'ar', 'ar-sa': 'ar', 'ar-ma': 'ar', 'ar-dz': 'ar', 'ar-tn': 'ar', 'ar-sy': 'ar', 'ar-iq': 'ar',
+    'ar-EG': 'ar', 'ar-SA': 'ar', 'ar-MA': 'ar', 'ar-DZ': 'ar', 'ar-TN': 'ar', 'ar-SY': 'ar', 'ar-IQ': 'ar',
     // Swedish variants
-    'sv-se': 'sv', 'sv-fi': 'sv',
+    'sv-SE': 'sv', 'sv-FI': 'sv',
     // Norwegian variants
-    'nb-no': 'nb', 'nn-no': 'nn', 'no-no': 'nb',
+    'nb-NO': 'nb', 'nn-NO': 'nn', 'no-NO': 'nb',
     // Polish variants
-    'pl-pl': 'pl', 'pl-us': 'pl',
+    'pl-PL': 'pl', 'pl-US': 'pl',
     // Urdu variants
-    'ur-pk': 'ur', 'ur-in': 'ur',
+    'ur-PK': 'ur', 'ur-IN': 'ur',
     // Punjabi variants
-    'pa-in': 'pa', 'pa-pk': 'pa',
+    'pa-IN': 'pa', 'pa-PK': 'pa',
     // Indonesian variants
-    'id-id': 'id',
+    'id-ID': 'id',
     // Tagalog/Filipino variants
-    'tl-ph': 'tl', 'fil-ph': 'tl', 'fil': 'tl',  // Android uses 'fil' but we have 'tl' translation
+    'tl-PH': 'tl', 'fil-PH': 'tl', 'fil': 'tl',  // Android uses 'fil' but we have 'tl' translation
     // Vietnamese variants
-    'vi-vn': 'vi',
+    'vi-VN': 'vi',
     // Thai variants
-    'th-th': 'th',
+    'th-TH': 'th',
     // Azerbaijani variants
-    'az-az': 'az',
+    'az-AZ': 'az',
     // Uzbek variants
-    'uz-uz': 'uz',
+    'uz-UZ': 'uz',
     // Kazakh variants
-    'kk-kz': 'kk',
+    'kk-KZ': 'kk',
     // Georgian variants
-    'ka-ge': 'ka',
+    'ka-GE': 'ka',
     // Armenian variants
-    'hy-am': 'hy',
+    'hy-AM': 'hy',
     // Belarusian variants
-    'be-by': 'be',
+    'be-BY': 'be',
     // Mongolian variants
-    'mn-mn': 'mn',
-    'mn-mong-mn': 'mn-mong', 'mn-mong-cn': 'mn-mong',
-    // Note: Plain 'mn-Mong' without region is handled by exact match, but listed here for clarity
+    'mn-MN': 'mn',
+    'mn-Mong-MN': 'mn-Mong', 'mn-Mong-CN': 'mn-Mong',
+    // Note: Plain 'mn-Mong' without region is handled by exact TRANSLATIONS match
     // Amharic variants
-    'am-et': 'am',
+    'am-ET': 'am',
     // Sinhala variants
-    'si-lk': 'si',
+    'si-LK': 'si',
     // Bosnian variants
-    'bs-ba': 'bs',
+    'bs-BA': 'bs',
     // Macedonian variants
-    'mk-mk': 'mk',
+    'mk-MK': 'mk',
     // Croatian variants
-    'hr-hr': 'hr', 'hr-ba': 'hr',
+    'hr-HR': 'hr', 'hr-BA': 'hr',
     // Serbian variants - Cyrillic (default)
-    'sr': 'sr-cyrl', 'sr-rs': 'sr-cyrl', 'sr-ba': 'sr-cyrl', 'sr-me': 'sr-cyrl',
-    'sr-cyrl-rs': 'sr-cyrl', 'sr-cyrl-ba': 'sr-cyrl', 'sr-cyrl-me': 'sr-cyrl',
+    'sr': 'sr-Cyrl', 'sr-RS': 'sr-Cyrl', 'sr-BA': 'sr-Cyrl', 'sr-ME': 'sr-Cyrl',
+    'sr-Cyrl-RS': 'sr-Cyrl', 'sr-Cyrl-BA': 'sr-Cyrl', 'sr-Cyrl-ME': 'sr-Cyrl',
     // Serbian variants - Latin
-    'sr-latn-rs': 'sr-latn', 'sr-latn-ba': 'sr-latn', 'sr-latn-me': 'sr-latn',
+    'sr-Latn-RS': 'sr-Latn', 'sr-Latn-BA': 'sr-Latn', 'sr-Latn-ME': 'sr-Latn',
+    // Serbo-Croatian (deprecated BCP 47 code, but still reported by browsers)
+    'sh': 'sr-Latn',
     // Catalan variants
-    'ca-es': 'ca', 'ca-ad': 'ca',
+    'ca-ES': 'ca', 'ca-AD': 'ca',
     // Basque variants
-    'eu-es': 'eu',
+    'eu-ES': 'eu',
     // Tibetan variants
-    'bo-cn': 'bo', 'bo-in': 'bo',
+    'bo-CN': 'bo', 'bo-IN': 'bo',
 };
 
 const TRANSLATIONS = {
@@ -313,13 +316,36 @@ const TRANSLATIONS = {
     // Continue in next file due to length...
 };
 
+/**
+ * Normalize a locale tag to proper BCP 47 casing:
+ *   language (lowercase) - Script (titlecase) - REGION (uppercase)
+ * e.g. "zh-hans-cn" → "zh-Hans-CN", "MN-MONG" → "mn-Mong"
+ */
+function normalizeBCP47(tag) {
+    var parts = tag.split('-');
+    parts[0] = parts[0].toLowerCase();
+    for (var i = 1; i < parts.length; i++) {
+        if (parts[i].length === 4) {
+            // Script subtag: Title case (e.g., Hans, Mong, Cyrl, Latn)
+            parts[i] = parts[i][0].toUpperCase() + parts[i].slice(1).toLowerCase();
+        } else if (parts[i].length === 2) {
+            // Region subtag: UPPERCASE (e.g., US, CN, MN)
+            parts[i] = parts[i].toUpperCase();
+        } else {
+            // Language or other: lowercase (e.g., fil)
+            parts[i] = parts[i].toLowerCase();
+        }
+    }
+    return parts.join('-');
+}
+
 // Language detection with regional fallback
 function detectLanguage() {
     // Get browser language(s)
     const languages = navigator.languages || [navigator.language || navigator.userLanguage || 'en'];
 
     for (let locale of languages) {
-        locale = locale.toLowerCase();
+        locale = normalizeBCP47(locale);
 
         // Try exact match first
         if (TRANSLATIONS[locale]) {
@@ -345,6 +371,9 @@ function detectLanguage() {
 // Apply translations
 function applyTranslations(lang) {
     const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
+
+    // Set document language for screen readers
+    document.documentElement.lang = lang;
 
     // Set RTL direction
     if (RTL_LANGUAGES.has(lang)) {

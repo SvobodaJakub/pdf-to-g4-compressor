@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
     <meta name="description" content="Compress PDFs to monochrome CCITT Group 4 format offline">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -323,7 +324,7 @@
             border: 1px solid #f5c6cb;
         }
 
-        button {
+        button, .action-btn {
             width: 100%;
             background: #764ba2;
             color: white;
@@ -334,13 +335,15 @@
             font-weight: 600;
             cursor: pointer;
             transition: background 0.3s;
+            text-align: center;
+            box-sizing: border-box;
         }
 
-        button:hover:not(:disabled) {
+        button:hover:not(:disabled), .action-btn:hover:not(.disabled) {
             background: #6a4291;
         }
 
-        button:disabled {
+        button:disabled, .action-btn.disabled {
             background: #ccc;
             cursor: not-allowed;
         }
@@ -483,6 +486,42 @@
             justify-content: center;
         }
 
+        /* Privacy Modal */
+        #privacyModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            padding: 20px;
+            overflow: auto;
+            /* Always LTR horizontal for English-only content */
+            direction: ltr !important;
+            writing-mode: horizontal-tb !important;
+            text-orientation: mixed !important;
+        }
+
+        #privacyModal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Privacy icon */
+        .privacy-icon-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .privacy-cloud-icon {
+            width: 200px;
+            height: 160px;
+            display: inline-block;
+        }
+
         .modal-content {
             background: white;
             border-radius: 8px;
@@ -546,6 +585,7 @@
             padding: 15px;
             border-radius: 4px;
             overflow-x: auto;
+            font-family: monospace;
             font-size: 11px;
             line-height: 1.4;
         }
@@ -660,44 +700,70 @@
             text-align: right;
         }
 
-        /* Traditional Mongolian script support */
+        /* Traditional Mongolian script support
+         *
+         * Key insight: writing-mode goes on the CONTAINER, not the body.
+         * Putting it on the body creates an orthogonal flow with html,
+         * making the body shrink-to-fit its content width instead of
+         * filling the viewport — which breaks responsive layout on mobile.
+         *
+         * Body stays in normal horizontal-tb mode = identical responsive
+         * layout to every other language. The container becomes the
+         * vertical-lr scroll viewport.
+         */
         body.mongolian-script {
-            writing-mode: vertical-lr;
-            text-orientation: sideways;
             font-family: 'Noto Sans Mongolian', serif;
-            /* Adjust gradient for vertical layout - flows left to right */
-            background: linear-gradient(to right, #667eea 0%, #764ba2 100%);
-            /* Ensure body extends full width to prevent gradient tiling */
-            min-width: 100vw;
+            background: #667eea;
+            /* Everything else inherited from normal body:
+               min-height: 100vh; display: flex; align-items: center;
+               justify-content: center; padding: 20px; */
         }
         body.mongolian-script .container {
-            max-width: none;
-            max-height: 600px;
-            height: 100vh;
-            width: auto;
+            writing-mode: vertical-lr;
+            text-orientation: sideways;
+            /* Flex layout so we can align-self:center individual children */
             display: flex;
             flex-direction: column;
-            align-items: center;
+            /* Fill available viewport height so columns use full screen */
+            height: calc(100vh - 40px);
+            /* Width grows with content columns; no max-width cap */
+            width: auto;
+            max-width: none;
+            /* Horizontal scroll for columns, no vertical scroll */
+            overflow-x: auto;
+            overflow-y: hidden;
+            /* Visual styles (background, border-radius, box-shadow, padding)
+               inherited from base .container rule so dark mode can override */
         }
         body.mongolian-script button,
+        body.mongolian-script .action-btn,
         body.mongolian-script input,
         body.mongolian-script select,
         body.mongolian-script textarea {
             font-family: 'Noto Sans Mongolian', serif;
         }
-        body.mongolian-script button {
-            /* In vertical mode, width becomes height, so reset and use auto width */
+        /* Android WebView bug: writing-mode doesn't inherit properly
+           from parent to children. Force it on all descendants. */
+        body.mongolian-script .container * {
+            writing-mode: vertical-lr;
+            text-orientation: sideways;
+        }
+        /* In vertical-lr, width:100% on buttons becomes unbounded
+           because container has width:auto. Use auto width and
+           center vertically via align-self on the flex cross-axis. */
+        body.mongolian-script .container button,
+        body.mongolian-script .container .action-btn {
             width: auto;
             align-self: center;
         }
 
-        /* Language selector button */
-        .language-selector-button {
+        /* Help/Demo replay button */
+        .help-button {
             position: fixed;
-            bottom: 20px;
+            bottom: 65px;
             left: 20px;
-            width: 50px;
-            height: 50px;
+            width: 35px;
+            height: 35px;
             background: rgba(102, 126, 234, 0.15);
             border-radius: 50%;
             border: 1px solid rgba(102, 126, 234, 0.2);
@@ -705,6 +771,81 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            padding: 0;
+            z-index: 9999;
+            transition: background 0.3s, transform 0.2s, border-color 0.3s;
+            font-size: 24px;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 0.9);
+            font-family: serif;
+            /* Always keep button in LTR horizontal mode regardless of page writing mode */
+            direction: ltr !important;
+            writing-mode: horizontal-tb !important;
+            text-orientation: mixed !important;
+        }
+
+        .help-button:hover {
+            background: rgba(102, 126, 234, 0.25);
+            border-color: rgba(102, 126, 234, 0.5);
+            transform: scale(1.05);
+        }
+
+        /* Intro overlay for Mongolian mode */
+        body.mongolian-script .intro-overlay {
+            background: #667eea;
+        }
+        body.mongolian-script .intro-container {
+            writing-mode: vertical-lr;
+            text-orientation: sideways;
+            display: flex;
+            flex-direction: column;
+            /* Same sizing approach as main .container */
+            height: calc(100vh - 80px);
+            width: auto;
+            max-width: none;
+        }
+        /* Android WebView bug: force writing-mode on all intro descendants */
+        body.mongolian-script .intro-container * {
+            writing-mode: vertical-lr;
+            text-orientation: sideways;
+        }
+        /* Intro elements: fix width and centering for vertical-lr */
+        body.mongolian-script .intro-compress-btn,
+        body.mongolian-script .intro-save-btn {
+            width: auto;
+            align-self: center;
+        }
+        /* Offline prelude: text vertical, cloud icon stays normal but smaller */
+        body.mongolian-script .intro-offline-message {
+            writing-mode: vertical-lr;
+            text-orientation: sideways;
+        }
+        body.mongolian-script .intro-cloud-icon {
+            writing-mode: horizontal-tb;
+            text-orientation: mixed;
+            width: 160px;
+            height: 128px;
+            margin-bottom: 0;
+        }
+        body.mongolian-script .intro-privacy-text {
+            margin-top: 5px;
+        }
+
+        /* Language selector button */
+        .language-selector-button {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 35px;
+            height: 35px;
+            background: rgba(102, 126, 234, 0.15);
+            border-radius: 50%;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
             z-index: 9999;
             transition: background 0.3s, transform 0.2s, border-color 0.3s;
             /* Always keep button in LTR horizontal mode regardless of page writing mode */
@@ -720,21 +861,9 @@
         }
 
         .language-selector-button svg {
-            width: 46px;
-            height: 46px;
-        }
-
-        /* Fix button staying circular in Mongolian vertical mode */
-        body.mongolian-script .language-selector-button {
-            width: 50px;
-            height: 50px;
-            min-width: 50px;
-            min-height: 50px;
-        }
-
-        body.mongolian-script .language-selector-button svg {
-            width: 46px;
-            height: 46px;
+            width: 16px;
+            height: 16px;
+            display: block;
         }
 
         /* Language selector modal */
@@ -809,6 +938,535 @@
             align-items: center;
             justify-content: center;
         }
+
+        /* ===================================================================
+           INTRO ANIMATION STYLES
+           Visual tutorial that runs on every load (no persistent state)
+           Overlay approach - demo is separate layer on top of normal UI
+           =================================================================== */
+
+        /* Intro overlay - full screen on top of normal UI */
+        .intro-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            z-index: 100000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            opacity: 0;
+            transition: opacity 0.8s ease-out;
+        }
+
+        .intro-overlay.visible {
+            opacity: 1;
+        }
+
+        .intro-overlay.intro-fading-out {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Intro container - mimics the normal container but simplified */
+        .intro-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+            opacity: 0;
+            transition: opacity 0.3s ease-out;
+        }
+
+        /* Intro offline message */
+        .intro-offline-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+        }
+
+        .intro-offline-message.visible {
+            opacity: 1;
+            transform: translate(-50%, -50%);
+        }
+
+        .intro-offline-message.fading {
+            opacity: 0;
+            transform: translate(-50%, -40%);
+        }
+
+        .intro-cloud-icon {
+            width: 480px;
+            height: 384px;
+            margin-bottom: -20px;
+        }
+
+        .intro-privacy-text {
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            max-width: 90%;
+            line-height: 1.4;
+            padding: 0 10px;
+        }
+
+        /* Intro upload area */
+        .intro-upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        /* Intro choose button */
+        .intro-choose-btn {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 6px;
+            border: none;
+            font-weight: 500;
+            font-size: 16px;
+            cursor: default;
+            transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+        }
+
+        .intro-choose-btn.intro-depressed {
+            transform: scale(0.95);
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        /* Intro compress button */
+        .intro-compress-btn {
+            width: 100%;
+            background: #764ba2;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: default;
+            text-align: center;
+            transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+        }
+
+        .intro-compress-btn.intro-disabled {
+            background: #ccc;
+        }
+
+        .intro-compress-btn.intro-depressed {
+            transform: scale(0.95);
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        /* Intro PDF icon */
+        .intro-pdf-icon {
+            position: fixed;
+            z-index: 1; /* Relative to overlay */
+            pointer-events: none;
+            opacity: 0;
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translate(-50%, -50%);
+        }
+
+        .intro-pdf-icon.visible {
+            opacity: 1;
+        }
+
+        .intro-pdf-icon.fading {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.8);
+        }
+
+        /* Icon sizes */
+        .intro-pdf-icon.size-large svg {
+            width: 80px;
+            height: 100px;
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+        }
+
+        .intro-pdf-icon.size-small svg {
+            width: 50px;
+            height: 62px;
+            filter: drop-shadow(0 2px 6px rgba(0,0,0,0.2));
+            transition: all 0.4s ease-out;
+        }
+
+        /* Intro compression result */
+        .intro-result {
+            margin-top: 20px;
+            padding: 0;
+            background: transparent;
+            border-radius: 6px;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+        }
+
+        .intro-result.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .intro-result-content {
+            background: #d4edda;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        .intro-size-change {
+            color: #155724;
+            font-size: 20px;
+            font-weight: 700;
+            display: block;
+        }
+
+        /* Intro save button */
+        .intro-save-btn {
+            width: 100%;
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: default;
+            text-align: center;
+            transition: all 0.3s ease-out;
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        .intro-save-btn.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .intro-save-btn.intro-depressed {
+            transform: scale(0.95) translateY(0);
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        /* Ensure smooth animations (epilepsy-friendly) */
+        @media (prefers-reduced-motion: reduce) {
+            .intro-pdf-icon,
+            .intro-result,
+            .intro-save-btn,
+            body.intro-exiting,
+            body.intro-exiting::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* ===================================================================
+           DARK MODE
+           Automatically detected via prefers-color-scheme
+           Works in all modern browsers and Android WebView
+           =================================================================== */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: linear-gradient(135deg, #3d4b7a 0%, #4a2f5e 100%);
+            }
+
+            .container {
+                background: #1e1e1e;
+                color: #e0e0e0;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+            }
+
+            h1 {
+                color: #e0e0e0;
+            }
+
+            .subtitle {
+                color: #b0b0b0;
+            }
+
+            .upload-area {
+                border-color: #444;
+                background: #2a2a2a;
+            }
+
+            .upload-area:hover {
+                border-color: #667eea;
+                background: #2f2f3a;
+            }
+
+            .upload-area.dragover {
+                background: #353545;
+            }
+
+            label[for="pdfFile"] {
+                background: #667eea;
+                color: white;
+            }
+
+            label[for="pdfFile"]:hover {
+                background: #5568d3;
+            }
+
+            .filename {
+                color: #e0e0e0;
+            }
+
+            .option-group {
+                background: #2a2a2a;
+            }
+
+            .option-label {
+                color: #e0e0e0;
+            }
+
+            .radio-option label {
+                color: #b0b0b0;
+            }
+
+            .page-range-input,
+            .dpi-value input {
+                background: #2a2a2a;
+                border-color: #444;
+                color: #e0e0e0;
+            }
+
+            .page-range-input:focus,
+            .dpi-value input:focus {
+                border-color: #667eea;
+            }
+
+            .page-range-input:disabled {
+                background: #1e1e1e;
+                color: #666;
+            }
+
+            .input-hint,
+            .dpi-dimensions {
+                color: #888;
+            }
+
+            .dpi-slider {
+                background: #444;
+            }
+
+            .dpi-value {
+                color: #667eea;
+            }
+
+            button, .action-btn {
+                background: #5a3d7a;
+            }
+
+            button:hover:not(:disabled), .action-btn:hover:not(.disabled) {
+                background: #4d3368;
+            }
+
+            button:disabled, .action-btn.disabled {
+                background: #3a3a3a;
+            }
+
+            #progress {
+                background: #1e3a52;
+                color: #64b5f6;
+            }
+
+            .credits {
+                border-top-color: #333;
+                color: #888;
+            }
+
+            .credits a {
+                color: #8fa3ea;
+            }
+
+            .language-switch {
+                background: #2a2a2a;
+            }
+
+            .language-switch label {
+                color: #b0b0b0;
+            }
+
+            /* Modals */
+            .modal-content {
+                background: #1e1e1e;
+                color: #e0e0e0;
+            }
+
+            .modal-content h2,
+            .modal-content h3 {
+                color: #e0e0e0;
+            }
+
+            .modal-content p,
+            .modal-content ul,
+            .modal-content li {
+                color: #b0b0b0;
+            }
+
+            .modal-content pre {
+                background: #2a2a2a;
+                color: #e0e0e0;
+            }
+
+            .modal-close {
+                color: #888;
+            }
+
+            .modal-close:hover {
+                color: #e0e0e0;
+            }
+
+            .license-section {
+                border-bottom-color: #333;
+            }
+
+            .source-section {
+                border-top-color: #667eea;
+            }
+
+            .source-toggle {
+                color: #8fa3ea;
+            }
+
+            .source-textarea {
+                background: #2a2a2a;
+                border-color: #444;
+                color: #e0e0e0;
+            }
+
+            .source-download {
+                background: #667eea;
+            }
+
+            .source-download:hover {
+                background: #5568d3;
+            }
+
+            .source-hint {
+                color: #888;
+            }
+
+            /* Help button */
+            .help-button {
+                background: rgba(102, 126, 234, 0.2);
+                border-color: rgba(102, 126, 234, 0.3);
+            }
+
+            .help-button:hover {
+                background: rgba(102, 126, 234, 0.35);
+                border-color: rgba(102, 126, 234, 0.6);
+            }
+
+            /* Language selector */
+            .language-selector-button {
+                background: rgba(102, 126, 234, 0.2);
+                border-color: rgba(102, 126, 234, 0.3);
+            }
+
+            .language-selector-button:hover {
+                background: rgba(102, 126, 234, 0.35);
+                border-color: rgba(102, 126, 234, 0.6);
+            }
+
+            .language-item {
+                background: #2a2a2a;
+            }
+
+            .language-item:hover {
+                background: #3a3a3a;
+            }
+
+            .language-item.active {
+                background: #667eea;
+                color: white;
+            }
+
+            .language-code {
+                color: #888;
+            }
+
+            .language-item.active .language-code {
+                color: #ddd;
+            }
+
+            /* GitHub corner - invert colors for dark mode */
+            .github-corner svg {
+                fill: #4a3d5a;
+            }
+
+            /* Intro overlay */
+            .intro-overlay {
+                background: linear-gradient(135deg, #3d4b7a 0%, #4a2f5e 100%);
+            }
+
+            .intro-container {
+                background: #1e1e1e;
+            }
+
+            .intro-upload-area {
+                border-color: #444;
+            }
+
+            .intro-compress-btn {
+                background: #5a3d7a;
+            }
+
+            .intro-compress-btn.intro-disabled {
+                background: #3a3a3a;
+            }
+
+            .intro-result-content {
+                background: #1e3a2a;
+            }
+
+            .intro-size-change {
+                color: #81c784;
+            }
+
+            .intro-save-btn {
+                background: #2e7d32;
+            }
+
+            /* Mongolian script dark mode */
+            body.mongolian-script {
+                background: #3d4b7a;
+            }
+            body.mongolian-script .intro-overlay {
+                background: #3d4b7a;
+            }
+        }
+    </style>
+
+    <!-- Placeholder for intro overlay - normal UI loads underneath -->
+    <script>
+        // Mark that intro will be shown (used to prevent early interactions)
+        document.documentElement.classList.add('intro-mode-loading');
+    </script>
+    <style>
+        /* Hide main UI until intro completes */
+        html.intro-mode-loading .container {
+            opacity: 0 !important;
+        }
     </style>
 </head>
 <body>
@@ -821,21 +1479,21 @@
         </svg>
     </a>
 
-    <div class="container">
+    <main class="container">
         <h1 data-i18n="title">PDF Monochrome G4 Compressor</h1>
         <p class="subtitle" data-i18n="subtitle">Compress PDFs by reducing colors to bilevel monochrome, by reducing DPI resolution, and by using the efficient CCITT Group 4 compression inside PDF, also known as ITU-T T.6 or MMR or Fax compression.</p>
-        <p class="subtitle" style="color: #667eea; font-weight: 500;"><span data-i18n="privacyNotice">🔒 Works 100% offline. Your PDFs never leave your device.</span></p>
+        <p class="subtitle" style="color: #667eea; font-weight: 500;"><a href="javascript:void(0)" id="showPrivacy" style="color: #667eea; text-decoration: none; cursor: pointer;"><span data-i18n="privacyNotice">🔒 Works 100% offline. Your PDFs never leave your device.</span></a></p>
 
-        <div class="upload-area" id="uploadArea">
-            <input type="file" id="pdfFile" accept="application/pdf">
-            <label for="pdfFile" data-i18n="chooseFile">Choose PDF File</label>
-            <div class="filename" id="filename"></div>
+        <div class="upload-area" id="uploadArea" role="group" aria-labelledby="uploadAreaLabel">
+            <input type="file" id="pdfFile" accept="application/pdf,application/zip,.pdf,.zip">
+            <label for="pdfFile" data-i18n="chooseFile" id="uploadAreaLabel">Choose PDF File</label>
+            <div class="filename" id="filename" aria-live="polite"></div>
         </div>
 
-        <div class="options">
+        <div class="options" role="group" aria-label="Compression options">
             <div class="option-group">
-                <span class="option-label" data-i18n="conversionMode">Conversion Mode:</span>
-                <div class="radio-group">
+                <span class="option-label" data-i18n="conversionMode" id="conversionModeLabel">Conversion Mode:</span>
+                <div class="radio-group" role="radiogroup" aria-labelledby="conversionModeLabel">
                     <div class="radio-option">
                         <input type="radio" id="noDither" name="mode" value="nodither" checked>
                         <label for="noDither" data-i18n="noDither">Non-dithered (Sharp)</label>
@@ -850,14 +1508,14 @@
                     </div>
                 </div>
                 <div class="page-range-container" id="pageRangeContainer">
-                    <input type="text" id="pageRange" class="page-range-input" data-i18n="pageRangePlaceholder" placeholder="e.g., 1, 3-5, 8, 10-12">
-                    <div class="input-hint" data-i18n="pageRangeHint">Enter page numbers and ranges separated by commas</div>
+                    <input type="text" id="pageRange" class="page-range-input" data-i18n="pageRangePlaceholder" placeholder="e.g., 1, 3-5, 8, 10-12" aria-label="Page range" aria-describedby="pageRangeHint">
+                    <div class="input-hint" id="pageRangeHint" data-i18n="pageRangeHint">Enter page numbers and ranges separated by commas</div>
                 </div>
             </div>
 
             <div class="option-group">
-                <span class="option-label" data-i18n="pageSize">Page Size:</span>
-                <div class="radio-group">
+                <span class="option-label" data-i18n="pageSize" id="pageSizeLabel">Page Size:</span>
+                <div class="radio-group" role="radiogroup" aria-labelledby="pageSizeLabel">
                     <div class="radio-option">
                         <input type="radio" id="pageSizeA4Portrait" name="pageSize" value="a4-portrait" checked>
                         <label for="pageSizeA4Portrait" data-i18n="pageSizeA4Portrait">A4 Portrait</label>
@@ -882,8 +1540,8 @@
             </div>
 
             <div class="option-group">
-                <span class="option-label" data-i18n="outputDpi">Output DPI (Resolution):</span>
-                <div class="radio-group">
+                <span class="option-label" data-i18n="outputDpi" id="outputDpiLabel">Output DPI (Resolution):</span>
+                <div class="radio-group" role="radiogroup" aria-labelledby="outputDpiLabel">
                     <div class="radio-option">
                         <input type="radio" id="dpiStandard" name="dpiMode" value="standard" checked>
                         <label for="dpiStandard" data-i18n="dpiStandard">Standard (310 DPI)</label>
@@ -895,19 +1553,19 @@
                 </div>
                 <div class="dpi-slider-container" id="dpiSliderContainer">
                     <div class="dpi-control">
-                        <input type="range" id="dpiSlider" class="dpi-slider" min="72" max="1200" value="310" step="1">
-                        <span class="dpi-value"><input type="number" id="dpiValue" min="72" max="1200" value="310"> DPI</span>
+                        <input type="range" id="dpiSlider" class="dpi-slider" min="72" max="1200" value="310" step="1" aria-label="DPI">
+                        <span class="dpi-value"><input type="number" id="dpiValue" min="72" max="1200" value="310" aria-label="DPI"> DPI</span>
                     </div>
                     <div class="input-hint" data-i18n="dpiHint">Higher DPI = larger file size but better quality. 310 DPI recommended.</div>
                 </div>
-                <div id="dpiWarning" class="dpi-warning"></div>
+                <div id="dpiWarning" class="dpi-warning" role="alert"></div>
             </div>
         </div>
 
-        <button id="convertBtn" data-i18n="compressButton" disabled>Compress to CCITT G4</button>
+        <div id="convertBtn" class="action-btn disabled" role="button" aria-disabled="true" tabindex="0" data-i18n="compressButton">Compress to CCITT G4</div>
 
-        <div id="progress">
-            <span class="spinner"></span>
+        <div id="progress" role="status" aria-live="polite">
+            <span class="spinner" aria-hidden="true"></span>
             <span id="progressText" data-i18n="processing">Processing...</span>
         </div>
 
@@ -937,13 +1595,13 @@
                 </label>
             </div>
         </div>
-    </div>
+    </main>
 
     <!-- License Modal -->
-    <div id="licenseModal">
+    <div id="licenseModal" role="dialog" aria-modal="true" aria-labelledby="licenseModalTitle">
         <div class="modal-content">
-            <button class="modal-close" id="closeLicense">&times;</button>
-            <h2>License & Attributions</h2>
+            <button class="modal-close" id="closeLicense" aria-label="Close">&times;</button>
+            <h2 id="licenseModalTitle">License & Attributions</h2>
 
             <div class="license-section">
                 <h3>PDF Monochrome CCITT G4 Compressor</h3>
@@ -1041,10 +1699,10 @@ limitations under the License.</pre>
     </div>
 
     <!-- About Modal -->
-    <div id="aboutModal">
+    <div id="aboutModal" role="dialog" aria-modal="true" aria-labelledby="aboutModalTitle">
         <div class="modal-content">
-            <button class="modal-close" id="closeAbout">&times;</button>
-            <h2>About This Project</h2>
+            <button class="modal-close" id="closeAbout" aria-label="Close">&times;</button>
+            <h2 id="aboutModalTitle">About This Project</h2>
             <p style="text-align: center; font-style: italic; color: #667eea; margin-bottom: 20px;">
                 "We were so preoccupied with whether we could, we didn't stop to think if we should."
             </p>
@@ -1060,8 +1718,8 @@ limitations under the License.</pre>
                 <p>The app works, but let's talk about the elephant in the HTML file: <strong>it contains its own source code as a base64-encoded tar.xz archive</strong>.</p>
                 <p>Why? Because when you're compressing PDFs, why not compress your own source code too? It's compression all the way down.</p>
                 <p>The file structure is essentially:</p>
-                <pre style="background: #f5f5f5; padding: 15px; border-radius: 4px; overflow-x: auto; font-size: 9px; line-height: 1.4;">┌─────────────────────────────────────┐
-│ HTML file (1.9  MB)                 │
+                <pre style="font-size: 9px;">┌─────────────────────────────────────┐
+│ HTML file (2.1 MB)                  │
 │ ┌─────────────────────────────────┐ │
 │ │ Decompression loader            │ │
 │ │ (shows purple spinner)          │ │
@@ -1092,6 +1750,89 @@ limitations under the License.</pre>
                 </ul>
             </div>
 
+            <div class="license-section">
+                <h3>Privacy Policy</h3>
+                <a href="#" id="privacyToggle" class="source-toggle">▶ View Privacy Policy</a>
+                <div id="privacyContent" class="source-content">
+                    <div class="privacy-icon-container">
+                        <svg class="privacy-cloud-icon" viewBox="0 0 100 80" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Globe (behind cloud) - positioned to right and slightly up -->
+                            <circle cx="62" cy="40" r="20" fill="none" stroke="#3498db" stroke-width="2.5" opacity="0.75"/>
+                            <ellipse cx="62" cy="40" rx="9" ry="20" fill="none" stroke="#3498db" stroke-width="2" opacity="0.75"/>
+                            <line x1="42" y1="40" x2="82" y2="40" stroke="#3498db" stroke-width="2" opacity="0.75"/>
+                            <line x1="62" y1="20" x2="62" y2="60" stroke="#3498db" stroke-width="2" opacity="0.75"/>
+
+                            <!-- Cloud - partly covering globe -->
+                            <path d="M 25,50 Q 25,42 32,42 Q 32,35 40,35 Q 40,28 50,28 Q 60,28 60,35 Q 68,35 68,42 Q 75,42 75,50 Q 75,58 68,58 L 32,58 Q 25,58 25,50 Z"
+                                  fill="rgba(255, 255, 255, 0.9)" stroke="#667eea" stroke-width="2.5"/>
+
+                            <!-- Wireless icon - 3 concentric quarter-circle arcs -->
+                            <circle cx="50" cy="54" r="2" fill="#667eea"/>
+                            <path d="M 42,54 A 8,8 0 0,1 50,46" fill="none" stroke="#667eea" stroke-width="2.5" stroke-linecap="round"/>
+                            <path d="M 38,54 A 12,12 0 0,1 50,42" fill="none" stroke="#667eea" stroke-width="2.5" stroke-linecap="round"/>
+                            <path d="M 34,54 A 16,16 0 0,1 50,38" fill="none" stroke="#667eea" stroke-width="2.5" stroke-linecap="round"/>
+
+                            <!-- Red cross -->
+                            <line x1="20" y1="20" x2="80" y2="65" stroke="#e74c3c" stroke-width="3" stroke-linecap="round"/>
+                            <line x1="80" y1="20" x2="20" y2="65" stroke="#e74c3c" stroke-width="3" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+
+                    <p style="margin-top: 15px;"><strong>Effective Date:</strong> April 2, 2026</p>
+
+                    <h4 style="color: #555; margin-top: 20px; margin-bottom: 10px; font-size: 16px;">Summary</h4>
+                    <p><strong>This application processes PDF files entirely on your device. No data is collected, stored, or transmitted to any servers. All processing happens locally in your browser.</strong></p>
+
+                    <h4 style="color: #555; margin-top: 20px; margin-bottom: 10px; font-size: 16px;">Data Collection</h4>
+                    <p>The App does <strong>NOT</strong> collect any personal data or information from users. Specifically:</p>
+                    <ul style="margin-left: 20px; color: #666; line-height: 1.6;">
+                        <li>No personal information (name, email, phone number, etc.)</li>
+                        <li>No device identifiers</li>
+                        <li>No location data</li>
+                        <li>No usage analytics or statistics</li>
+                        <li>No cookies or tracking mechanisms</li>
+                        <li>No crash reports or diagnostics</li>
+                    </ul>
+
+                    <h4 style="color: #555; margin-top: 20px; margin-bottom: 10px; font-size: 16px;">Data Processing</h4>
+                    <p>All PDF processing occurs entirely on your device:</p>
+                    <ul style="margin-left: 20px; color: #666; line-height: 1.6;">
+                        <li>PDF files are processed locally in your browser/device memory</li>
+                        <li>No files are uploaded to any servers</li>
+                        <li>Processed PDFs remain on your device</li>
+                        <li>The App operates fully offline after initial download</li>
+                    </ul>
+
+                    <h4 style="color: #555; margin-top: 20px; margin-bottom: 10px; font-size: 16px;">Data Sharing</h4>
+                    <p>The App does <strong>NOT</strong> share any data with third parties because no data is collected in the first place.</p>
+
+                    <h4 style="color: #555; margin-top: 20px; margin-bottom: 10px; font-size: 16px;">Third-Party Services</h4>
+                    <p>The App does not integrate with any third-party services, analytics platforms, advertising networks, or external APIs.</p>
+
+                    <h4 style="color: #555; margin-top: 20px; margin-bottom: 10px; font-size: 16px;">Open Source</h4>
+                    <p>The App is open source software. You can review the complete source code to verify these privacy practices at:</p>
+                    <p><strong>Repository:</strong> <a href="https://github.com/SvobodaJakub/pdf-to-g4-compressor" target="_blank" rel="noopener noreferrer" style="color: #667eea;">https://github.com/SvobodaJakub/pdf-to-g4-compressor</a></p>
+
+                    <h4 style="color: #555; margin-top: 20px; margin-bottom: 10px; font-size: 16px;">Children's Privacy</h4>
+                    <p>The App does not collect any data from anyone, including children under 13 years of age.</p>
+
+                    <h4 style="color: #555; margin-top: 20px; margin-bottom: 10px; font-size: 16px;">Changes to This Policy</h4>
+                    <p>If we make changes to this privacy policy, we will update the effective date above. Given that the App collects no data, changes to this policy are unlikely.</p>
+
+                    <h4 style="color: #555; margin-top: 20px; margin-bottom: 10px; font-size: 16px;">Contact</h4>
+                    <p>If you have questions about this privacy policy, please contact us through the GitHub repository:</p>
+                    <p><strong>GitHub Issues:</strong> <a href="https://github.com/SvobodaJakub/pdf-to-g4-compressor/issues" target="_blank" rel="noopener noreferrer" style="color: #667eea;">https://github.com/SvobodaJakub/pdf-to-g4-compressor/issues</a></p>
+
+                    <h4 style="color: #555; margin-top: 20px; margin-bottom: 10px; font-size: 16px;">Your Rights</h4>
+                    <p>Since the App does not collect, store, or process any personal data, there is no data to access, modify, or delete. You maintain complete control over any files you process with the App, as they never leave your device.</p>
+
+                    <p style="margin-top: 20px; color: #999; font-size: 12px;">
+                        <strong>PDF Monochrome CCITT G4 Compressor</strong><br>
+                        Licensed under Apache License 2.0
+                    </p>
+                </div>
+            </div>
+
             <div class="license-section" style="border-bottom: none;">
                 <h3>Disclaimer</h3>
                 <p><strong>This project actually works and is production-ready.</strong> The absurdity is purely architectural. Use responsibly, or don't. We're not your supervisor.</p>
@@ -1120,9 +1861,118 @@ limitations under the License.</pre>
         </div>
     </div>
 
+    <!-- Privacy Policy Modal -->
+    <div id="privacyModal" role="dialog" aria-modal="true" aria-labelledby="privacyModalTitle">
+        <div class="modal-content">
+            <button class="modal-close" id="closePrivacy" aria-label="Close">&times;</button>
+            <h2 id="privacyModalTitle">Privacy Policy</h2>
+
+            <div class="privacy-icon-container" aria-hidden="true">
+                <svg class="privacy-cloud-icon" viewBox="0 0 100 80" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Globe (behind cloud) - positioned to right and slightly up -->
+                    <circle cx="62" cy="40" r="20" fill="none" stroke="#3498db" stroke-width="2.5" opacity="0.75"/>
+                    <ellipse cx="62" cy="40" rx="9" ry="20" fill="none" stroke="#3498db" stroke-width="2" opacity="0.75"/>
+                    <line x1="42" y1="40" x2="82" y2="40" stroke="#3498db" stroke-width="2" opacity="0.75"/>
+                    <line x1="62" y1="20" x2="62" y2="60" stroke="#3498db" stroke-width="2" opacity="0.75"/>
+
+                    <!-- Cloud - partly covering globe -->
+                    <path d="M 25,50 Q 25,42 32,42 Q 32,35 40,35 Q 40,28 50,28 Q 60,28 60,35 Q 68,35 68,42 Q 75,42 75,50 Q 75,58 68,58 L 32,58 Q 25,58 25,50 Z"
+                          fill="rgba(255, 255, 255, 0.9)" stroke="#667eea" stroke-width="2.5"/>
+
+                    <!-- Wireless icon - 3 concentric quarter-circle arcs -->
+                    <circle cx="50" cy="54" r="2" fill="#667eea"/>
+                    <path d="M 42,54 A 8,8 0 0,1 50,46" fill="none" stroke="#667eea" stroke-width="2.5" stroke-linecap="round"/>
+                    <path d="M 38,54 A 12,12 0 0,1 50,42" fill="none" stroke="#667eea" stroke-width="2.5" stroke-linecap="round"/>
+                    <path d="M 34,54 A 16,16 0 0,1 50,38" fill="none" stroke="#667eea" stroke-width="2.5" stroke-linecap="round"/>
+
+                    <!-- Red cross -->
+                    <line x1="20" y1="20" x2="80" y2="65" stroke="#e74c3c" stroke-width="3" stroke-linecap="round"/>
+                    <line x1="80" y1="20" x2="20" y2="65" stroke="#e74c3c" stroke-width="3" stroke-linecap="round"/>
+                </svg>
+            </div>
+
+            <p><strong>Effective Date:</strong> April 2, 2026</p>
+
+            <div class="license-section">
+                <h3>Summary</h3>
+                <p><strong>This application processes PDF files entirely on your device. No data is collected, stored, or transmitted to any servers. All processing happens locally in your browser.</strong></p>
+            </div>
+
+            <div class="license-section">
+                <h3>Data Collection</h3>
+                <p>The App does <strong>NOT</strong> collect any personal data or information from users. Specifically:</p>
+                <ul>
+                    <li>No personal information (name, email, phone number, etc.)</li>
+                    <li>No device identifiers</li>
+                    <li>No location data</li>
+                    <li>No usage analytics or statistics</li>
+                    <li>No cookies or tracking mechanisms</li>
+                    <li>No crash reports or diagnostics</li>
+                </ul>
+            </div>
+
+            <div class="license-section">
+                <h3>Data Processing</h3>
+                <p>All PDF processing occurs entirely on your device:</p>
+                <ul>
+                    <li>PDF files are processed locally in your browser/device memory</li>
+                    <li>No files are uploaded to any servers</li>
+                    <li>Processed PDFs remain on your device</li>
+                    <li>The App operates fully offline after initial download</li>
+                </ul>
+            </div>
+
+            <div class="license-section">
+                <h3>Data Sharing</h3>
+                <p>The App does <strong>NOT</strong> share any data with third parties because no data is collected in the first place.</p>
+            </div>
+
+            <div class="license-section">
+                <h3>Third-Party Services</h3>
+                <p>The App does not integrate with any third-party services, analytics platforms, advertising networks, or external APIs.</p>
+            </div>
+
+            <div class="license-section">
+                <h3>Open Source</h3>
+                <p>The App is open source software. You can review the complete source code to verify these privacy practices at:</p>
+                <p><strong>Repository:</strong> <a href="https://github.com/SvobodaJakub/pdf-to-g4-compressor" target="_blank" rel="noopener noreferrer" style="color: #667eea;">https://github.com/SvobodaJakub/pdf-to-g4-compressor</a></p>
+            </div>
+
+            <div class="license-section">
+                <h3>Children's Privacy</h3>
+                <p>The App does not collect any data from anyone, including children under 13 years of age.</p>
+            </div>
+
+            <div class="license-section">
+                <h3>Changes to This Policy</h3>
+                <p>If we make changes to this privacy policy, we will update the effective date above. Given that the App collects no data, changes to this policy are unlikely.</p>
+            </div>
+
+            <div class="license-section">
+                <h3>Contact</h3>
+                <p>If you have questions about this privacy policy, please contact us through the GitHub repository:</p>
+                <p><strong>GitHub Issues:</strong> <a href="https://github.com/SvobodaJakub/pdf-to-g4-compressor/issues" target="_blank" rel="noopener noreferrer" style="color: #667eea;">https://github.com/SvobodaJakub/pdf-to-g4-compressor/issues</a></p>
+            </div>
+
+            <div class="license-section" style="border-bottom: none;">
+                <h3>Your Rights</h3>
+                <p>Since the App does not collect, store, or process any personal data, there is no data to access, modify, or delete. You maintain complete control over any files you process with the App, as they never leave your device.</p>
+            </div>
+
+            <p style="text-align: center; margin-top: 20px; color: #999;">
+                <strong>PDF Monochrome CCITT G4 Compressor</strong><br>
+                Licensed under Apache License 2.0<br>
+                <a href="https://github.com/SvobodaJakub/pdf-to-g4-compressor" target="_blank" rel="noopener noreferrer" style="color: #667eea;">View on GitHub</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Help/Demo Replay Button -->
+    <button class="help-button" id="helpBtn" aria-label="Show demo">?</button>
+
     <!-- Language Selector Button -->
     <button class="language-selector-button" id="languageSelectorBtn" aria-label="Select Language">
-        <svg viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <!-- Latin A (bottom layer) -->
             <text x="4" y="29" font-family="serif" font-size="40" font-weight="bold" fill="rgba(255, 255, 255, 0.9)">A</text>
             <!-- Chinese 文 (overlapping) -->
@@ -1137,9 +1987,9 @@ limitations under the License.</pre>
     </button>
 
     <!-- Language Selector Modal -->
-    <div id="languageModal">
+    <div id="languageModal" role="dialog" aria-modal="true" aria-label="Select Language">
         <div class="modal-content">
-            <button class="modal-close" id="closeLanguageModal">&times;</button>
+            <button class="modal-close" id="closeLanguageModal" aria-label="Close">&times;</button>
             <div class="language-list" id="languageList">
                 <!-- Languages will be populated by JavaScript -->
             </div>

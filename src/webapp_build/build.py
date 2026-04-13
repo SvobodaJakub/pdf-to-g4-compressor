@@ -258,6 +258,8 @@ def main():
     imageprocessing = read_file('imageprocessing.js')
     pdfgen = read_file('pdfgen.js')
     pdfcompress = read_file('pdfcompress.js')
+    ziputil = read_file('ziputil.js')
+    intro = read_file('intro.js')
 
     # Read and encode Mongolian font
     print("Reading Mongolian font...")
@@ -436,6 +438,17 @@ const SOURCE_TARBALL_BASE64 = '{source_tarball_b64}';
 {pdfcompress}
 
 // ============================================================================
+// ZIP Utilities (minimal reader/writer using pako)
+// ============================================================================
+{ziputil}
+
+// ============================================================================
+// Intro Animation
+// Visual tutorial that runs on every load
+// ============================================================================
+{intro}
+
+// ============================================================================
 // Pristine HTML (for self-download feature)
 // ============================================================================
 // The loader sets window.PRISTINE_HTML with the decompressed full HTML
@@ -450,6 +463,8 @@ if (typeof window.PRISTINE_HTML === 'undefined') {{
 var currentLang = 'en';  // Will be set during initialization
 var detectedLang = 'en';  // Original detected language
 var selectedFile = null;
+var isZipMode = false;
+var zipProgressPrefix = '';
 
 // DOM element references (assigned in DOMContentLoaded)
 var pdfFileInput, filenameDisplay, convertBtn, progressDiv, progressText;
@@ -512,11 +527,15 @@ function resetAppState() {{
     // Close modals
     const licenseModal = document.getElementById('licenseModal');
     const aboutModal = document.getElementById('aboutModal');
+    const privacyModal = document.getElementById('privacyModal');
     if (licenseModal) {{
         licenseModal.style.display = 'none';
     }}
     if (aboutModal) {{
         aboutModal.style.display = 'none';
+    }}
+    if (privacyModal) {{
+        privacyModal.style.display = 'none';
     }}
     // Notify Android that modals are closed
     if (typeof AndroidModalState !== 'undefined') {{
@@ -546,6 +565,15 @@ function resetAppState() {{
     window.resultSize = null;
     window.ditherMode = null;
 
+    // Reset ZIP mode
+    isZipMode = false;
+    zipProgressPrefix = '';
+    if (ditherSelectedRadio) {{
+        ditherSelectedRadio.disabled = false;
+        var ditherSelectedOption = ditherSelectedRadio.closest('.radio-option');
+        if (ditherSelectedOption) ditherSelectedOption.style.opacity = '';
+    }}
+
     // Reset language to detected language (uncheck "Use English")
     if (useEnglishCheckbox) {{
         useEnglishCheckbox.checked = false;
@@ -564,7 +592,8 @@ function resetAppState() {{
 
     // Grey out conversion button (after language reset to use correct translation)
     if (convertBtn) {{
-        convertBtn.disabled = true;
+        convertBtn.classList.add('disabled');
+        convertBtn.setAttribute('aria-disabled', 'true');
         const currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
         convertBtn.textContent = currentT.chooseFile || 'Choose PDF File';
     }}
@@ -587,7 +616,7 @@ document.addEventListener('DOMContentLoaded', function() {{
     applyTranslations(currentLang);
 
     // Apply Mongolian script class if needed
-    if (currentLang === 'mn-mong') {{
+    if (currentLang === 'mn-Mong') {{
         document.body.classList.add('mongolian-script');
     }}
 
@@ -604,8 +633,8 @@ document.addEventListener('DOMContentLoaded', function() {{
 
     // Regions where traditional Mongolian script might be relevant
     // Mongolia + mainland China (Inner Mongolia), but NOT Taiwan, Hong Kong, Macau, Singapore
-    const mongolianRelevantRegions = ['mn', 'mn-mn', 'mn-mong', 'mn-mong-mn', 'mn-mong-cn',
-                                      'zh-cn', 'zh-hans', 'zh-hans-cn'];
+    const mongolianRelevantRegions = ['mn', 'mn-MN', 'mn-Mong', 'mn-Mong-MN', 'mn-Mong-CN',
+                                      'zh-CN', 'zh-Hans', 'zh-Hans-CN'];
     const isMongolianRelevant = mongolianRelevantRegions.some(region =>
         detectedLang === region || detectedLang.startsWith(region + '-'));
 
@@ -615,9 +644,9 @@ document.addEventListener('DOMContentLoaded', function() {{
     }}
 
     // Show Mongolian checkbox if in relevant region or if currently using mn-Mong
-    if (isMongolianRelevant || currentLang === 'mn-mong') {{
+    if (isMongolianRelevant || currentLang === 'mn-Mong') {{
         mongolianSwitch.classList.add('show');
-        if (currentLang === 'mn-mong') {{
+        if (currentLang === 'mn-Mong') {{
             useMongolianCheckbox.checked = true;
         }}
     }}
@@ -650,7 +679,7 @@ document.addEventListener('DOMContentLoaded', function() {{
             t = TRANSLATIONS[detectedLang] || TRANSLATIONS.en;
 
             // Handle Mongolian script
-            if (detectedLang === 'mn-mong') {{
+            if (detectedLang === 'mn-Mong') {{
                 document.body.classList.add('mongolian-script');
                 // Check Mongolian checkbox if returning to mn-Mong
                 if (useMongolianCheckbox) {{
@@ -673,9 +702,9 @@ document.addEventListener('DOMContentLoaded', function() {{
     useMongolianCheckbox.addEventListener('change', function() {{
         if (this.checked) {{
             // Switch to traditional Mongolian
-            currentLang = 'mn-mong';
-            applyTranslations('mn-mong');
-            t = TRANSLATIONS['mn-mong'] || TRANSLATIONS.en;
+            currentLang = 'mn-Mong';
+            applyTranslations('mn-Mong');
+            t = TRANSLATIONS['mn-Mong'] || TRANSLATIONS.en;
             document.body.setAttribute('dir', 'ltr');
             document.body.classList.add('mongolian-script');
             updateDPIDisplay();
@@ -694,7 +723,7 @@ document.addEventListener('DOMContentLoaded', function() {{
             t = TRANSLATIONS[detectedLang] || TRANSLATIONS.en;
 
             // Remove Mongolian script if switching away
-            if (detectedLang !== 'mn-mong') {{
+            if (detectedLang !== 'mn-Mong') {{
                 document.body.classList.remove('mongolian-script');
             }}
 
@@ -709,7 +738,7 @@ document.addEventListener('DOMContentLoaded', function() {{
             updateDPIDisplay();
 
             // Hide Mongolian checkbox if OS language is not Mongolian-relevant
-            if (!isMongolianRelevant && detectedLang !== 'mn-mong') {{
+            if (!isMongolianRelevant && detectedLang !== 'mn-Mong') {{
                 mongolianSwitch.classList.remove('show');
             }}
         }}
@@ -767,14 +796,17 @@ document.addEventListener('DOMContentLoaded', function() {{
             const dpi = parseInt(dpiValue.value);
             // Disable button if DPI is out of valid range
             if (isNaN(dpi) || dpi < 72 || dpi > 1200) {{
-                convertBtn.disabled = true;
+                convertBtn.classList.add('disabled');
+                convertBtn.setAttribute('aria-disabled', 'true');
             }} else {{
-                convertBtn.disabled = false;
+                convertBtn.classList.remove('disabled');
+                convertBtn.setAttribute('aria-disabled', 'false');
                 convertBtn.textContent = currentT.compressButton || 'Compress to G4';
             }}
         }} else {{
             // Standard DPI mode - always valid if file is selected
-            convertBtn.disabled = false;
+            convertBtn.classList.remove('disabled');
+            convertBtn.setAttribute('aria-disabled', 'false');
             convertBtn.textContent = currentT.compressButton || 'Compress to G4';
         }}
     }}
@@ -863,16 +895,52 @@ document.addEventListener('DOMContentLoaded', function() {{
         }});
     }});
 
+    // Detect file type by magic bytes and update ZIP mode state
+    async function detectFileType(file) {{
+        var header = new Uint8Array(await file.slice(0, 4).arrayBuffer());
+        if (header[0] === 0x50 && header[1] === 0x4B && header[2] === 0x03 && header[3] === 0x04) {{
+            isZipMode = true;
+        }} else {{
+            isZipMode = false;
+        }}
+        updateZipModeUI();
+    }}
+
+    // Update UI state based on ZIP mode
+    function updateZipModeUI() {{
+        if (isZipMode) {{
+            // Disable dither-selected radio (no sense in selective dithering with multiple files)
+            ditherSelectedRadio.disabled = true;
+            var ditherSelectedOption = ditherSelectedRadio.closest('.radio-option');
+            if (ditherSelectedOption) ditherSelectedOption.style.opacity = '0.5';
+
+            // If dither-selected was checked, switch to noDither
+            if (ditherSelectedRadio.checked) {{
+                var noDitherRadio = document.getElementById('noDither');
+                if (noDitherRadio) noDitherRadio.checked = true;
+            }}
+
+            // Hide page range container
+            pageRangeContainer.classList.remove('show');
+        }} else {{
+            // Re-enable dither-selected radio
+            ditherSelectedRadio.disabled = false;
+            var ditherSelectedOption = ditherSelectedRadio.closest('.radio-option');
+            if (ditherSelectedOption) ditherSelectedOption.style.opacity = '';
+        }}
+    }}
+
     // File upload handling
-    pdfFileInput.addEventListener('change', function(e) {{
+    pdfFileInput.addEventListener('change', async function(e) {{
         console.log('File selected:', e.target.files[0]);
         selectedFile = e.target.files[0];
         if (selectedFile) {{
+            await detectFileType(selectedFile);
             const currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
             filenameDisplay.textContent = selectedFile.name;
             convertBtn.textContent = currentT.compressButton || 'Compress to G4';
             validateControls();
-            console.log('Button enabled');
+            console.log('Button enabled, isZipMode:', isZipMode);
         }}
     }});
 
@@ -886,26 +954,30 @@ document.addEventListener('DOMContentLoaded', function() {{
         uploadArea.classList.remove('dragover');
     }});
 
-    uploadArea.addEventListener('drop', function(e) {{
+    uploadArea.addEventListener('drop', async function(e) {{
         e.preventDefault();
         uploadArea.classList.remove('dragover');
 
         if (e.dataTransfer.files.length > 0) {{
             selectedFile = e.dataTransfer.files[0];
-            if (selectedFile.type === 'application/pdf') {{
-                const currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
-                filenameDisplay.textContent = selectedFile.name;
-                convertBtn.textContent = currentT.compressButton || 'Compress to G4';
-                validateControls();
-            }} else {{
-                alert('Please select a PDF file');
-            }}
+            await detectFileType(selectedFile);
+            const currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
+            filenameDisplay.textContent = selectedFile.name;
+            convertBtn.textContent = currentT.compressButton || 'Compress to G4';
+            validateControls();
         }}
     }});
 
-    // Convert button
+    // Convert button - keyboard activation for role="button" div
+    convertBtn.addEventListener('keydown', function(e) {{
+        if (e.key === 'Enter' || e.key === ' ') {{
+            e.preventDefault();
+            convertBtn.click();
+        }}
+    }});
     convertBtn.addEventListener('click', async function() {{
         if (!selectedFile) return;
+        if (convertBtn.classList.contains('disabled')) return;
 
         const ditherMode = document.querySelector('input[name="mode"]:checked').value;
         let ditherConfig = null;
@@ -942,7 +1014,8 @@ document.addEventListener('DOMContentLoaded', function() {{
             progressText.textContent = 'Loading PDF...';
 
             // Disable all controls during conversion
-            convertBtn.disabled = true;
+            convertBtn.classList.add('disabled');
+            convertBtn.setAttribute('aria-disabled', 'true');
             dpiSlider.disabled = true;
             pageRangeInput.disabled = true;
             document.querySelectorAll('input[name="mode"]').forEach(radio => {{
@@ -961,8 +1034,12 @@ document.addEventListener('DOMContentLoaded', function() {{
             // Get selected page size
             const pageSize = document.querySelector('input[name="pageSize"]:checked').value;
 
-            // Process the PDF
-            await convertPDF(selectedFile, ditherConfig, targetDPI, pageSize);
+            // Process the file (PDF or ZIP)
+            if (isZipMode) {{
+                await convertZIP(selectedFile, ditherConfig, targetDPI, pageSize);
+            }} else {{
+                await convertPDF(selectedFile, ditherConfig, targetDPI, pageSize);
+            }}
 
         }} catch (error) {{
             console.error('Conversion error:', error);
@@ -973,7 +1050,8 @@ document.addEventListener('DOMContentLoaded', function() {{
             }}
         }} finally {{
             // Re-enable all controls (but keep result box visible if conversion succeeded)
-            convertBtn.disabled = false;
+            convertBtn.classList.remove('disabled');
+            convertBtn.setAttribute('aria-disabled', 'false');
             dpiSlider.disabled = false;
             pageRangeInput.disabled = false;
             document.querySelectorAll('input[name="mode"]').forEach(radio => {{
@@ -985,6 +1063,10 @@ document.addEventListener('DOMContentLoaded', function() {{
             document.querySelectorAll('input[name="pageSize"]').forEach(radio => {{
                 radio.disabled = false;
             }});
+            // Keep dither-selected disabled in ZIP mode
+            if (isZipMode) {{
+                updateZipModeUI();
+            }}
         }}
     }});
 
@@ -1055,6 +1137,72 @@ document.addEventListener('DOMContentLoaded', function() {{
         window.ditherMode = ditherConfig.mode;
 
         // Show result box instead of downloading
+        showResultBox();
+    }}
+
+    // Batch conversion for ZIP files containing PDFs
+    async function convertZIP(file, ditherConfig, targetDPI, pageSize) {{
+        progressText.textContent = 'Reading ZIP file...';
+
+        // Read ZIP into ArrayBuffer
+        const arrayBuffer = await file.arrayBuffer();
+
+        progressText.textContent = 'Parsing ZIP structure...';
+        const allEntries = parseZip(arrayBuffer);
+
+        // Filter for PDF files (case-insensitive)
+        const pdfEntries = allEntries.filter(function(e) {{
+            return e.path.toLowerCase().endsWith('.pdf');
+        }});
+        if (pdfEntries.length === 0) {{
+            throw new Error('No PDF files found in ZIP');
+        }}
+
+        var totalOriginalSize = 0;
+        var resultEntries = [];
+
+        for (var i = 0; i < pdfEntries.length; i++) {{
+            var entry = pdfEntries[i];
+            var fileLabel = 'File ' + (i + 1) + '/' + pdfEntries.length;
+            totalOriginalSize += entry.data.length;
+
+            // Set progress prefix for renderPDFPages
+            zipProgressPrefix = fileLabel + ': ';
+
+            progressText.textContent = fileLabel + ': Loading PDF...';
+            var pages = await renderPDFPages(entry.data, ditherConfig, targetDPI, pageSize);
+
+            if (!pages || pages.length === 0) {{
+                console.warn('No pages rendered from ' + entry.path + ', skipping');
+                continue;
+            }}
+
+            progressText.textContent = fileLabel + ': Generating CCITT-compressed PDF...';
+            var compressedPDF = createPDF(pages);
+
+            progressText.textContent = fileLabel + ': Applying FlateDecode compression...';
+            var finalPDF = compressPDF(compressedPDF, pako);
+
+            resultEntries.push({{ path: entry.path, data: finalPDF }});
+        }}
+
+        // Clear progress prefix
+        zipProgressPrefix = '';
+
+        if (resultEntries.length === 0) {{
+            throw new Error('No PDFs could be processed from the ZIP');
+        }}
+
+        progressText.textContent = 'Creating result ZIP...';
+        var resultZip = createZip(resultEntries);
+
+        // Store results (same globals as convertPDF)
+        window.resultPDF = resultZip;
+        window.resultFilename = file.name.replace(/\\.zip$/i, '_ccitt.zip');
+        window.originalSize = totalOriginalSize;
+        window.resultSize = resultZip.length;
+        window.ditherMode = ditherConfig.mode;
+
         showResultBox();
     }}
 
@@ -1130,13 +1278,20 @@ document.addEventListener('DOMContentLoaded', function() {{
         // Show the result with save button
         progressDiv.innerHTML = `
             <div style="font-weight: bold; margin-bottom: 15px;">${{message}}</div>
-            <button id="saveResultBtn" style="width: auto; padding: 10px 20px; background: #667eea; border-radius: 4px;">${{currentT.resultSaveButton}}</button>
+            <div id="saveResultBtn" class="action-btn" role="button" tabindex="0" style="width: auto; padding: 10px 20px; background: #667eea; border-radius: 4px;">${{currentT.resultSaveButton}}</div>
         `;
         progressDiv.style.display = 'block';
 
         // Attach save button handler
-        document.getElementById('saveResultBtn').addEventListener('click', function() {{
+        var saveBtn = document.getElementById('saveResultBtn');
+        saveBtn.addEventListener('click', function() {{
             downloadFile(window.resultPDF, window.resultFilename);
+        }});
+        saveBtn.addEventListener('keydown', function(e) {{
+            if (e.key === 'Enter' || e.key === ' ') {{
+                e.preventDefault();
+                saveBtn.click();
+            }}
         }});
     }}
 
@@ -1187,7 +1342,7 @@ document.addEventListener('DOMContentLoaded', function() {{
         // previewDiv.style.display = 'block';
 
         for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {{
-            progressText.textContent = `Rendering page ${{pageNum}} of ${{pdf.numPages}} @ ${{targetDPI}} DPI...`;
+            progressText.textContent = zipProgressPrefix + `Rendering page ${{pageNum}} of ${{pdf.numPages}} @ ${{targetDPI}} DPI...`;
 
             const page = await pdf.getPage(pageNum);
 
@@ -1248,7 +1403,7 @@ document.addEventListener('DOMContentLoaded', function() {{
             }}
             // else mode === 'none', shouldDither stays false
 
-            progressText.textContent = `Processing page ${{pageNum}} (${{shouldDither ? 'dithered' : 'sharp'}})...`;
+            progressText.textContent = zipProgressPrefix + `Processing page ${{pageNum}} (${{shouldDither ? 'dithered' : 'sharp'}})...`;
 
             // Process through image pipeline
             const processed = processImage(imageData, {{ dither: shouldDither }});
@@ -1256,7 +1411,7 @@ document.addEventListener('DOMContentLoaded', function() {{
             const bytesPerRow = Math.ceil(processed.width / 8);
             console.log(`Page ${{pageNum}} bilevel: ${{processed.width}}x${{processed.height}}, bytesPerRow: ${{bytesPerRow}}`);
 
-            progressText.textContent = `Encoding page ${{pageNum}} with CCITT Group 4...`;
+            progressText.textContent = zipProgressPrefix + `Encoding page ${{pageNum}} with CCITT Group 4...`;
 
             // Encode with G4
             const encoder = new G4Encoder();
@@ -1301,6 +1456,9 @@ document.addEventListener('DOMContentLoaded', function() {{
 
     // Download helper
     function downloadFile(data, filename) {{
+        // Detect MIME type from filename
+        var mimeType = filename.toLowerCase().endsWith('.zip') ? 'application/zip' : 'application/pdf';
+
         // Check if running in Android WebView with file handler
         if (typeof AndroidFileHandler !== 'undefined') {{
             // Convert data to base64
@@ -1317,10 +1475,10 @@ document.addEventListener('DOMContentLoaded', function() {{
             }}
 
             // Use Android file handler
-            AndroidFileHandler.saveFile(filename, base64Data, 'application/pdf');
+            AndroidFileHandler.saveFile(filename, base64Data, mimeType);
         }} else {{
             // Standard browser download
-            const blob = new Blob([data], {{ type: 'application/pdf' }});
+            const blob = new Blob([data], {{ type: mimeType }});
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -1406,6 +1564,62 @@ document.addEventListener('DOMContentLoaded', function() {{
         }}
     }});
 
+    // Privacy Policy modal functionality
+    const privacyModal = document.getElementById('privacyModal');
+    const showPrivacyBtn = document.getElementById('showPrivacy');
+    const closePrivacyBtn = document.getElementById('closePrivacy');
+
+    if (showPrivacyBtn) {{
+        showPrivacyBtn.addEventListener('click', function(e) {{
+            e.preventDefault();
+            privacyModal.classList.add('show');
+            // Notify Android that a modal is open (for back button handling)
+            if (typeof AndroidModalState !== 'undefined') {{
+                AndroidModalState.setModalOpen(true);
+            }}
+        }});
+    }}
+
+    if (closePrivacyBtn) {{
+        closePrivacyBtn.addEventListener('click', function() {{
+            privacyModal.classList.remove('show');
+            // Notify Android that modal is closed
+            if (typeof AndroidModalState !== 'undefined') {{
+                AndroidModalState.setModalOpen(false);
+            }}
+        }});
+    }}
+
+    // Close privacy modal when clicking outside
+    privacyModal.addEventListener('click', function(e) {{
+        if (e.target === privacyModal) {{
+            privacyModal.classList.remove('show');
+            // Notify Android that modal is closed
+            if (typeof AndroidModalState !== 'undefined') {{
+                AndroidModalState.setModalOpen(false);
+            }}
+        }}
+    }});
+
+    // Privacy Policy toggle in About modal
+    const privacyToggle = document.getElementById('privacyToggle');
+    const privacyContent = document.getElementById('privacyContent');
+
+    if (privacyToggle) {{
+        privacyToggle.addEventListener('click', function(e) {{
+            e.preventDefault();
+            const isShown = privacyContent.classList.contains('show');
+
+            if (!isShown) {{
+                privacyContent.classList.add('show');
+                privacyToggle.textContent = '▼ View Privacy Policy';
+            }} else {{
+                privacyContent.classList.remove('show');
+                privacyToggle.textContent = '▶ View Privacy Policy';
+            }}
+        }});
+    }}
+
     // Language selector modal functionality
     const LANGUAGE_NAMES = {{
         'af': 'Afrikaans', 'am': 'አማርኛ', 'ar': 'العربية', 'as': 'অসমীয়া', 'az': 'Azərbaycan',
@@ -1417,14 +1631,14 @@ document.addEventListener('DOMContentLoaded', function() {{
         'is': 'Íslenska', 'it': 'Italiano', 'ja': '日本語', 'jv': 'Jawa', 'ka': 'ქართული',
         'kk': 'Қазақ', 'km': 'ខ្មែរ', 'kn': 'ಕನ್ನಡ', 'ko': '한국어', 'ky': 'Кыргызча',
         'lo': 'ລາວ', 'lt': 'Lietuvių', 'lv': 'Latviešu', 'mk': 'Македонски', 'ml': 'മലയാളം',
-        'mn': 'Монгол', 'mn-mong': 'ᠮᠣᠩᠭᠣᠯ', 'mr': 'मराठी', 'ms': 'Melayu', 'my': 'မြန်မာ', 'nb': 'Norsk (Bokmål)',
+        'mn': 'Монгол', 'mn-Mong': 'ᠮᠣᠩᠭᠣᠯ', 'mr': 'मराठी', 'ms': 'Melayu', 'my': 'မြန်မာ', 'nb': 'Norsk (Bokmål)',
         'ne': 'नेपाली', 'nl': 'Nederlands', 'nn': 'Norsk (Nynorsk)', 'or': 'ଓଡ଼ିଆ', 'pa': 'ਪੰਜਾਬੀ',
         'pl': 'Polski', 'pt': 'Português', 'ro': 'Română', 'ru': 'Русский', 'si': 'සිංහල',
-        'sk': 'Slovenčina', 'sl': 'Slovenščina', 'sq': 'Shqip', 'sr-cyrl': 'Српски', 'sr-latn': 'Srpski',
+        'sk': 'Slovenčina', 'sl': 'Slovenščina', 'sq': 'Shqip', 'sr-Cyrl': 'Српски', 'sr-Latn': 'Srpski',
         'sv': 'Svenska', 'sw': 'Kiswahili',
         'ta': 'தமிழ்', 'te': 'తెలుగు', 'tg': 'Тоҷикӣ', 'th': 'ไทย', 'tk': 'Türkmen',
         'tl': 'Tagalog', 'tr': 'Türkçe', 'tt': 'Татар', 'uk': 'Українська', 'ur': 'اردو',
-        'uz': 'Oʻzbek', 'vi': 'Tiếng Việt', 'yi': 'ייִדיש', 'zh-hans': '简体中文', 'zh-hant': '繁體中文',
+        'uz': 'Oʻzbek', 'vi': 'Tiếng Việt', 'yi': 'ייִדיש', 'zh-Hans': '简体中文', 'zh-Hant': '繁體中文',
         'zu': 'isiZulu'
     }};
 
@@ -1447,7 +1661,7 @@ document.addEventListener('DOMContentLoaded', function() {{
                 item.classList.add('active');
             }}
             // Make Mongolian script display vertically in the selector
-            if (code === 'mn-mong') {{
+            if (code === 'mn-Mong') {{
                 item.classList.add('mongolian-vertical');
             }}
 
@@ -1481,7 +1695,7 @@ document.addEventListener('DOMContentLoaded', function() {{
                 if (rtlLanguages.has(code)) {{
                     document.body.setAttribute('dir', 'rtl');
                     document.body.classList.remove('mongolian-script');
-                }} else if (code === 'mn-mong') {{
+                }} else if (code === 'mn-Mong') {{
                     // Traditional Mongolian script - vertical writing
                     document.body.setAttribute('dir', 'ltr');
                     document.body.classList.add('mongolian-script');
@@ -1493,7 +1707,7 @@ document.addEventListener('DOMContentLoaded', function() {{
                 // Handle "Use Mongolian" checkbox visibility and state
                 const mongolianSwitch = document.getElementById('mongolianSwitch');
                 const useMongolianCheckbox = document.getElementById('useMongolianCheckbox');
-                if (code === 'mn-mong') {{
+                if (code === 'mn-Mong') {{
                     // Show and check Mongolian checkbox when mn-Mong is selected
                     if (mongolianSwitch) {{
                         mongolianSwitch.classList.add('show');
@@ -1508,8 +1722,8 @@ document.addEventListener('DOMContentLoaded', function() {{
                     }}
                     // Keep showing if in Mongolian-relevant region
                     // Mongolia + mainland China (Inner Mongolia), NOT Taiwan/HK/Macau/Singapore
-                    const mongolianRelevantRegions = ['mn', 'mn-mn', 'mn-mong', 'mn-mong-mn', 'mn-mong-cn',
-                                                      'zh', 'zh-cn', 'zh-hans', 'zh-hans-cn'];
+                    const mongolianRelevantRegions = ['mn', 'mn-MN', 'mn-Mong', 'mn-Mong-MN', 'mn-Mong-CN',
+                                                      'zh', 'zh-CN', 'zh-Hans', 'zh-Hans-CN'];
                     const isMongolianRelevant = mongolianRelevantRegions.some(region =>
                         detectedLang === region || detectedLang.startsWith(region + '-'));
                     if (!isMongolianRelevant && mongolianSwitch) {{
@@ -1528,11 +1742,15 @@ document.addEventListener('DOMContentLoaded', function() {{
                 // Close all modals
                 const aboutModal = document.getElementById('aboutModal');
                 const licenseModal = document.getElementById('licenseModal');
+                const privacyModal = document.getElementById('privacyModal');
                 if (aboutModal) {{
                     aboutModal.classList.remove('show');
                 }}
                 if (licenseModal) {{
                     licenseModal.classList.remove('show');
+                }}
+                if (privacyModal) {{
+                    privacyModal.classList.remove('show');
                 }}
                 languageModal.classList.remove('show');
                 if (typeof AndroidModalState !== 'undefined') {{
@@ -1687,9 +1905,47 @@ document.addEventListener('DOMContentLoaded', function() {{
                 githubCorner.style.display = '';
             }});
         }}
+
+        // Show GitHub corner when Privacy modal is opened
+        if (showPrivacyBtn) {{
+            showPrivacyBtn.addEventListener('click', function(e) {{
+                githubCorner.style.display = '';
+            }});
+        }}
     }}
 
     console.log('PDF Monochrome CCITT G4 Compressor - Ready!');
+
+    // Start intro animation immediately
+    if (typeof IntroAnimation !== 'undefined') {{
+        IntroAnimation.start();
+    }}
+
+    // Help/Demo replay button
+    const helpBtn = document.getElementById('helpBtn');
+    if (helpBtn) {{
+        helpBtn.addEventListener('click', function() {{
+            // Replay demo with slower speeds:
+            // - Offline prelude 10x slower (0.1 speed multiplier)
+            // - PDF demo 6.25x slower (0.16 speed multiplier)
+            if (typeof IntroAnimation !== 'undefined') {{
+                IntroAnimation.start(0.1, 0.16);
+            }}
+        }});
+    }}
+
+    // Traditional Mongolian: convert mouse wheel to horizontal scroll on container
+    (function() {{
+        var container = document.querySelector('.container');
+        if (container) {{
+            container.addEventListener('wheel', function(e) {{
+                if (document.body.classList.contains('mongolian-script')) {{
+                    e.preventDefault();
+                    container.scrollLeft += e.deltaY;
+                }}
+            }}, {{passive: false}});
+        }}
+    }})();
 
     // Check if browser restored form state (desktop Chrome back button)
     // This doesn't trigger bfcache event but still restores form values

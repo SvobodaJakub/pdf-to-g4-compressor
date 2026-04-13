@@ -19,8 +19,8 @@ KEYSTORE_DIR="$PROJECT_ROOT/android-private"
 # Increment these for each Google Play release:
 #   versionCode: Integer, must increase with each release (1, 2, 3, ...)
 #   versionName: User-visible version string (e.g., "1.0", "1.1.0", "2.0")
-VERSION_CODE=8
-VERSION_NAME="1.0.7"
+VERSION_CODE=9
+VERSION_NAME="1.1.0"
 
 echo "Script directory: $SCRIPT_DIR"
 echo "Source directory: $SRC_DIR"
@@ -278,13 +278,15 @@ public class MainActivity extends ComponentActivity {
                 // Store callback for later use
                 MainActivity.this.filePathCallback = filePathCallback;
 
-                // Create file chooser intent
+                // Create file chooser intent (accept PDF and ZIP files)
                 Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                intent.setType("application/pdf");
+                intent.setType("*/*");
+                String[] mimeTypes = {"application/pdf", "application/zip"};
+                intent.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes);
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
 
                 try {
-                    fileChooserLauncher.launch(Intent.createChooser(intent, "Select PDF file"));
+                    fileChooserLauncher.launch(Intent.createChooser(intent, "Select file"));
                 } catch (Exception e) {
                     filePathCallback.onReceiveValue(null);
                     MainActivity.this.filePathCallback = null;
@@ -398,23 +400,48 @@ STRINGS_EOF
 cat > "app/src/main/res/values/styles.xml" << 'STYLES_EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="AppTheme" parent="@android:style/Theme.DeviceDefault.NoActionBar">
+    <!-- Explicit Light theme so WebView sets prefers-color-scheme:light -->
+    <style name="AppTheme" parent="@android:style/Theme.DeviceDefault.Light.NoActionBar">
         <item name="android:statusBarColor">#000000</item>
         <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>
 STYLES_EOF
 
+# Dark mode theme variant (values-night/) — used when system is in dark mode
+mkdir -p "app/src/main/res/values-night"
+cat > "app/src/main/res/values-night/styles.xml" << 'STYLES_NIGHT_EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark theme so WebView sets prefers-color-scheme:dark -->
+    <style name="AppTheme" parent="@android:style/Theme.DeviceDefault.NoActionBar">
+        <item name="android:statusBarColor">#000000</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>
+STYLES_NIGHT_EOF
+
 # Create Android 15 (API 35) specific theme to opt out of edge-to-edge
 mkdir -p "app/src/main/res/values-v35"
 cat > "app/src/main/res/values-v35/styles.xml" << 'STYLES_V35_EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppTheme" parent="@android:style/Theme.DeviceDefault.Light.NoActionBar">
+        <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
+    </style>
+</resources>
+STYLES_V35_EOF
+
+# Dark mode variant for API 35
+mkdir -p "app/src/main/res/values-night-v35"
+cat > "app/src/main/res/values-night-v35/styles.xml" << 'STYLES_NIGHT_V35_EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="AppTheme" parent="@android:style/Theme.DeviceDefault.NoActionBar">
         <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
     </style>
 </resources>
-STYLES_V35_EOF
+STYLES_NIGHT_V35_EOF
 
 # Create root build.gradle
 cat > "build.gradle" << 'GRADLE_EOF'
@@ -1847,11 +1874,11 @@ from pathlib import Path
 # Android uses different codes for some languages
 LOCALE_MAPPING = {
     # Chinese
-    'zh-hans': 'zh-rCN',  # Simplified Chinese
-    'zh-hant': 'zh-rTW',  # Traditional Chinese
+    'zh-Hans': 'zh-rCN',  # Simplified Chinese
+    'zh-Hant': 'zh-rTW',  # Traditional Chinese
     # Serbian
-    'sr-cyrl': 'sr',      # Serbian Cyrillic (default)
-    'sr-latn': 'b+sr+Latn',  # Serbian Latin (BCP 47)
+    'sr-Cyrl': 'sr',      # Serbian Cyrillic (default)
+    'sr-Latn': 'b+sr+Latn',  # Serbian Latin (BCP 47)
     # Hebrew (Android legacy code)
     'he': 'iw',
     # Indonesian (Android legacy code)
@@ -1860,7 +1887,7 @@ LOCALE_MAPPING = {
     'yi': 'ji',
     # Filipino = Tagalog in Android
     'fil': 'tl',
-    # Note: mn-mong (Traditional Mongolian) is skipped - Android resource system doesn't support it
+    # Note: mn-Mong (Traditional Mongolian) is skipped - Android resource system doesn't support it
 }
 
 def extract_languages_from_i18n(i18n_dir):
@@ -1910,8 +1937,8 @@ def create_android_resources(languages, res_dir):
     created_count = 0
 
     for js_code, app_name in sorted(languages.items()):
-        # Skip mn-mong - Android resource system doesn't support it
-        if js_code == 'mn-mong':
+        # Skip mn-Mong - Android resource system doesn't support it
+        if js_code == 'mn-Mong':
             continue
 
         android_code = js_to_android_locale(js_code)
@@ -2011,7 +2038,7 @@ echo "   AAB: $BUILD_DIR/app/build/outputs/bundle/release/app-release.aab"
 echo "   APK: $BUILD_DIR/app/build/outputs/apk/release/app-release.apk"
 echo ""
 echo "APK/AAB will be fully offline with NO internet permission."
-echo "Size: ~1.6 MB (includes 1.62 MB HTML file)"
+echo "Size: ~2.1 MB (includes ~2.1 MB HTML file)"
 echo ""
 echo "NOTE: Google Play requires AAB format for publishing."
 echo "      APK is for local testing and sideloading only."

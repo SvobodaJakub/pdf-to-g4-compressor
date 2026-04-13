@@ -42,7 +42,7 @@ python3 -m http.server 8000
 
 ## Features
 
-- **Single HTML file** (1.9 MB) - completely self-contained
+- **Single HTML file** (2.1 MB) - completely self-contained
 - **Zero dependencies** - works from `file://` protocol
 - **Offline-first** - no external requests
 - **Dithering modes** - sharp (text) or smooth (photos)

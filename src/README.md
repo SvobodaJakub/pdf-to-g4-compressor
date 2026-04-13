@@ -7,7 +7,7 @@ A single-file web application that compresses PDFs to monochrome bilevel format 
 
 ## Features
 
-- ✅ **Single HTML file** (1.9 MB) - no installation needed
+- ✅ **Single HTML file** (2.1 MB) - no installation needed
 - ✅ **Completely self-contained** - includes full source code
 - ✅ **Works offline** - no internet connection required
 - ✅ **Configurable DPI** - 72 to 1200 DPI (310 DPI default)
