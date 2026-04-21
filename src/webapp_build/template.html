@@ -1562,7 +1562,7 @@
             </div>
         </div>
 
-        <div id="convertBtn" class="action-btn disabled" role="button" aria-disabled="true" tabindex="0" data-i18n="compressButton">Compress to CCITT G4</div>
+        <div id="convertBtn" class="action-btn disabled" role="button" aria-disabled="true" tabindex="0" data-i18n="compressButton">Compress</div>
 
         <div id="progress" role="status" aria-live="polite">
             <span class="spinner" aria-hidden="true"></span>
@@ -1579,7 +1579,7 @@
         </div>
 
         <div class="credits">
-            <p data-i18n="credits">Built with PDF.js • pako • G4Enc</p>
+            <p data-i18n="credits">Built with PDF.js • pako • G4Enc • jbig2enc • Leptonica</p>
             <p><a href="javascript:void(0)" id="showLicense" data-i18n="license">Licensed under Apache 2.0 • View Licenses & Attributions</a></p>
             <p><a href="javascript:void(0)" id="showAbout" data-i18n="about">About This Project • A Study in Questionable Decisions</a></p>
             <div class="language-switch" id="languageSwitch">
@@ -1635,14 +1635,29 @@
                     <li>Ported from C to JavaScript for this project</li>
                 </ul>
 
-                <p style="margin-top: 15px;"><strong>4. LibTIFF</strong> - TIFFBitRevTable</p>
+                <p style="margin-top: 15px;"><strong>4. jbig2enc</strong> - JBIG2 Encoder (compiled to WebAssembly)</p>
+                <ul>
+                    <li>Copyright (C) 2006 Google Inc.</li>
+                    <li>License: Apache 2.0</li>
+                    <li>URL: https://github.com/agl/jbig2enc</li>
+                    <li>Compiled to WebAssembly with Emscripten</li>
+                </ul>
+
+                <p style="margin-top: 15px;"><strong>5. Leptonica</strong> - Image Processing Library (linked in jbig2enc WASM)</p>
+                <ul>
+                    <li>Copyright © 2001-2020 Leptonica</li>
+                    <li>License: BSD 2-Clause License</li>
+                    <li>URL: https://github.com/DanBloomberg/leptonica</li>
+                </ul>
+
+                <p style="margin-top: 15px;"><strong>6. LibTIFF</strong> - TIFFBitRevTable</p>
                 <ul>
                     <li>Copyright © 1988-1997 Sam Leffler, © 1991-1997 Silicon Graphics, Inc.</li>
                     <li>License: LibTIFF License (BSD-style)</li>
                     <li>URL: https://gitlab.com/libtiff/libtiff</li>
                 </ul>
 
-                <p style="margin-top: 15px;"><strong>5. Noto Sans Mongolian Font</strong> - Traditional Mongolian script support</p>
+                <p style="margin-top: 15px;"><strong>7. Noto Sans Mongolian Font</strong> - Traditional Mongolian script support</p>
                 <ul>
                     <li>Copyright 2022 The Noto Project Authors</li>
                     <li>License: SIL Open Font License 1.1 (OFL 1.1)</li>
@@ -1709,7 +1724,8 @@ limitations under the License.</pre>
 
             <div class="license-section">
                 <h3>Why This Exists</h3>
-                <p>There are plenty of nice apps for scanning paper documents to PDFs, and plenty of apps for rotating PDF pages. But very few nice apps let you drastically compress scanned PDFs with the highly efficient CCITT Group 4 compression - which can shrink files by 95%+ while maintaining perfect black-and-white clarity.</p>
+                <p>There are plenty of nice apps for scanning paper documents to PDFs, and plenty of apps for rotating PDF pages. But very few nice apps let you drastically compress scanned PDFs with the highly efficient CCITT Group 4 or JBIG2 compression - which can shrink files by 95%+ while maintaining excellent clarity.</p>
+                <p>JBIG2 takes it further with lossy symbol matching: it finds similar-looking characters and reuses templates, achieving even better compression. At threshold 0.97, quality loss is imperceptible for most text documents.</p>
                 <p>Also, someone asked "can we make a single HTML file that contains its own source code as a compressed tarball?" and instead of saying "no, that's absurd," we said "hold my coffee."</p>
             </div>
 
@@ -1719,7 +1735,7 @@ limitations under the License.</pre>
                 <p>Why? Because when you're compressing PDFs, why not compress your own source code too? It's compression all the way down.</p>
                 <p>The file structure is essentially:</p>
                 <pre style="font-size: 9px;">┌─────────────────────────────────────┐
-│ HTML file (2.1 MB)                  │
+│ HTML file (2.7 MB)                  │
 │ ┌─────────────────────────────────┐ │
 │ │ Decompression loader            │ │
 │ │ (shows purple spinner)          │ │
@@ -1744,9 +1760,10 @@ limitations under the License.</pre>
                 <ul style="margin-left: 20px; color: #666; line-height: 1.6;">
                     <li>Converts any PDF to high-compression bilevel format</li>
                     <li>Renders pages at 310 DPI (configurable 72-1200)</li>
-                    <li>Compresses with CCITT Group 4 (ITU-T T.6)</li>
+                    <li>Compresses with CCITT Group 4 (lossless) or JBIG2 (lossy with symbol matching)</li>
+                    <li>JBIG2 via WebAssembly (jbig2enc compiled with Emscripten)</li>
                     <li>Outputs PDF/A-1B compliant files</li>
-                    <li>Typical result: 10-80 KB per text page</li>
+                    <li>Typical result: 10-80 KB per text page (CCITT G4), 5-50 KB (JBIG2)</li>
                 </ul>
             </div>
 

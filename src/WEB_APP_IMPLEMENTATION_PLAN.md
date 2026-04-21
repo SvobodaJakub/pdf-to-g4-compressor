@@ -6,7 +6,7 @@ Create a single-page HTML application that converts PDF files to CCITT-compresse
 ## Current Pipeline Analysis
 
 ### Existing Components
-1. **cpdfgm.sh** - Orchestration script
+1. **ccitt_g4_pdf_compression_example.sh** - Orchestration script
    - Uses GraphicsMagick for PDF→TIFF conversion
    - Creates dithered and non-dithered versions
    - Density: 310 PPI
@@ -34,7 +34,7 @@ Create a single-page HTML application that converts PDF files to CCITT-compresse
 - Rendering quality: Must handle complex PDFs with accents, graphics
 - Dithering: Optional (user selects dithered/non-dithered)
 
-### Image Processing Pipeline (Match cpdfgm.sh exactly)
+### Image Processing Pipeline (Match ccitt_g4_pdf_compression_example.sh exactly)
 1. **Render PDF to canvas**: 310 DPI, A4 portrait (2478x3507 pixels)
 2. **Background**: White
 3. **Colorspace conversion**: RGB → Grayscale
@@ -615,7 +615,7 @@ The MVP is fully working with:
 - ✅ **Approach**: Pure JavaScript (NOT VM/WASM)
 - ✅ **CCITT Encoder**: Port G4Enc (Apache 2.0) from C to JavaScript
 - ✅ **License**: Apache 2.0 for final product
-- ✅ **Image Processing**: Match cpdfgm.sh exactly (10%/90% level adjustment)
+- ✅ **Image Processing**: Match ccitt_g4_pdf_compression_example.sh exactly (10%/90% level adjustment)
 - ✅ **Single File**: Everything inline in one .html file
 
 ### Important Notes

@@ -3,14 +3,14 @@
 > **An April Fools' Day 2026 Production** 🎭  
 > _"We were so preoccupied with whether we could, we didn't stop to think if we should."_
 
-A single-file web app that compresses PDFs to monochrome (1-bit black/white) with CCITT Group 4 encoding. Works completely offline in your browser. Also contains its own source code as a base64-encoded tarball inside itself, because apparently that's a thing we do now.
+A single-file web app that compresses PDFs to monochrome (1-bit black/white) with CCITT Group 4 or JBIG2 encoding. Works completely offline in your browser. Also contains its own source code as a base64-encoded tarball inside itself, because apparently that's a thing we do now.
 
 **Live Demo:** https://svobodajakub.github.io/  
 **GitHub:** https://github.com/SvobodaJakub/pdf-to-g4-compressor
 
 ## Why
 
-There are plenty of nice apps for scanning paper documents to PDFs, and plenty of apps for rotating PDF pages. But very few nice apps let you drastically compress scanned PDFs with the highly efficient CCITT Group 4 compression - which can shrink files by 95%+ while maintaining perfect black-and-white clarity.
+There are plenty of nice apps for scanning paper documents to PDFs, and plenty of apps for rotating PDF pages. But very few nice apps let you drastically compress scanned PDFs with the highly efficient CCITT Group 4 or JBIG2 compression - which can shrink files by 95%+ while maintaining perfect black-and-white clarity.
 
 Also, someone asked "can we make a single HTML file that contains its own source code as a compressed tarball?" and instead of saying "no, that's absurd," we said "hold my coffee."
 
@@ -19,9 +19,10 @@ Also, someone asked "can we make a single HTML file that contains its own source
 Converts any PDF to high-compression bilevel format:
 - Renders pages at 310 DPI (configurable 72-1200)
 - Converts to grayscale → normalizes → bilevel (1-bit)
-- Compresses with CCITT Group 4 (ITU-T T.6)
+- Compresses with CCITT Group 4 (ITU-T T.6, lossless) or JBIG2 (lossy with symbol matching)
+- JBIG2 via WebAssembly (jbig2enc compiled with Emscripten)
 - Outputs PDF/A-1B compliant files
-- Typical result: 10-80 KB per text page
+- Typical result: 10-80 KB per text page (CCITT G4), 5-50 KB (JBIG2)
 
 ## Usage
 
@@ -42,23 +43,27 @@ python3 -m http.server 8000
 
 ## Features
 
-- **Single HTML file** (2.1 MB) - completely self-contained
+- **Single HTML file** (2.7 MB) - completely self-contained
 - **Zero dependencies** - works from `file://` protocol
 - **Offline-first** - no external requests
+- **Dual compression** - CCITT G4 (lossless) or JBIG2 (lossy, better compression)
 - **Dithering modes** - sharp (text) or smooth (photos)
 - **PDF/A-1B output** - archival quality
+- **WebAssembly** - JBIG2 encoder compiled from C/C++ via Emscripten
 - **Source included** - full source code embedded in the file (because we believe in transparency, and also because we couldn't help ourselves)
 - **Recursion-ready** - you could theoretically extract the source, rebuild it, extract that source, rebuild that... we don't recommend it, but we won't stop you
 
 ## How it works
 
-Pure JavaScript implementation:
+JavaScript + WebAssembly hybrid:
 - **PDF.js** for rendering
-- **Custom G4 encoder** (ported from C)
+- **Custom G4 encoder** (ported from C to JavaScript)
+- **jbig2enc** (compiled to WebAssembly via Emscripten)
+- **Leptonica** (image processing library, linked in WASM)
 - **pako** for zlib compression
 - **FlateDecode cascading** on CCITT streams (~35% extra reduction)
 
-Pipeline: `PDF → Canvas → Grayscale → Normalize → Bilevel → G4 Encode → PDF/A-1B`
+Pipeline: `PDF → Canvas → Grayscale → Normalize → Bilevel → G4/JBIG2 Encode → PDF/A-1B`
 
 ## Architecture: A Study in Questionable Decisions
 
@@ -69,7 +74,7 @@ Why? Because when you're compressing PDFs, why not compress your own source code
 The file structure is essentially:
 ```
 ┌─────────────────────────────────────┐
-│ HTML file (1.47 MB)                 │
+│ HTML file (2.7  MB)                 │
 │ ┌─────────────────────────────────┐ │
 │ │ Decompression loader            │ │
 │ │ (shows purple spinner)          │ │
@@ -114,6 +119,8 @@ Third-party components:
 - PDF.js (Apache 2.0) - Mozilla Foundation
 - pako (MIT) - Vitaly Puzrin
 - G4Enc (Apache 2.0) - BitBank Software, Inc.
+- jbig2enc (Apache 2.0) - Google Inc.
+- Leptonica (BSD) - Leptonica
 - libtiff (BSD-style) - Sam Leffler, Silicon Graphics, Inc.
 - Noto Sans Mongolian (SIL OFL 1.1) - The Noto Project Authors
 

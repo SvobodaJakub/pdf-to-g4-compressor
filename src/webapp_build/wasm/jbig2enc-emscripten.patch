@@ -1,0 +1,44 @@
+diff --git a/src/jbig2.cc b/src/jbig2.cc
+index f27d17e..018384f 100644
+--- a/src/jbig2.cc
++++ b/src/jbig2.cc
+@@ -589,11 +589,15 @@ main(int argc, char **argv) {
+   if (pdfmode) {
+     char *filename;
+     asprintf(&filename, "%s.sym", basename);
+-    const int fd = open(filename, O_WRONLY | O_TRUNC | O_CREAT | WINBINARY, 0600);
++    FILE *fp = fopen(filename, "wb");
++    if (!fp) {
++      fprintf(stderr, "Failed to open %s for writing\n", filename);
++      free(filename);
++      abort();
++    }
++    fwrite(ret, 1, length, fp);
++    fclose(fp);
+     free(filename);
+-    if (fd < 0) abort();
+-    write(fd, ret, length);
+-    close(fd);
+   } else {
+     write(1, ret, length);
+   }
+@@ -604,11 +608,15 @@ main(int argc, char **argv) {
+     if (pdfmode) {
+       char *filename;
+       asprintf(&filename, "%s.%04d", basename, i);
+-      const int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC | WINBINARY, 0600);
++      FILE *fp = fopen(filename, "wb");
++      if (!fp) {
++        fprintf(stderr, "Failed to open %s for writing\n", filename);
++        free(filename);
++        abort();
++      }
++      fwrite(ret, 1, length, fp);
++      fclose(fp);
+       free(filename);
+-      if (fd < 0) abort();
+-      write(fd, ret, length);
+-      close(fd);
+     } else {
+       write(1, ret, length);
+     }

@@ -25,9 +25,15 @@ const A4_HEIGHT_PT = 842;
 /**
  * Create a PDF from CCITT compressed pages
  * @param {Array} pages - Array of page objects {width, height, data (CCITT compressed)}
+ * @param {Object} [metadataOptions] - Metadata options
+ * @param {boolean} [metadataOptions.includeProducer=true] - Include Producer/CreatorTool
+ * @param {boolean} [metadataOptions.includeTimestamp=true] - Include real timestamps
  * @returns {Uint8Array} PDF file data
  */
-function createPDF(pages) {
+function createPDF(pages, metadataOptions) {
+    const mdOpts = metadataOptions || {};
+    const includeProducer = mdOpts.includeProducer !== false;
+    const includeTimestamp = mdOpts.includeTimestamp !== false;
     const encoder = new TextEncoder();
 
     // PDF header with binary marker
@@ -166,8 +172,11 @@ function createPDF(pages) {
     // ========================================================================
     const metadataObjNum = objNum++;
 
-    const now = new Date();
-    const timestamp = now.toISOString().replace(/\.\d{3}Z$/, '+00:00');
+    const timestamp = includeTimestamp
+        ? new Date().toISOString().replace(/\.\d{3}Z$/, '+00:00')
+        : '1970-01-01T00:00:00+00:00';
+    const creatorTool = includeProducer ? 'PDF Monochrome G4 Compressor' : '';
+    const producer = includeProducer ? 'PDF Monochrome G4 Compressor' : '';
 
     const xmpMetadata = encoder.encode(
         `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>\n` +
@@ -184,10 +193,10 @@ function createPDF(pages) {
         `      <xmp:CreateDate>${timestamp}</xmp:CreateDate>\n` +
         `      <xmp:ModifyDate>${timestamp}</xmp:ModifyDate>\n` +
         `      <xmp:MetadataDate>${timestamp}</xmp:MetadataDate>\n` +
-        `      <xmp:CreatorTool>PDF to CCITT Web Converter</xmp:CreatorTool>\n` +
+        `      <xmp:CreatorTool>${creatorTool}</xmp:CreatorTool>\n` +
         `    </rdf:Description>\n` +
         `    <rdf:Description rdf:about="" xmlns:pdf="http://ns.adobe.com/pdf/1.3/">\n` +
-        `      <pdf:Producer>PDF to CCITT Web Converter</pdf:Producer>\n` +
+        `      <pdf:Producer>${producer}</pdf:Producer>\n` +
         `    </rdf:Description>\n` +
         `  </rdf:RDF>\n` +
         `</x:xmpmeta>\n` +

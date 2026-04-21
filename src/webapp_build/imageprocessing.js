@@ -183,7 +183,7 @@ function toBilevelDithered(image, threshold = 128) {
 
 /**
  * Complete image processing pipeline
- * Matches cpdfgm.sh: grayscale → normalize → level 10%,90% → bilevel
+ * Matches ccitt_g4_pdf_compression_example.sh: grayscale → normalize → level 10%,90% → bilevel
  */
 function processImage(imageData, options = {}) {
     const {

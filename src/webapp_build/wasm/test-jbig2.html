@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>JBIG2 WASM Test</title>
+</head>
+<body>
+    <h1>JBIG2 WASM Module Test</h1>
+    <pre id="output">Loading WASM module...</pre>
+
+    <script src="jbig2.js"></script>
+    <script>
+    // Test that the WASM module loads
+    Module.onRuntimeInitialized = function() {
+        const output = document.getElementById('output');
+        output.textContent = '✅ WASM module loaded successfully!\n\n';
+        output.textContent += 'Module object: ' + typeof Module + '\n';
+        output.textContent += 'FS available: ' + (typeof Module.FS !== 'undefined') + '\n';
+        output.textContent += 'ccall available: ' + (typeof Module.ccall !== 'undefined') + '\n';
+        output.textContent += 'cwrap available: ' + (typeof Module.cwrap !== 'undefined') + '\n';
+
+        // Check if we can create a virtual filesystem
+        try {
+            Module.FS.mkdir('/test');
+            Module.FS.writeFile('/test/hello.txt', 'Hello WASM!');
+            const content = Module.FS.readFile('/test/hello.txt', { encoding: 'utf8' });
+            output.textContent += '\n✅ Virtual filesystem works!\n';
+            output.textContent += 'Test file content: ' + content + '\n';
+        } catch (e) {
+            output.textContent += '\n❌ Filesystem test failed: ' + e.message + '\n';
+        }
+
+        output.textContent += '\n🎉 JBIG2 WASM module is ready for use!';
+    };
+    </script>
+</body>
+</html>

@@ -7,11 +7,12 @@ A single-file web application that compresses PDFs to monochrome bilevel format 
 
 ## Features
 
-- ✅ **Single HTML file** (2.1 MB) - no installation needed
+- ✅ **Single HTML file** (2.7 MB) - no installation needed
 - ✅ **Completely self-contained** - includes full source code
 - ✅ **Works offline** - no internet connection required
 - ✅ **Configurable DPI** - 72 to 1200 DPI (310 DPI default)
 - ✅ **CCITT Group 4 compression** - efficient bilevel encoding (ITU-T T.6)
+- ✅ **JBIG2 compression** - optional lossy compression for maximum reduction
 - ✅ **PDF/A-1B output** - archival-quality PDFs
 - ✅ **FlateDecode cascading** - additional compression on CCITT streams (~35% extra reduction)
 - ✅ **Dithering modes** - non-dithered (sharp) or dithered (smooth) output
@@ -40,8 +41,8 @@ python3 -m http.server 8000
 3. **Normalize** → Histogram stretching for contrast
 4. **Level adjustment** → 10% black point, 90% white point
 5. **Convert to bilevel** → 1-bit black/white (threshold or Floyd-Steinberg dithering)
-6. **CCITT G4 encode** → Compress using ITU-T T.6 (Fax Group 4)
-7. **Generate PDF** → Create PDF/A-1B with CCITT streams
+6. **Compress** → CCITT G4 (lossless) or JBIG2 (lossy with symbol matching)
+7. **Generate PDF** → Create PDF/A-1B with compressed image streams
 8. **Apply FlateDecode** → Cascade zlib compression for maximum reduction
 
 ## Usage Guide
@@ -94,11 +95,13 @@ python3 build.py
 
 ### Architecture
 
-- **Pure JavaScript** - no WebAssembly, no external dependencies
+- **JavaScript + WebAssembly** - Hybrid architecture for performance
 - **Self-extracting** - HTML decompresses itself on load
 - **PDF.js** - Mozilla PDF renderer (Apache 2.0)
 - **pako** - zlib compression (MIT)
 - **G4Enc** - CCITT encoder ported from C (Apache 2.0)
+- **jbig2enc** - JBIG2 encoder compiled to WebAssembly via Emscripten (Apache 2.0)
+- **Leptonica** - Image processing library (BSD-style, linked in jbig2enc)
 - **Noto Sans Mongolian** - Traditional Mongolian script support (SIL OFL 1.1)
 
 ## License
@@ -111,6 +114,8 @@ Third-party components:
 - **PDF.js** (Apache 2.0) - Mozilla Foundation
 - **pako** (MIT) - Vitaly Puzrin and Andrei Tuputcyn
 - **G4Enc** (Apache 2.0) - BitBank Software, Inc.
+- **jbig2enc** (Apache 2.0) - Adam Langley (Google Inc.)
+- **Leptonica** (BSD-style) - Dan Bloomberg, Leptonica project
 - **libtiff** (BSD-style) - Sam Leffler, Silicon Graphics, Inc.
 - **Noto Sans Mongolian** (SIL OFL 1.1) - The Noto Project Authors
 

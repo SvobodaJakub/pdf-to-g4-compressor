@@ -261,6 +261,14 @@ def main():
     ziputil = read_file('ziputil.js')
     intro = read_file('intro.js')
 
+    # Read JBIG2 components
+    print("Reading JBIG2 modules...")
+    jbig2_wasm = read_binary('wasm/jbig2.wasm')
+    jbig2_wasm_b64 = to_base64(jbig2_wasm)
+    jbig2_js = read_file('wasm/jbig2.js')
+    jbig2_wrapper = read_file('jbig2-wrapper.js')
+    jbig2pdf_js = read_file('jbig2pdf.js')
+
     # Read and encode Mongolian font
     print("Reading Mongolian font...")
     with open('NotoSansMongolian-Regular.otf', 'rb') as f:
@@ -273,6 +281,11 @@ def main():
     print(f"  pdf.worker (base64): {len(pdfjsworker_b64):,} bytes")
     print(f"  Mongolian font: {len(mongolian_font):,} bytes")
     print(f"  Mongolian font (base64): {len(mongolian_font_b64):,} bytes")
+    print(f"  jbig2.wasm: {len(jbig2_wasm):,} bytes")
+    print(f"  jbig2.wasm (base64): {len(jbig2_wasm_b64):,} bytes")
+    print(f"  jbig2.js: {len(jbig2_js):,} bytes")
+    print(f"  jbig2-wrapper.js: {len(jbig2_wrapper):,} bytes")
+    print(f"  jbig2pdf.js: {len(jbig2pdf_js):,} bytes")
 
     # Merge i18n files
     print("Merging i18n modules...")
@@ -345,7 +358,18 @@ THIRD-PARTY COMPONENTS (All inlined below)
    URL: https://github.com/bitbank2/G4ENC
    Note: Ported from C to JavaScript for this project
 
-4. LibTIFF - TIFFBitRevTable (used in Python source)
+4. jbig2enc - JBIG2 Encoder (compiled to WASM)
+   Copyright (C) 2006 Google Inc.
+   License: Apache 2.0
+   URL: https://github.com/agl/jbig2enc
+   Note: Compiled to WebAssembly with Emscripten
+
+5. Leptonica - Image Processing Library (linked in jbig2enc WASM)
+   Copyright © 2001-2020 Leptonica
+   License: BSD 2-Clause License
+   URL: https://github.com/DanBloomberg/leptonica
+
+6. LibTIFF - TIFFBitRevTable (used in Python source)
    Copyright © 1988-1997 Sam Leffler, © 1991-1997 Silicon Graphics, Inc.
    License: LibTIFF License (BSD-style)
    URL: https://gitlab.com/libtiff/libtiff
@@ -423,6 +447,55 @@ const SOURCE_TARBALL_BASE64 = '{source_tarball_b64}';
 {g4enc}
 
 // ============================================================================
+// JBIG2 Encoder - Apache 2.0 License
+// Compiled from https://github.com/agl/jbig2enc (WASM)
+// ============================================================================
+
+// JBIG2 WASM Module
+(function() {{
+    // Base64-encoded WASM binary
+    const jbig2WasmBase64 = '{jbig2_wasm_b64}';
+
+    // Decode base64 to binary
+    const wasmBinary = atob(jbig2WasmBase64);
+    const wasmBytes = new Uint8Array(wasmBinary.length);
+    for (let i = 0; i < wasmBinary.length; i++) {{
+        wasmBytes[i] = wasmBinary.charCodeAt(i);
+    }}
+
+    // Create Module object that jbig2.js will use
+    window.Module = {{
+        wasmBinary: wasmBytes,
+        noInitialRun: true,
+        print: function(text) {{
+            console.log('[JBIG2]', text);
+        }},
+        printErr: function(text) {{
+            console.error('[JBIG2]', text);
+        }},
+        onRuntimeInitialized: function() {{
+            console.log('[JBIG2] Runtime initialized');
+            window.JBIG2Ready = true;
+        }},
+        onAbort: function(what) {{
+            console.error('[JBIG2] Aborted:', what);
+        }}
+    }};
+
+    window.JBIG2Ready = false;
+    console.log('[JBIG2] WASM binary prepared:', wasmBytes.length, 'bytes');
+}})();
+
+// JBIG2.js - Emscripten-generated loader
+{jbig2_js}
+
+// JBIG2 Wrapper - High-level API
+{jbig2_wrapper}
+
+// JBIG2 PDF Generator
+{jbig2pdf_js}
+
+// ============================================================================
 // Image Processing Pipeline
 // ============================================================================
 {imageprocessing}
@@ -465,6 +538,20 @@ var detectedLang = 'en';  // Original detected language
 var selectedFile = null;
 var isZipMode = false;
 var zipProgressPrefix = '';
+var resultUsedJBIG2 = false;  // Track whether current result used JBIG2
+
+// Track compression settings used to create current result
+var resultSettings = {{
+    fileName: null,
+    ditherMode: null,
+    pageRange: null,
+    dpi: null,
+    pageSize: null,
+    useJBIG2: false,
+    jbig2Threshold: 0.97,
+    includeProducer: true,
+    includeTimestamp: true
+}};
 
 // DOM element references (assigned in DOMContentLoaded)
 var pdfFileInput, filenameDisplay, convertBtn, progressDiv, progressText;
@@ -564,6 +651,19 @@ function resetAppState() {{
     window.originalSize = null;
     window.resultSize = null;
     window.ditherMode = null;
+    resultUsedJBIG2 = false;
+
+    // Clear result settings
+    resultSettings = {{
+        fileName: null,
+        ditherMode: null,
+        pageRange: null,
+        dpi: null,
+        pageSize: null,
+        useJBIG2: false,
+        includeProducer: true,
+        includeTimestamp: true
+    }};
 
     // Reset ZIP mode
     isZipMode = false;
@@ -801,13 +901,13 @@ document.addEventListener('DOMContentLoaded', function() {{
             }} else {{
                 convertBtn.classList.remove('disabled');
                 convertBtn.setAttribute('aria-disabled', 'false');
-                convertBtn.textContent = currentT.compressButton || 'Compress to G4';
+                convertBtn.textContent = currentT.compressButton || 'Compress';
             }}
         }} else {{
             // Standard DPI mode - always valid if file is selected
             convertBtn.classList.remove('disabled');
             convertBtn.setAttribute('aria-disabled', 'false');
-            convertBtn.textContent = currentT.compressButton || 'Compress to G4';
+            convertBtn.textContent = currentT.compressButton || 'Compress';
         }}
     }}
 
@@ -865,9 +965,13 @@ document.addEventListener('DOMContentLoaded', function() {{
 
         // Validate controls to disable/enable convert button
         validateControls();
+        validateFormMatchesResult();
     }});
 
-    dpiSlider.addEventListener('input', updateDPIDisplay);
+    dpiSlider.addEventListener('input', function() {{
+        updateDPIDisplay();
+        validateFormMatchesResult();
+    }});
     updateDPIDisplay(); // Initialize display
 
     // Show/hide DPI slider based on radio selection
@@ -880,6 +984,7 @@ document.addEventListener('DOMContentLoaded', function() {{
             }}
             updateDPIWarning();
             validateControls();
+            validateFormMatchesResult();
         }});
     }});
 
@@ -892,7 +997,16 @@ document.addEventListener('DOMContentLoaded', function() {{
                 pageRangeContainer.classList.remove('show');
             }}
             updateDPIWarning(); // Update warning when dithering mode changes
+            validateFormMatchesResult();
         }});
+    }});
+
+    // Validate when page range changes
+    pageRangeInput.addEventListener('input', validateFormMatchesResult);
+
+    // Validate when page size changes
+    document.querySelectorAll('input[name="pageSize"]').forEach(radio => {{
+        radio.addEventListener('change', validateFormMatchesResult);
     }});
 
     // Detect file type by magic bytes and update ZIP mode state
@@ -938,8 +1052,9 @@ document.addEventListener('DOMContentLoaded', function() {{
             await detectFileType(selectedFile);
             const currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
             filenameDisplay.textContent = selectedFile.name;
-            convertBtn.textContent = currentT.compressButton || 'Compress to G4';
+            convertBtn.textContent = currentT.compressButton || 'Compress';
             validateControls();
+            validateFormMatchesResult();
             console.log('Button enabled, isZipMode:', isZipMode);
         }}
     }});
@@ -963,8 +1078,9 @@ document.addEventListener('DOMContentLoaded', function() {{
             await detectFileType(selectedFile);
             const currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
             filenameDisplay.textContent = selectedFile.name;
-            convertBtn.textContent = currentT.compressButton || 'Compress to G4';
+            convertBtn.textContent = currentT.compressButton || 'Compress';
             validateControls();
+            validateFormMatchesResult();
         }}
     }});
 
@@ -978,6 +1094,16 @@ document.addEventListener('DOMContentLoaded', function() {{
     convertBtn.addEventListener('click', async function() {{
         if (!selectedFile) return;
         if (convertBtn.classList.contains('disabled')) return;
+
+        // Read checkbox states BEFORE destroying the result box
+        const useJBIG2Checkbox = document.getElementById('useJBIG2');
+        const useJBIG2ForThisRun = useJBIG2Checkbox ? useJBIG2Checkbox.checked : false;
+        const jbig2ThresholdRadio = document.querySelector('input[name="jbig2Threshold"]:checked');
+        const jbig2ThresholdForThisRun = jbig2ThresholdRadio ? parseFloat(jbig2ThresholdRadio.value) : 0.97;
+        const includeProducerCheckbox = document.getElementById('includeProducer');
+        const includeProducerForThisRun = includeProducerCheckbox ? includeProducerCheckbox.checked : true;
+        const includeTimestampCheckbox = document.getElementById('includeTimestamp');
+        const includeTimestampForThisRun = includeTimestampCheckbox ? includeTimestampCheckbox.checked : true;
 
         const ditherMode = document.querySelector('input[name="mode"]:checked').value;
         let ditherConfig = null;
@@ -1035,10 +1161,11 @@ document.addEventListener('DOMContentLoaded', function() {{
             const pageSize = document.querySelector('input[name="pageSize"]:checked').value;
 
             // Process the file (PDF or ZIP)
+            const metadataOpts = {{ includeProducer: includeProducerForThisRun, includeTimestamp: includeTimestampForThisRun }};
             if (isZipMode) {{
-                await convertZIP(selectedFile, ditherConfig, targetDPI, pageSize);
+                await convertZIP(selectedFile, ditherConfig, targetDPI, pageSize, useJBIG2ForThisRun, jbig2ThresholdForThisRun, metadataOpts);
             }} else {{
-                await convertPDF(selectedFile, ditherConfig, targetDPI, pageSize);
+                await convertPDF(selectedFile, ditherConfig, targetDPI, pageSize, useJBIG2ForThisRun, jbig2ThresholdForThisRun, metadataOpts);
             }}
 
         }} catch (error) {{
@@ -1103,7 +1230,7 @@ document.addEventListener('DOMContentLoaded', function() {{
     }}
 
     // Main conversion function
-    async function convertPDF(file, ditherConfig, targetDPI, pageSize) {{
+    async function convertPDF(file, ditherConfig, targetDPI, pageSize, useJBIG2, jbig2Threshold, metadataOpts) {{
         progressText.textContent = 'Reading PDF file...';
 
         // Read file as ArrayBuffer
@@ -1114,8 +1241,8 @@ document.addEventListener('DOMContentLoaded', function() {{
         progressText.textContent = 'Loading PDF with PDF.js...';
         console.log('Loading PDF, size:', pdfData.length, 'bytes');
 
-        // Render PDF pages to images
-        const pages = await renderPDFPages(pdfData, ditherConfig, targetDPI, pageSize);
+        // Render PDF pages to images (with appropriate encoding)
+        const pages = await renderPDFPages(pdfData, ditherConfig, targetDPI, pageSize, useJBIG2);
 
         if (!pages || pages.length === 0) {{
             throw new Error('No pages rendered from PDF');
@@ -1123,25 +1250,85 @@ document.addEventListener('DOMContentLoaded', function() {{
 
         console.log(`Successfully processed ${{pages.length}} page(s)`);
 
-        progressText.textContent = 'Generating CCITT-compressed PDF...';
-        const compressedPDF = createPDF(pages);
+        let finalPDF;
 
-        progressText.textContent = 'Applying FlateDecode compression...';
-        const finalPDF = compressPDF(compressedPDF, pako);
+        if (useJBIG2) {{
+            // JBIG2 encoding path
+            progressText.textContent = 'Initializing JBIG2 encoder...';
+
+            const encoder = new JBIG2Encoder();
+            await encoder.init();
+
+            progressText.textContent = 'Encoding with JBIG2...';
+
+            // Prepare pages for JBIG2 (bilevel data)
+            const bilevelPages = pages.map(p => ({{
+                width: p.width,
+                height: p.height,
+                data: p.data  // Already bilevel from renderPDFPages
+            }}));
+
+            // Encode with JBIG2
+            const jbig2Result = await encoder.encode(bilevelPages, {{
+                lossy: true,
+                threshold: jbig2Threshold,
+                symbolCoding: true,
+                progressCallback: (current, total, status) => {{
+                    progressText.textContent = `JBIG2 encoding: ${{status}}`;
+                }}
+            }});
+
+            progressText.textContent = 'Generating JBIG2-compressed PDF...';
+
+            // Create PDF/A-1B with JBIG2 streams
+            const jbig2Pages = bilevelPages.map((p, i) => ({{
+                width: p.width,
+                height: p.height,
+                data: jbig2Result.pages[i]
+            }}));
+
+            const jbig2PDF = createJBIG2PDF({{
+                globalData: jbig2Result.sym,
+                pages: jbig2Pages,
+                metadataOptions: metadataOpts
+            }});
+
+            progressText.textContent = 'Applying FlateDecode compression...';
+            finalPDF = compressPDF(jbig2PDF, pako);
+        }} else {{
+            // CCITT G4 encoding path (original)
+            progressText.textContent = 'Generating CCITT-compressed PDF...';
+            const compressedPDF = createPDF(pages, metadataOpts);
+
+            progressText.textContent = 'Applying FlateDecode compression...';
+            finalPDF = compressPDF(compressedPDF, pako);
+        }}
 
         // Store result for later download
         window.resultPDF = finalPDF;
-        window.resultFilename = file.name.replace('.pdf', '_ccitt.pdf');
+        window.resultFilename = file.name.replace('.pdf', useJBIG2 ? '_jbig2.pdf' : '_ccittG4.pdf');
         window.originalSize = originalSize;
         window.resultSize = finalPDF.length;
         window.ditherMode = ditherConfig.mode;
+        resultUsedJBIG2 = useJBIG2;  // Track which method was used
+
+        // Save all compression settings for validation
+        resultSettings.fileName = file.name;
+        resultSettings.ditherMode = ditherConfig.mode;
+        resultSettings.pageRange = ditherConfig.mode === 'selected' ? (ditherConfig.pages || []).join(',') : null;
+        resultSettings.dpi = targetDPI;
+        resultSettings.pageSize = pageSize;
+        resultSettings.useJBIG2 = useJBIG2;
+        resultSettings.jbig2Threshold = jbig2Threshold;
+        resultSettings.includeProducer = metadataOpts.includeProducer;
+        resultSettings.includeTimestamp = metadataOpts.includeTimestamp;
 
         // Show result box instead of downloading
         showResultBox();
     }}
 
     // Batch conversion for ZIP files containing PDFs
-    async function convertZIP(file, ditherConfig, targetDPI, pageSize) {{
+    async function convertZIP(file, ditherConfig, targetDPI, pageSize, useJBIG2, jbig2Threshold, metadataOpts) {{
         progressText.textContent = 'Reading ZIP file...';
 
         // Read ZIP into ArrayBuffer
@@ -1158,6 +1345,14 @@ document.addEventListener('DOMContentLoaded', function() {{
             throw new Error('No PDF files found in ZIP');
         }}
 
+        // Initialize JBIG2 encoder if needed (once for all files)
+        let jbig2Encoder = null;
+        if (useJBIG2) {{
+            progressText.textContent = 'Initializing JBIG2 encoder...';
+            jbig2Encoder = new JBIG2Encoder();
+            await jbig2Encoder.init();
+        }}
+
         var totalOriginalSize = 0;
         var resultEntries = [];
 
@@ -1170,18 +1365,58 @@ document.addEventListener('DOMContentLoaded', function() {{
             zipProgressPrefix = fileLabel + ': ';
 
             progressText.textContent = fileLabel + ': Loading PDF...';
-            var pages = await renderPDFPages(entry.data, ditherConfig, targetDPI, pageSize);
+            var pages = await renderPDFPages(entry.data, ditherConfig, targetDPI, pageSize, useJBIG2);
 
             if (!pages || pages.length === 0) {{
                 console.warn('No pages rendered from ' + entry.path + ', skipping');
                 continue;
             }}
 
-            progressText.textContent = fileLabel + ': Generating CCITT-compressed PDF...';
-            var compressedPDF = createPDF(pages);
+            var finalPDF;
 
-            progressText.textContent = fileLabel + ': Applying FlateDecode compression...';
-            var finalPDF = compressPDF(compressedPDF, pako);
+            if (useJBIG2) {{
+                // JBIG2 encoding path
+                progressText.textContent = fileLabel + ': Encoding with JBIG2...';
+
+                const bilevelPages = pages.map(p => ({{
+                    width: p.width,
+                    height: p.height,
+                    data: p.data
+                }}));
+
+                const jbig2Result = await jbig2Encoder.encode(bilevelPages, {{
+                    lossy: true,
+                    threshold: jbig2Threshold,
+                    symbolCoding: true,
+                    progressCallback: (current, total, status) => {{
+                        progressText.textContent = fileLabel + ': ' + status;
+                    }}
+                }});
+
+                progressText.textContent = fileLabel + ': Generating JBIG2-compressed PDF...';
+
+                const jbig2Pages = bilevelPages.map((p, idx) => ({{
+                    width: p.width,
+                    height: p.height,
+                    data: jbig2Result.pages[idx]
+                }}));
+
+                const jbig2PDF = createJBIG2PDF({{
+                    globalData: jbig2Result.sym,
+                    pages: jbig2Pages,
+                    metadataOptions: metadataOpts
+                }});
+
+                progressText.textContent = fileLabel + ': Applying FlateDecode compression...';
+                finalPDF = compressPDF(jbig2PDF, pako);
+            }} else {{
+                // CCITT G4 encoding path
+                progressText.textContent = fileLabel + ': Generating CCITT-compressed PDF...';
+                var compressedPDF = createPDF(pages, metadataOpts);
+
+                progressText.textContent = fileLabel + ': Applying FlateDecode compression...';
+                finalPDF = compressPDF(compressedPDF, pako);
+            }}
 
             resultEntries.push({{ path: entry.path, data: finalPDF }});
         }}
@@ -1198,10 +1433,22 @@ document.addEventListener('DOMContentLoaded', function() {{
 
         // Store results (same globals as convertPDF)
         window.resultPDF = resultZip;
-        window.resultFilename = file.name.replace(/\\.zip$/i, '_ccitt.zip');
+        window.resultFilename = file.name.replace(/\\.zip$/i, useJBIG2 ? '_jbig2.zip' : '_ccittG4.zip');
         window.originalSize = totalOriginalSize;
         window.resultSize = resultZip.length;
         window.ditherMode = ditherConfig.mode;
+        resultUsedJBIG2 = useJBIG2;  // Track which method was used
+
+        // Save all compression settings for validation
+        resultSettings.fileName = file.name;
+        resultSettings.ditherMode = ditherConfig.mode;
+        resultSettings.pageRange = ditherConfig.mode === 'selected' ? (ditherConfig.pages || []).join(',') : null;
+        resultSettings.dpi = targetDPI;
+        resultSettings.pageSize = pageSize;
+        resultSettings.useJBIG2 = useJBIG2;
+        resultSettings.jbig2Threshold = jbig2Threshold;
+        resultSettings.includeProducer = metadataOpts.includeProducer;
+        resultSettings.includeTimestamp = metadataOpts.includeTimestamp;
 
         showResultBox();
     }}
@@ -1275,28 +1522,191 @@ document.addEventListener('DOMContentLoaded', function() {{
             }}
         }}
 
-        // Show the result with save button
-        progressDiv.innerHTML = `
+        // Build HTML with advanced tricks and save button (always shown)
+        const advancedTricksText = currentT.advancedTricks || 'Advanced technological tricks';
+        const advancedTricksExpanded = resultUsedJBIG2 || !resultSettings.includeProducer || !resultSettings.includeTimestamp;
+        const advancedTricksDisplay = advancedTricksExpanded ? 'block' : 'none';
+        const advancedTricksArrow = advancedTricksExpanded ? '▼' : '▶';
+        let resultHTML = `
             <div style="font-weight: bold; margin-bottom: 15px;">${{message}}</div>
-            <div id="saveResultBtn" class="action-btn" role="button" tabindex="0" style="width: auto; padding: 10px 20px; background: #667eea; border-radius: 4px;">${{currentT.resultSaveButton}}</div>
+            <div style="margin-top: 20px;">
+                <a href="javascript:void(0)" id="advancedTricksToggle" class="advanced-toggle" style="display: inline-block; color: #667eea; cursor: pointer; font-weight: 500; text-decoration: none; margin-bottom: 10px;">${{advancedTricksArrow}} ${{advancedTricksText}}</a>
+                <div id="advancedTricksContent" class="advanced-content" style="display: ${{advancedTricksDisplay}}; margin-top: 10px; padding: 15px; background: white; border-radius: 4px; border: 1px solid #ddd;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                        <input type="checkbox" id="useJBIG2" name="useJBIG2" ${{resultUsedJBIG2 ? 'checked' : ''}} style="width: 18px; height: 18px; cursor: pointer;">
+                        <label for="useJBIG2" style="cursor: pointer; color: #333; font-weight: 500;">${{currentT.useJBIG2Label || 'Use lossy JBIG2 compression instead of CCITT G4'}}</label>
+                    </div>
+                    <div style="font-size: 13px; color: #856404; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 10px; line-height: 1.5;">${{currentT.jbig2Warning || '⚠️ Improve compression by using JBIG2 compression instead of CCITT G4 compression. Small similar characters might be confused (e.g. 6 with 8). Old devices might be unable to open the PDF.'}}</div>
+
+                    <div id="jbig2ThresholdOptions" style="display: ${{resultUsedJBIG2 ? 'block' : 'none'}}; margin-top: 12px; padding: 12px; background: #f8f9fa; border-radius: 4px; border: 1px solid #e0e0e0;">
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="radio" id="jbig2Threshold097" name="jbig2Threshold" value="0.97" ${{resultSettings.jbig2Threshold === 0.97 ? 'checked' : ''}} style="width: 16px; height: 16px; cursor: pointer;">
+                                <label for="jbig2Threshold097" style="cursor: pointer; color: #333; font-family: 'Courier New', monospace;">jbig2enc -t 0.97</label>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="radio" id="jbig2Threshold092" name="jbig2Threshold" value="0.92" ${{resultSettings.jbig2Threshold === 0.92 ? 'checked' : ''}} style="width: 16px; height: 16px; cursor: pointer;">
+                                <label for="jbig2Threshold092" style="cursor: pointer; color: #333; font-family: 'Courier New', monospace;">⚠️ jbig2enc -t 0.92</label>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="radio" id="jbig2Threshold085" name="jbig2Threshold" value="0.85" ${{resultSettings.jbig2Threshold === 0.85 ? 'checked' : ''}} style="width: 16px; height: 16px; cursor: pointer;">
+                                <label for="jbig2Threshold085" style="cursor: pointer; color: #333; font-family: 'Courier New', monospace;">⚠️⚠️ jbig2enc -t 0.85</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid #eee;">
+                        <div style="font-weight: 500; color: #333; margin-bottom: 10px;">${{currentT.metadataSection || 'Metadata'}}</div>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                            <input type="checkbox" id="includeProducer" name="includeProducer" ${{resultSettings.includeProducer ? 'checked' : ''}} style="width: 18px; height: 18px; cursor: pointer;">
+                            <label for="includeProducer" style="cursor: pointer; color: #333;">PDF Monochrome G4 Compressor</label>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="includeTimestamp" name="includeTimestamp" ${{resultSettings.includeTimestamp ? 'checked' : ''}} style="width: 18px; height: 18px; cursor: pointer;">
+                            <label for="includeTimestamp" style="cursor: pointer; color: #333;">${{currentT.includeTimestampLabel || 'Include Created & Modified timestamps'}}</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="saveResultBtn" class="action-btn" role="button" tabindex="0" style="width: auto; padding: 10px 20px; background: #667eea; border-radius: 4px; margin-top: 20px;">${{currentT.resultSaveButton}}</div>
         `;
+
+        progressDiv.innerHTML = resultHTML;
         progressDiv.style.display = 'block';
 
         // Attach save button handler
         var saveBtn = document.getElementById('saveResultBtn');
         saveBtn.addEventListener('click', function() {{
+            // Don't save if button is disabled
+            if (this.classList.contains('disabled')) return;
             downloadFile(window.resultPDF, window.resultFilename);
         }});
         saveBtn.addEventListener('keydown', function(e) {{
             if (e.key === 'Enter' || e.key === ' ') {{
                 e.preventDefault();
-                saveBtn.click();
+                // Don't save if button is disabled
+                if (!this.classList.contains('disabled')) {{
+                    downloadFile(window.resultPDF, window.resultFilename);
+                }}
             }}
         }});
+
+        // Attach advanced tricks toggle handler (if present)
+        var advancedTricksToggle = document.getElementById('advancedTricksToggle');
+        var advancedTricksContent = document.getElementById('advancedTricksContent');
+        if (advancedTricksToggle && advancedTricksContent) {{
+            advancedTricksToggle.addEventListener('click', function(e) {{
+                e.preventDefault();
+                const isShown = advancedTricksContent.style.display === 'block';
+                const currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
+                const advancedTricksText = currentT.advancedTricks || 'Advanced technological tricks';
+
+                if (!isShown) {{
+                    advancedTricksContent.style.display = 'block';
+                    advancedTricksToggle.textContent = '▼ ' + advancedTricksText;
+                }} else {{
+                    advancedTricksContent.style.display = 'none';
+                    advancedTricksToggle.textContent = '▶ ' + advancedTricksText;
+                }}
+            }});
+        }}
+
+        // Attach change listeners to checkboxes to validate form state
+        var useJBIG2Checkbox = document.getElementById('useJBIG2');
+        if (useJBIG2Checkbox) {{
+            useJBIG2Checkbox.addEventListener('change', function() {{
+                // Show/hide threshold options
+                const thresholdOptions = document.getElementById('jbig2ThresholdOptions');
+                if (thresholdOptions) {{
+                    thresholdOptions.style.display = this.checked ? 'block' : 'none';
+                }}
+                validateFormMatchesResult();
+            }});
+        }}
+        var includeProducerCb = document.getElementById('includeProducer');
+        if (includeProducerCb) {{
+            includeProducerCb.addEventListener('change', validateFormMatchesResult);
+        }}
+        var includeTimestampCb = document.getElementById('includeTimestamp');
+        if (includeTimestampCb) {{
+            includeTimestampCb.addEventListener('change', validateFormMatchesResult);
+        }}
+
+        // Attach change listeners to JBIG2 threshold radio buttons
+        var thresholdRadios = document.querySelectorAll('input[name="jbig2Threshold"]');
+        thresholdRadios.forEach(function(radio) {{
+            radio.addEventListener('change', validateFormMatchesResult);
+        }});
+
+        // Initial validation on show
+        validateFormMatchesResult();
+    }}
+
+    // Validate that current form settings match the compressed result
+    function validateFormMatchesResult() {{
+        const saveBtn = document.getElementById('saveResultBtn');
+        if (!saveBtn) return;  // Save button doesn't exist (no result shown)
+        if (!resultSettings.fileName) return;  // No result to compare against
+
+        // Make sure all required elements exist
+        if (!selectedFile || !dpiStandardRadio || !dpiSlider) return;
+
+        // Check all form settings against saved result settings
+        const currentFileName = selectedFile.name;
+        const currentDitherMode = document.querySelector('input[name="mode"]:checked')?.value || 'no-dither';
+        const currentPageRange = currentDitherMode === 'dither-selected' ? (pageRangeInput?.value || '').trim() : null;
+        const currentDPI = dpiStandardRadio.checked ? 310 : parseInt(dpiSlider.value) || 310;
+        const currentPageSize = document.querySelector('input[name="pageSize"]:checked')?.value || 'a4-portrait';
+        const currentUseJBIG2 = document.getElementById('useJBIG2')?.checked || false;
+        const currentJBIG2Threshold = parseFloat(document.querySelector('input[name="jbig2Threshold"]:checked')?.value || '0.97');
+        const currentIncludeProducer = document.getElementById('includeProducer')?.checked ?? true;
+        const currentIncludeTimestamp = document.getElementById('includeTimestamp')?.checked ?? true;
+
+        // Convert radio button values to the ditherConfig.mode values used during compression
+        let compareDitherMode = 'none';
+        if (currentDitherMode === 'no-dither') compareDitherMode = 'none';
+        else if (currentDitherMode === 'dither') compareDitherMode = 'all';
+        else if (currentDitherMode === 'dither-selected') compareDitherMode = 'selected';
+
+        // Build normalized page range for comparison
+        let normalizedCurrentPageRange = null;
+        if (compareDitherMode === 'selected' && currentPageRange) {{
+            try {{
+                const pages = parsePageRange(currentPageRange);
+                normalizedCurrentPageRange = pages.join(',');
+            }} catch (e) {{
+                // Invalid page range - doesn't match
+                normalizedCurrentPageRange = 'INVALID';
+            }}
+        }}
+
+        const settingsMatch = (
+            currentFileName === resultSettings.fileName &&
+            compareDitherMode === resultSettings.ditherMode &&
+            normalizedCurrentPageRange === resultSettings.pageRange &&
+            currentDPI === resultSettings.dpi &&
+            currentPageSize === resultSettings.pageSize &&
+            currentUseJBIG2 === resultSettings.useJBIG2 &&
+            currentJBIG2Threshold === resultSettings.jbig2Threshold &&
+            currentIncludeProducer === resultSettings.includeProducer &&
+            currentIncludeTimestamp === resultSettings.includeTimestamp
+        );
+
+        if (settingsMatch) {{
+            // Settings match - enable save button
+            saveBtn.classList.remove('disabled');
+            saveBtn.style.opacity = '1';
+            saveBtn.style.cursor = 'pointer';
+        }} else {{
+            // Settings don't match - grey out save button
+            saveBtn.classList.add('disabled');
+            saveBtn.style.opacity = '0.5';
+            saveBtn.style.cursor = 'not-allowed';
+        }}
     }}
 
     // Render PDF pages using PDF.js
-    async function renderPDFPages(pdfData, ditherConfig, targetDPI, pageSize) {{
+    async function renderPDFPages(pdfData, ditherConfig, targetDPI, pageSize, useJBIG2) {{
         // Load PDF document
         const loadingTask = pdfjsLib.getDocument({{ data: pdfData }});
         const pdf = await loadingTask.promise;
@@ -1411,44 +1821,58 @@ document.addEventListener('DOMContentLoaded', function() {{
             const bytesPerRow = Math.ceil(processed.width / 8);
             console.log(`Page ${{pageNum}} bilevel: ${{processed.width}}x${{processed.height}}, bytesPerRow: ${{bytesPerRow}}`);
 
-            progressText.textContent = zipProgressPrefix + `Encoding page ${{pageNum}} with CCITT Group 4...`;
+            if (useJBIG2) {{
+                // JBIG2 path: just store bilevel data for later encoding
+                progressText.textContent = zipProgressPrefix + `Prepared page ${{pageNum}} for JBIG2 encoding...`;
 
-            // Encode with G4
-            const encoder = new G4Encoder();
-            encoder.init(processed.width, processed.height, G4ENC_MSB_FIRST);
+                pages.push({{
+                    width: processed.width,
+                    height: processed.height,
+                    data: processed.data,  // Raw bilevel data (1 bit per pixel, MSB first)
+                    pageWidthPt: Math.round(pageDimensions.width * 72),
+                    pageHeightPt: Math.round(pageDimensions.height * 72)
+                }});
+            }} else {{
+                // G4 path: encode with CCITT Group 4
+                progressText.textContent = zipProgressPrefix + `Encoding page ${{pageNum}} with CCITT Group 4...`;
 
-            // CRITICAL FIX: G4 encoder expects bit=1 for WHITE, but our bilevel has bit=1 for BLACK
-            // Invert all bits before encoding
-            const invertedData = new Uint8Array(processed.data.length);
-            for (let i = 0; i < processed.data.length; i++) {{
-                invertedData[i] = ~processed.data[i] & 0xFF;
-            }}
+                // Encode with G4
+                const encoder = new G4Encoder();
+                encoder.init(processed.width, processed.height, G4ENC_MSB_FIRST);
 
-            for (let y = 0; y < processed.height; y++) {{
-                const rowStart = y * bytesPerRow;
-                const rowData = invertedData.slice(rowStart, rowStart + bytesPerRow);
-                const result = encoder.addLine(rowData);
-
-                if (result === G4ENC_IMAGE_COMPLETE) {{
-                    console.log(`G4 encoding complete at line ${{y + 1}}`);
-                    break;
+                // CRITICAL FIX: G4 encoder expects bit=1 for WHITE, but our bilevel has bit=1 for BLACK
+                // Invert all bits before encoding
+                const invertedData = new Uint8Array(processed.data.length);
+                for (let i = 0; i < processed.data.length; i++) {{
+                    invertedData[i] = ~processed.data[i] & 0xFF;
                 }}
+
+                for (let y = 0; y < processed.height; y++) {{
+                    const rowStart = y * bytesPerRow;
+                    const rowData = invertedData.slice(rowStart, rowStart + bytesPerRow);
+                    const result = encoder.addLine(rowData);
+
+                    if (result === G4ENC_IMAGE_COMPLETE) {{
+                        console.log(`G4 encoding complete at line ${{y + 1}}`);
+                        break;
+                    }}
+                }}
+
+                const compressedData = encoder.getData();
+                const compressionRatio = (compressedData.length / (bytesPerRow * processed.height) * 100);
+
+                console.log(`Page ${{pageNum}} G4 compressed: ${{compressedData.length}} bytes (ratio: ${{compressionRatio.toFixed(1)}}%)`);
+
+                console.log(`Page ${{pageNum}} G4 stream: ${{compressedData.length}} bytes, first 20 bytes:`, Array.from(compressedData.slice(0, 20)).map(b => '0x' + b.toString(16).padStart(2, '0')).join(' '));
+
+                pages.push({{
+                    width: processed.width,
+                    height: processed.height,
+                    data: compressedData,
+                    pageWidthPt: Math.round(pageDimensions.width * 72),   // Convert inches to points (1 inch = 72 points)
+                    pageHeightPt: Math.round(pageDimensions.height * 72)
+                }});
             }}
-
-            const compressedData = encoder.getData();
-            const compressionRatio = (compressedData.length / (bytesPerRow * processed.height) * 100);
-
-            console.log(`Page ${{pageNum}} G4 compressed: ${{compressedData.length}} bytes (ratio: ${{compressionRatio.toFixed(1)}}%)`);
-
-            console.log(`Page ${{pageNum}} G4 stream: ${{compressedData.length}} bytes, first 20 bytes:`, Array.from(compressedData.slice(0, 20)).map(b => '0x' + b.toString(16).padStart(2, '0')).join(' '));
-
-            pages.push({{
-                width: processed.width,
-                height: processed.height,
-                data: compressedData,
-                pageWidthPt: Math.round(pageDimensions.width * 72),   // Convert inches to points (1 inch = 72 points)
-                pageHeightPt: Math.round(pageDimensions.height * 72)
-            }});
         }}
 
         return pages;

@@ -130,7 +130,7 @@ const IntroAnimation = {
         // Get current language for localized button text
         const currentT = (typeof TRANSLATIONS !== 'undefined' && typeof currentLang !== 'undefined')
             ? (TRANSLATIONS[currentLang] || TRANSLATIONS.en)
-            : { chooseFile: 'Choose PDF File', compressButton: 'Compress to CCITT G4' };
+            : { chooseFile: 'Choose PDF File', compressButton: 'Compress' };
 
         overlay.innerHTML = `
             <div class="intro-container" id="introContainer">

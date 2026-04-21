@@ -110,13 +110,11 @@ The `build.py` script now:
 │   │   ├── pdfgen.js             # PDF generation
 │   │   ├── pdfcompress.js        # PDF compression
 │   │   └── libs/                 # External libraries
-│   ├── resources/                 # Reference code
 │   ├── README.md                  # Project documentation
 │   ├── LICENSES.md                # License compliance
 │   ├── IMPLEMENTATION_SUMMARY.md  # Technical details
 │   ├── LESSONS_LEARNED.md         # Algorithm insights
 │   └── ...                        # Other documentation
-├── resources/                      # Not included in tarball
 └── testing_pdf_from_hell/          # Not included in tarball
 ```
 
