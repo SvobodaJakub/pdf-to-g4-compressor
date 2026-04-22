@@ -7,6 +7,7 @@ A single-file web app that compresses PDFs to monochrome (1-bit black/white) wit
 
 **Live Demo:** https://svobodajakub.github.io/  
 **GitHub:** https://github.com/SvobodaJakub/pdf-to-g4-compressor
+**Google Play:** https://play.google.com/store/apps/details?id=com.svobodajakub.pdfg4compressor
 
 ## Why
 
