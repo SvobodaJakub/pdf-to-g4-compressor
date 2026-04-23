@@ -146,9 +146,11 @@ function createPDF(pages, metadataOptions) {
         const pageObjNum = objNum++;
         pageObjNums.push(pageObjNum);
 
+        const rotateEntry = page.rotate ? `/Rotate ${page.rotate} ` : '';
         const pageObj = encoder.encode(
             `<< /Type /Page /Parent ${pagesObjNum} 0 R ` +
             `/MediaBox [0 0 ${pageWidthPt} ${pageHeightPt}] ` +
+            rotateEntry +
             `/Resources << /XObject << /Im${i} ${imgObjNum} 0 R >> >> ` +
             `/Contents ${contentObjNum} 0 R >>`
         );

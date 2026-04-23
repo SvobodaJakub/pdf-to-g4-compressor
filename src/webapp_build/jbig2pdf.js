@@ -223,8 +223,10 @@ function createJBIG2PDF({ globalData = null, pages, metadataOptions = {} }) {
         const pageObjNum = objNum++;
         pageObjNums.push(pageObjNum);
 
+        const rotateEntry = page.rotate ? `/Rotate ${page.rotate} ` : '';
         const pageObj = `<< /Type /Page /Parent ${objNum} 0 R ` +
             `/MediaBox [0 0 ${pageWidthPt} ${pageHeightPt}] ` +
+            rotateEntry +
             `/Resources << /XObject << /Im${i} ${imgObjNum} 0 R >> >> ` +
             `/Contents ${contentObjNum} 0 R >>`;
         objects.push(pageObj);

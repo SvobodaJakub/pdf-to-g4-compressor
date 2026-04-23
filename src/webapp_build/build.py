@@ -27,6 +27,19 @@ def to_base64(data):
         data = data.encode('utf-8')
     return base64.b64encode(data).decode('ascii')
 
+def read_version():
+    """Read VERSION_NAME from ../build-apk.sh"""
+    import re
+    try:
+        with open('../build-apk.sh', 'r', encoding='utf-8') as f:
+            for line in f:
+                m = re.match(r'^VERSION_NAME="([^"]+)"', line.strip())
+                if m:
+                    return f'v{m.group(1)}'
+    except FileNotFoundError:
+        pass
+    return ''
+
 def create_source_tarball():
     """Create tar.xz of source code, return base64-encoded content"""
     print("Creating source tarball...")
@@ -549,6 +562,7 @@ var resultSettings = {{
     pageSize: null,
     useJBIG2: false,
     jbig2Threshold: 0.97,
+    preserveRotation: false,
     includeProducer: true,
     includeTimestamp: true
 }};
@@ -558,6 +572,13 @@ var pdfFileInput, filenameDisplay, convertBtn, progressDiv, progressText;
 var uploadArea, pageRangeContainer, pageRangeInput, ditherSelectedRadio;
 var dpiStandardRadio, dpiCustomRadio, dpiSliderContainer, dpiSlider, dpiValue, dpiWarning;
 var useEnglishCheckbox;
+
+// Conversion cancellation
+var conversionInProgress = false;
+var cancellationRequested = false;
+
+// Track which box is currently shown so language changes can re-render it
+var progressBoxState = null;  // null, 'result', or 'cancelled'
 
 // Detect navigation back from browser cache (bfcache)
 // This can leave the app in a weird state - reset state instead of reload
@@ -635,9 +656,15 @@ function resetAppState() {{
         githubCorner.style.display = 'none';
     }}
 
+    // Reset conversion state
+    conversionInProgress = false;
+    cancellationRequested = false;
+    progressBoxState = null;
+
     // Hide progress/result indicator
     if (progressDiv) {{
         progressDiv.style.display = 'none';
+        progressDiv.classList.remove('cancelled');
         // Reset progress div styling
         progressDiv.style.background = '#e3f2fd';
         progressDiv.style.borderColor = '';
@@ -661,6 +688,8 @@ function resetAppState() {{
         dpi: null,
         pageSize: null,
         useJBIG2: false,
+        jbig2Threshold: 0.97,
+        preserveRotation: false,
         includeProducer: true,
         includeTimestamp: true
     }};
@@ -792,10 +821,9 @@ document.addEventListener('DOMContentLoaded', function() {{
             updateDPIDisplay(); // Refresh DPI display with new language
         }}
 
-        // If result box is shown, regenerate it in the new language
-        if (window.resultPDF) {{
-            showResultBox();
-        }}
+        // Re-render the progress box in the new language if visible
+        if (progressBoxState === 'result') showResultBox();
+        else if (progressBoxState === 'cancelled') showCancelledBox();
     }});
 
     // Handle Mongolian script switch
@@ -843,10 +871,9 @@ document.addEventListener('DOMContentLoaded', function() {{
             }}
         }}
 
-        // If result box is shown, regenerate it in the new language
-        if (window.resultPDF) {{
-            showResultBox();
-        }}
+        // Re-render the progress box in the new language if visible
+        if (progressBoxState === 'result') showResultBox();
+        else if (progressBoxState === 'cancelled') showCancelledBox();
     }});
 
     // selectedFile is now a global variable (declared above)
@@ -1093,6 +1120,13 @@ document.addEventListener('DOMContentLoaded', function() {{
     }});
     convertBtn.addEventListener('click', async function() {{
         if (!selectedFile) return;
+
+        // If conversion is in progress, cancel it
+        if (conversionInProgress) {{
+            cancellationRequested = true;
+            return;
+        }}
+
         if (convertBtn.classList.contains('disabled')) return;
 
         // Read checkbox states BEFORE destroying the result box
@@ -1100,6 +1134,8 @@ document.addEventListener('DOMContentLoaded', function() {{
         const useJBIG2ForThisRun = useJBIG2Checkbox ? useJBIG2Checkbox.checked : false;
         const jbig2ThresholdRadio = document.querySelector('input[name="jbig2Threshold"]:checked');
         const jbig2ThresholdForThisRun = jbig2ThresholdRadio ? parseFloat(jbig2ThresholdRadio.value) : 0.97;
+        const preserveRotationCheckbox = document.getElementById('preserveRotation');
+        const preserveRotationForThisRun = preserveRotationCheckbox ? preserveRotationCheckbox.checked : false;
         const includeProducerCheckbox = document.getElementById('includeProducer');
         const includeProducerForThisRun = includeProducerCheckbox ? includeProducerCheckbox.checked : true;
         const includeTimestampCheckbox = document.getElementById('includeTimestamp');
@@ -1127,8 +1163,12 @@ document.addEventListener('DOMContentLoaded', function() {{
             ditherConfig = {{ mode: 'none' }};
         }}
 
+        conversionInProgress = true;
+        cancellationRequested = false;
+
         try {{
             // Reset progress box to show processing state (in case result box was displayed)
+            progressDiv.classList.remove('cancelled');
             progressDiv.innerHTML = '<span class="spinner"></span><span id="progressText" data-i18n="processing">Processing...</span>';
             progressDiv.style.background = '#e3f2fd';
             progressDiv.style.borderColor = '';
@@ -1139,9 +1179,7 @@ document.addEventListener('DOMContentLoaded', function() {{
             progressText = document.getElementById('progressText');
             progressText.textContent = 'Loading PDF...';
 
-            // Disable all controls during conversion
-            convertBtn.classList.add('disabled');
-            convertBtn.setAttribute('aria-disabled', 'true');
+            // Disable all controls during conversion (except convert button for cancellation)
             dpiSlider.disabled = true;
             pageRangeInput.disabled = true;
             document.querySelectorAll('input[name="mode"]').forEach(radio => {{
@@ -1163,20 +1201,26 @@ document.addEventListener('DOMContentLoaded', function() {{
             // Process the file (PDF or ZIP)
             const metadataOpts = {{ includeProducer: includeProducerForThisRun, includeTimestamp: includeTimestampForThisRun }};
             if (isZipMode) {{
-                await convertZIP(selectedFile, ditherConfig, targetDPI, pageSize, useJBIG2ForThisRun, jbig2ThresholdForThisRun, metadataOpts);
+                await convertZIP(selectedFile, ditherConfig, targetDPI, pageSize, useJBIG2ForThisRun, jbig2ThresholdForThisRun, preserveRotationForThisRun, metadataOpts);
             }} else {{
-                await convertPDF(selectedFile, ditherConfig, targetDPI, pageSize, useJBIG2ForThisRun, jbig2ThresholdForThisRun, metadataOpts);
+                await convertPDF(selectedFile, ditherConfig, targetDPI, pageSize, useJBIG2ForThisRun, jbig2ThresholdForThisRun, preserveRotationForThisRun, metadataOpts);
             }}
 
         }} catch (error) {{
-            console.error('Conversion error:', error);
-            alert('Error during conversion: ' + error.message);
-            // Hide progress on error
-            if (progressDiv) {{
-                progressDiv.style.display = 'none';
+            if (error.message === 'CONVERSION_CANCELLED') {{
+                showCancelledBox();
+            }} else {{
+                console.error('Conversion error:', error);
+                alert('Error during conversion: ' + error.message);
+                progressBoxState = null;
+                if (progressDiv) {{
+                    progressDiv.style.display = 'none';
+                }}
             }}
         }} finally {{
-            // Re-enable all controls (but keep result box visible if conversion succeeded)
+            conversionInProgress = false;
+            cancellationRequested = false;
+            // Re-enable all controls
             convertBtn.classList.remove('disabled');
             convertBtn.setAttribute('aria-disabled', 'false');
             dpiSlider.disabled = false;
@@ -1230,7 +1274,7 @@ document.addEventListener('DOMContentLoaded', function() {{
     }}
 
     // Main conversion function
-    async function convertPDF(file, ditherConfig, targetDPI, pageSize, useJBIG2, jbig2Threshold, metadataOpts) {{
+    async function convertPDF(file, ditherConfig, targetDPI, pageSize, useJBIG2, jbig2Threshold, preserveRotation, metadataOpts) {{
         progressText.textContent = 'Reading PDF file...';
 
         // Read file as ArrayBuffer
@@ -1242,7 +1286,7 @@ document.addEventListener('DOMContentLoaded', function() {{
         console.log('Loading PDF, size:', pdfData.length, 'bytes');
 
         // Render PDF pages to images (with appropriate encoding)
-        const pages = await renderPDFPages(pdfData, ditherConfig, targetDPI, pageSize, useJBIG2);
+        const pages = await renderPDFPages(pdfData, ditherConfig, targetDPI, pageSize, useJBIG2, preserveRotation);
 
         if (!pages || pages.length === 0) {{
             throw new Error('No pages rendered from PDF');
@@ -1265,7 +1309,8 @@ document.addEventListener('DOMContentLoaded', function() {{
             const bilevelPages = pages.map(p => ({{
                 width: p.width,
                 height: p.height,
-                data: p.data  // Already bilevel from renderPDFPages
+                data: p.data,
+                rotate: p.rotate || 0
             }}));
 
             // Encode with JBIG2
@@ -1284,7 +1329,8 @@ document.addEventListener('DOMContentLoaded', function() {{
             const jbig2Pages = bilevelPages.map((p, i) => ({{
                 width: p.width,
                 height: p.height,
-                data: jbig2Result.pages[i]
+                data: jbig2Result.pages[i],
+                rotate: p.rotate || 0
             }}));
 
             const jbig2PDF = createJBIG2PDF({{
@@ -1320,6 +1366,7 @@ document.addEventListener('DOMContentLoaded', function() {{
         resultSettings.pageSize = pageSize;
         resultSettings.useJBIG2 = useJBIG2;
         resultSettings.jbig2Threshold = jbig2Threshold;
+        resultSettings.preserveRotation = preserveRotation;
         resultSettings.includeProducer = metadataOpts.includeProducer;
         resultSettings.includeTimestamp = metadataOpts.includeTimestamp;
 
@@ -1328,7 +1375,7 @@ document.addEventListener('DOMContentLoaded', function() {{
     }}
 
     // Batch conversion for ZIP files containing PDFs
-    async function convertZIP(file, ditherConfig, targetDPI, pageSize, useJBIG2, jbig2Threshold, metadataOpts) {{
+    async function convertZIP(file, ditherConfig, targetDPI, pageSize, useJBIG2, jbig2Threshold, preserveRotation, metadataOpts) {{
         progressText.textContent = 'Reading ZIP file...';
 
         // Read ZIP into ArrayBuffer
@@ -1357,6 +1404,8 @@ document.addEventListener('DOMContentLoaded', function() {{
         var resultEntries = [];
 
         for (var i = 0; i < pdfEntries.length; i++) {{
+            if (cancellationRequested) throw new Error('CONVERSION_CANCELLED');
+
             var entry = pdfEntries[i];
             var fileLabel = 'File ' + (i + 1) + '/' + pdfEntries.length;
             totalOriginalSize += entry.data.length;
@@ -1365,7 +1414,7 @@ document.addEventListener('DOMContentLoaded', function() {{
             zipProgressPrefix = fileLabel + ': ';
 
             progressText.textContent = fileLabel + ': Loading PDF...';
-            var pages = await renderPDFPages(entry.data, ditherConfig, targetDPI, pageSize, useJBIG2);
+            var pages = await renderPDFPages(entry.data, ditherConfig, targetDPI, pageSize, useJBIG2, preserveRotation);
 
             if (!pages || pages.length === 0) {{
                 console.warn('No pages rendered from ' + entry.path + ', skipping');
@@ -1381,7 +1430,8 @@ document.addEventListener('DOMContentLoaded', function() {{
                 const bilevelPages = pages.map(p => ({{
                     width: p.width,
                     height: p.height,
-                    data: p.data
+                    data: p.data,
+                    rotate: p.rotate || 0
                 }}));
 
                 const jbig2Result = await jbig2Encoder.encode(bilevelPages, {{
@@ -1398,7 +1448,8 @@ document.addEventListener('DOMContentLoaded', function() {{
                 const jbig2Pages = bilevelPages.map((p, idx) => ({{
                     width: p.width,
                     height: p.height,
-                    data: jbig2Result.pages[idx]
+                    data: jbig2Result.pages[idx],
+                    rotate: p.rotate || 0
                 }}));
 
                 const jbig2PDF = createJBIG2PDF({{
@@ -1447,6 +1498,7 @@ document.addEventListener('DOMContentLoaded', function() {{
         resultSettings.pageSize = pageSize;
         resultSettings.useJBIG2 = useJBIG2;
         resultSettings.jbig2Threshold = jbig2Threshold;
+        resultSettings.preserveRotation = preserveRotation;
         resultSettings.includeProducer = metadataOpts.includeProducer;
         resultSettings.includeTimestamp = metadataOpts.includeTimestamp;
 
@@ -1454,7 +1506,128 @@ document.addEventListener('DOMContentLoaded', function() {{
     }}
 
     // Show result box with compression results
+    // Build the Advanced Tricks HTML section (shared between result and cancelled states)
+    function buildAdvancedTricksHTML(expanded) {{
+        const currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
+        const advancedTricksText = currentT.advancedTricks || 'Advanced technological tricks';
+        const display = expanded ? 'block' : 'none';
+        const arrow = expanded ? '▼' : '▶';
+        const jbig2Checked = resultSettings.useJBIG2;
+
+        return `
+                <a href="javascript:void(0)" id="advancedTricksToggle" class="advanced-toggle" style="display: inline-block; color: #667eea; cursor: pointer; font-weight: 500; text-decoration: none; margin-bottom: 10px;">${{arrow}} ${{advancedTricksText}}</a>
+                <div id="advancedTricksContent" class="advanced-content" style="display: ${{display}}; margin-top: 10px; padding: 15px; background: white; border-radius: 4px; border: 1px solid #ddd;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                        <input type="checkbox" id="useJBIG2" name="useJBIG2" ${{jbig2Checked ? 'checked' : ''}} style="width: 18px; height: 18px; cursor: pointer;">
+                        <label for="useJBIG2" style="cursor: pointer; color: #333; font-weight: 500;">${{currentT.useJBIG2Label || 'Use lossy JBIG2 compression instead of CCITT G4'}}</label>
+                    </div>
+                    <div style="font-size: 13px; color: #856404; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 10px; line-height: 1.5;">${{currentT.jbig2Warning || '⚠️ Improve compression by using JBIG2 compression instead of CCITT G4 compression. Small similar characters might be confused (e.g. 6 with 8). Old devices might be unable to open the PDF.'}}</div>
+
+                    <div id="jbig2ThresholdOptions" style="display: ${{jbig2Checked ? 'block' : 'none'}}; margin-top: 12px; padding: 12px; background: #f8f9fa; border-radius: 4px; border: 1px solid #e0e0e0;">
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="radio" id="jbig2Threshold097" name="jbig2Threshold" value="0.97" ${{resultSettings.jbig2Threshold === 0.97 ? 'checked' : ''}} style="width: 16px; height: 16px; cursor: pointer;">
+                                <label for="jbig2Threshold097" style="cursor: pointer; color: #333; font-family: 'Courier New', monospace;">jbig2enc -t 0.97</label>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="radio" id="jbig2Threshold092" name="jbig2Threshold" value="0.92" ${{resultSettings.jbig2Threshold === 0.92 ? 'checked' : ''}} style="width: 16px; height: 16px; cursor: pointer;">
+                                <label for="jbig2Threshold092" style="cursor: pointer; color: #333; font-family: 'Courier New', monospace;">⚠️ jbig2enc -t 0.92</label>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="radio" id="jbig2Threshold085" name="jbig2Threshold" value="0.85" ${{resultSettings.jbig2Threshold === 0.85 ? 'checked' : ''}} style="width: 16px; height: 16px; cursor: pointer;">
+                                <label for="jbig2Threshold085" style="cursor: pointer; color: #333; font-family: 'Courier New', monospace;">⚠️⚠️ jbig2enc -t 0.85</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 8px; margin-top: 14px;">
+                        <input type="checkbox" id="preserveRotation" name="preserveRotation" ${{resultSettings.preserveRotation ? 'checked' : ''}} style="width: 18px; height: 18px; cursor: pointer;">
+                        <label for="preserveRotation" style="cursor: pointer; color: #333; font-weight: 500;">${{currentT.preserveRotationLabel || 'Try to preserve page rotation'}}</label>
+                    </div>
+
+                    <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid #eee;">
+                        <div style="font-weight: 500; color: #333; margin-bottom: 10px;">${{currentT.metadataSection || 'Metadata'}}</div>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                            <input type="checkbox" id="includeProducer" name="includeProducer" ${{resultSettings.includeProducer ? 'checked' : ''}} style="width: 18px; height: 18px; cursor: pointer;">
+                            <label for="includeProducer" style="cursor: pointer; color: #333;">PDF Monochrome G4 Compressor</label>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="includeTimestamp" name="includeTimestamp" ${{resultSettings.includeTimestamp ? 'checked' : ''}} style="width: 18px; height: 18px; cursor: pointer;">
+                            <label for="includeTimestamp" style="cursor: pointer; color: #333;">${{currentT.includeTimestampLabel || 'Include Created & Modified timestamps'}}</label>
+                        </div>
+                    </div>
+                </div>`;
+    }}
+
+    // Attach event listeners for the Advanced Tricks section controls
+    function attachAdvancedTricksListeners(withValidation) {{
+        const currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
+        const advancedTricksText = currentT.advancedTricks || 'Advanced technological tricks';
+
+        // Toggle handler
+        var advancedTricksToggle = document.getElementById('advancedTricksToggle');
+        var advancedTricksContent = document.getElementById('advancedTricksContent');
+        if (advancedTricksToggle && advancedTricksContent) {{
+            advancedTricksToggle.addEventListener('click', function(e) {{
+                e.preventDefault();
+                const isShown = advancedTricksContent.style.display === 'block';
+                if (!isShown) {{
+                    advancedTricksContent.style.display = 'block';
+                    advancedTricksToggle.textContent = '▼ ' + advancedTricksText;
+                }} else {{
+                    advancedTricksContent.style.display = 'none';
+                    advancedTricksToggle.textContent = '▶ ' + advancedTricksText;
+                }}
+            }});
+        }}
+
+        // JBIG2 checkbox: always show/hide threshold options
+        var useJBIG2Checkbox = document.getElementById('useJBIG2');
+        if (useJBIG2Checkbox) {{
+            useJBIG2Checkbox.addEventListener('change', function() {{
+                var thresholdOptions = document.getElementById('jbig2ThresholdOptions');
+                if (thresholdOptions) {{
+                    thresholdOptions.style.display = this.checked ? 'block' : 'none';
+                }}
+                if (withValidation) validateFormMatchesResult();
+            }});
+        }}
+
+        if (withValidation) {{
+            var preserveRotationCb = document.getElementById('preserveRotation');
+            if (preserveRotationCb) {{
+                preserveRotationCb.addEventListener('change', validateFormMatchesResult);
+            }}
+            var includeProducerCb = document.getElementById('includeProducer');
+            if (includeProducerCb) {{
+                includeProducerCb.addEventListener('change', validateFormMatchesResult);
+            }}
+            var includeTimestampCb = document.getElementById('includeTimestamp');
+            if (includeTimestampCb) {{
+                includeTimestampCb.addEventListener('change', validateFormMatchesResult);
+            }}
+            var thresholdRadios = document.querySelectorAll('input[name="jbig2Threshold"]');
+            thresholdRadios.forEach(function(radio) {{
+                radio.addEventListener('change', validateFormMatchesResult);
+            }});
+        }}
+    }}
+
+    function showCancelledBox() {{
+        progressBoxState = 'cancelled';
+        progressDiv.style.background = '';
+        progressDiv.style.borderColor = '';
+        progressDiv.style.color = '';
+        progressDiv.classList.add('cancelled');
+
+        progressDiv.innerHTML = '<div style="margin-top: 0;">' + buildAdvancedTricksHTML(false) + '</div>';
+        progressDiv.style.display = 'block';
+
+        attachAdvancedTricksListeners(false);
+    }}
+
     function showResultBox() {{
+        progressBoxState = 'result';
         const currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
         const originalSize = window.originalSize;
         const resultSize = window.resultSize;
@@ -1480,6 +1653,9 @@ document.addEventListener('DOMContentLoaded', function() {{
         }} else {{
             message = formatSize(originalSize) + ' → ' + formatSize(resultSize);
         }}
+
+        // Clear cancelled state if present
+        progressDiv.classList.remove('cancelled');
 
         // Determine compression result and set box color accordingly
         if (ratio < 0.6) {{
@@ -1523,50 +1699,11 @@ document.addEventListener('DOMContentLoaded', function() {{
         }}
 
         // Build HTML with advanced tricks and save button (always shown)
-        const advancedTricksText = currentT.advancedTricks || 'Advanced technological tricks';
-        const advancedTricksExpanded = resultUsedJBIG2 || !resultSettings.includeProducer || !resultSettings.includeTimestamp;
-        const advancedTricksDisplay = advancedTricksExpanded ? 'block' : 'none';
-        const advancedTricksArrow = advancedTricksExpanded ? '▼' : '▶';
+        const advancedTricksExpanded = resultSettings.useJBIG2 || resultSettings.preserveRotation || !resultSettings.includeProducer || !resultSettings.includeTimestamp;
         let resultHTML = `
             <div style="font-weight: bold; margin-bottom: 15px;">${{message}}</div>
             <div style="margin-top: 20px;">
-                <a href="javascript:void(0)" id="advancedTricksToggle" class="advanced-toggle" style="display: inline-block; color: #667eea; cursor: pointer; font-weight: 500; text-decoration: none; margin-bottom: 10px;">${{advancedTricksArrow}} ${{advancedTricksText}}</a>
-                <div id="advancedTricksContent" class="advanced-content" style="display: ${{advancedTricksDisplay}}; margin-top: 10px; padding: 15px; background: white; border-radius: 4px; border: 1px solid #ddd;">
-                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-                        <input type="checkbox" id="useJBIG2" name="useJBIG2" ${{resultUsedJBIG2 ? 'checked' : ''}} style="width: 18px; height: 18px; cursor: pointer;">
-                        <label for="useJBIG2" style="cursor: pointer; color: #333; font-weight: 500;">${{currentT.useJBIG2Label || 'Use lossy JBIG2 compression instead of CCITT G4'}}</label>
-                    </div>
-                    <div style="font-size: 13px; color: #856404; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 10px; line-height: 1.5;">${{currentT.jbig2Warning || '⚠️ Improve compression by using JBIG2 compression instead of CCITT G4 compression. Small similar characters might be confused (e.g. 6 with 8). Old devices might be unable to open the PDF.'}}</div>
-
-                    <div id="jbig2ThresholdOptions" style="display: ${{resultUsedJBIG2 ? 'block' : 'none'}}; margin-top: 12px; padding: 12px; background: #f8f9fa; border-radius: 4px; border: 1px solid #e0e0e0;">
-                        <div style="display: flex; flex-direction: column; gap: 8px;">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <input type="radio" id="jbig2Threshold097" name="jbig2Threshold" value="0.97" ${{resultSettings.jbig2Threshold === 0.97 ? 'checked' : ''}} style="width: 16px; height: 16px; cursor: pointer;">
-                                <label for="jbig2Threshold097" style="cursor: pointer; color: #333; font-family: 'Courier New', monospace;">jbig2enc -t 0.97</label>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <input type="radio" id="jbig2Threshold092" name="jbig2Threshold" value="0.92" ${{resultSettings.jbig2Threshold === 0.92 ? 'checked' : ''}} style="width: 16px; height: 16px; cursor: pointer;">
-                                <label for="jbig2Threshold092" style="cursor: pointer; color: #333; font-family: 'Courier New', monospace;">⚠️ jbig2enc -t 0.92</label>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <input type="radio" id="jbig2Threshold085" name="jbig2Threshold" value="0.85" ${{resultSettings.jbig2Threshold === 0.85 ? 'checked' : ''}} style="width: 16px; height: 16px; cursor: pointer;">
-                                <label for="jbig2Threshold085" style="cursor: pointer; color: #333; font-family: 'Courier New', monospace;">⚠️⚠️ jbig2enc -t 0.85</label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid #eee;">
-                        <div style="font-weight: 500; color: #333; margin-bottom: 10px;">${{currentT.metadataSection || 'Metadata'}}</div>
-                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                            <input type="checkbox" id="includeProducer" name="includeProducer" ${{resultSettings.includeProducer ? 'checked' : ''}} style="width: 18px; height: 18px; cursor: pointer;">
-                            <label for="includeProducer" style="cursor: pointer; color: #333;">PDF Monochrome G4 Compressor</label>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <input type="checkbox" id="includeTimestamp" name="includeTimestamp" ${{resultSettings.includeTimestamp ? 'checked' : ''}} style="width: 18px; height: 18px; cursor: pointer;">
-                            <label for="includeTimestamp" style="cursor: pointer; color: #333;">${{currentT.includeTimestampLabel || 'Include Created & Modified timestamps'}}</label>
-                        </div>
-                    </div>
-                </div>
+                ${{buildAdvancedTricksHTML(advancedTricksExpanded)}}
             </div>
             <div id="saveResultBtn" class="action-btn" role="button" tabindex="0" style="width: auto; padding: 10px 20px; background: #667eea; border-radius: 4px; margin-top: 20px;">${{currentT.resultSaveButton}}</div>
         `;
@@ -1577,68 +1714,19 @@ document.addEventListener('DOMContentLoaded', function() {{
         // Attach save button handler
         var saveBtn = document.getElementById('saveResultBtn');
         saveBtn.addEventListener('click', function() {{
-            // Don't save if button is disabled
             if (this.classList.contains('disabled')) return;
             downloadFile(window.resultPDF, window.resultFilename);
         }});
         saveBtn.addEventListener('keydown', function(e) {{
             if (e.key === 'Enter' || e.key === ' ') {{
                 e.preventDefault();
-                // Don't save if button is disabled
                 if (!this.classList.contains('disabled')) {{
                     downloadFile(window.resultPDF, window.resultFilename);
                 }}
             }}
         }});
 
-        // Attach advanced tricks toggle handler (if present)
-        var advancedTricksToggle = document.getElementById('advancedTricksToggle');
-        var advancedTricksContent = document.getElementById('advancedTricksContent');
-        if (advancedTricksToggle && advancedTricksContent) {{
-            advancedTricksToggle.addEventListener('click', function(e) {{
-                e.preventDefault();
-                const isShown = advancedTricksContent.style.display === 'block';
-                const currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
-                const advancedTricksText = currentT.advancedTricks || 'Advanced technological tricks';
-
-                if (!isShown) {{
-                    advancedTricksContent.style.display = 'block';
-                    advancedTricksToggle.textContent = '▼ ' + advancedTricksText;
-                }} else {{
-                    advancedTricksContent.style.display = 'none';
-                    advancedTricksToggle.textContent = '▶ ' + advancedTricksText;
-                }}
-            }});
-        }}
-
-        // Attach change listeners to checkboxes to validate form state
-        var useJBIG2Checkbox = document.getElementById('useJBIG2');
-        if (useJBIG2Checkbox) {{
-            useJBIG2Checkbox.addEventListener('change', function() {{
-                // Show/hide threshold options
-                const thresholdOptions = document.getElementById('jbig2ThresholdOptions');
-                if (thresholdOptions) {{
-                    thresholdOptions.style.display = this.checked ? 'block' : 'none';
-                }}
-                validateFormMatchesResult();
-            }});
-        }}
-        var includeProducerCb = document.getElementById('includeProducer');
-        if (includeProducerCb) {{
-            includeProducerCb.addEventListener('change', validateFormMatchesResult);
-        }}
-        var includeTimestampCb = document.getElementById('includeTimestamp');
-        if (includeTimestampCb) {{
-            includeTimestampCb.addEventListener('change', validateFormMatchesResult);
-        }}
-
-        // Attach change listeners to JBIG2 threshold radio buttons
-        var thresholdRadios = document.querySelectorAll('input[name="jbig2Threshold"]');
-        thresholdRadios.forEach(function(radio) {{
-            radio.addEventListener('change', validateFormMatchesResult);
-        }});
-
-        // Initial validation on show
+        attachAdvancedTricksListeners(true);
         validateFormMatchesResult();
     }}
 
@@ -1659,6 +1747,7 @@ document.addEventListener('DOMContentLoaded', function() {{
         const currentPageSize = document.querySelector('input[name="pageSize"]:checked')?.value || 'a4-portrait';
         const currentUseJBIG2 = document.getElementById('useJBIG2')?.checked || false;
         const currentJBIG2Threshold = parseFloat(document.querySelector('input[name="jbig2Threshold"]:checked')?.value || '0.97');
+        const currentPreserveRotation = document.getElementById('preserveRotation')?.checked || false;
         const currentIncludeProducer = document.getElementById('includeProducer')?.checked ?? true;
         const currentIncludeTimestamp = document.getElementById('includeTimestamp')?.checked ?? true;
 
@@ -1688,6 +1777,7 @@ document.addEventListener('DOMContentLoaded', function() {{
             currentPageSize === resultSettings.pageSize &&
             currentUseJBIG2 === resultSettings.useJBIG2 &&
             currentJBIG2Threshold === resultSettings.jbig2Threshold &&
+            currentPreserveRotation === resultSettings.preserveRotation &&
             currentIncludeProducer === resultSettings.includeProducer &&
             currentIncludeTimestamp === resultSettings.includeTimestamp
         );
@@ -1706,7 +1796,7 @@ document.addEventListener('DOMContentLoaded', function() {{
     }}
 
     // Render PDF pages using PDF.js
-    async function renderPDFPages(pdfData, ditherConfig, targetDPI, pageSize, useJBIG2) {{
+    async function renderPDFPages(pdfData, ditherConfig, targetDPI, pageSize, useJBIG2, preserveRotation) {{
         // Load PDF document
         const loadingTask = pdfjsLib.getDocument({{ data: pdfData }});
         const pdf = await loadingTask.promise;
@@ -1752,17 +1842,39 @@ document.addEventListener('DOMContentLoaded', function() {{
         // previewDiv.style.display = 'block';
 
         for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {{
+            if (cancellationRequested) throw new Error('CONVERSION_CANCELLED');
+
             progressText.textContent = zipProgressPrefix + `Rendering page ${{pageNum}} of ${{pdf.numPages}} @ ${{targetDPI}} DPI...`;
 
             const page = await pdf.getPage(pageNum);
 
-            // Calculate scale to fit page on A4 @ 310 DPI
+            // Calculate scale to fit page on destination canvas
+            // Note: getViewport() without rotation uses the page's inherent rotation.
+            // Passing rotation: N would OVERRIDE the page's rotation, which we must avoid
+            // unless the user explicitly enabled rotation preservation.
             const viewport72 = page.getViewport({{ scale: 1.0 }});
-            const scaleX = A4_WIDTH_PX / viewport72.width;
-            const scaleY = A4_HEIGHT_PX / viewport72.height;
-            const scale = Math.min(scaleX, scaleY); // Fit within A4, preserving aspect ratio
 
-            const scaledViewport = page.getViewport({{ scale: scale }});
+            // Detect if adding 90° rotation would improve coverage on the destination page
+            let additionalRotation = null;
+            if (preserveRotation) {{
+                const scaleNormal = Math.min(A4_WIDTH_PX / viewport72.width, A4_HEIGHT_PX / viewport72.height);
+                const rotatedViewport = page.getViewport({{ scale: 1.0, rotation: (page.rotate + 90) % 360 }});
+                const scaleRotated = Math.min(A4_WIDTH_PX / rotatedViewport.width, A4_HEIGHT_PX / rotatedViewport.height);
+                if (scaleRotated > scaleNormal) {{
+                    additionalRotation = (page.rotate + 90) % 360;
+                }}
+            }}
+
+            const viewportForScale = additionalRotation !== null
+                ? page.getViewport({{ scale: 1.0, rotation: additionalRotation }})
+                : viewport72;
+            const scaleX = A4_WIDTH_PX / viewportForScale.width;
+            const scaleY = A4_HEIGHT_PX / viewportForScale.height;
+            const scale = Math.min(scaleX, scaleY);
+
+            const scaledViewport = additionalRotation !== null
+                ? page.getViewport({{ scale: scale, rotation: additionalRotation }})
+                : page.getViewport({{ scale: scale }});
 
             // Create temporary canvas for isolated rendering
             const tempCanvas = document.createElement('canvas');
@@ -1779,6 +1891,8 @@ document.addEventListener('DOMContentLoaded', function() {{
                 canvasContext: tempContext,
                 viewport: scaledViewport
             }}).promise;
+
+            if (cancellationRequested) throw new Error('CONVERSION_CANCELLED');
 
             // Now composite onto A4 canvas
             previewCanvas.width = A4_WIDTH_PX;
@@ -1830,7 +1944,8 @@ document.addEventListener('DOMContentLoaded', function() {{
                     height: processed.height,
                     data: processed.data,  // Raw bilevel data (1 bit per pixel, MSB first)
                     pageWidthPt: Math.round(pageDimensions.width * 72),
-                    pageHeightPt: Math.round(pageDimensions.height * 72)
+                    pageHeightPt: Math.round(pageDimensions.height * 72),
+                    rotate: additionalRotation !== null ? 270 : 0
                 }});
             }} else {{
                 // G4 path: encode with CCITT Group 4
@@ -1870,7 +1985,8 @@ document.addEventListener('DOMContentLoaded', function() {{
                     height: processed.height,
                     data: compressedData,
                     pageWidthPt: Math.round(pageDimensions.width * 72),   // Convert inches to points (1 inch = 72 points)
-                    pageHeightPt: Math.round(pageDimensions.height * 72)
+                    pageHeightPt: Math.round(pageDimensions.height * 72),
+                    rotate: additionalRotation !== null ? 270 : 0
                 }});
             }}
         }}
@@ -2158,10 +2274,9 @@ document.addEventListener('DOMContentLoaded', function() {{
                 // Refresh DPI warning in new language
                 updateDPIWarning();
 
-                // If result box is shown, regenerate it in the new language
-                if (window.resultPDF) {{
-                    showResultBox();
-                }}
+                // Re-render the progress box in the new language if visible
+                if (progressBoxState === 'result') showResultBox();
+                else if (progressBoxState === 'cancelled') showCancelledBox();
 
                 // Close all modals
                 const aboutModal = document.getElementById('aboutModal');
@@ -2394,6 +2509,7 @@ document.addEventListener('DOMContentLoaded', function() {{
     # Replace placeholders
     full_html = html_template.replace('{{JAVASCRIPT}}', js_section)
     full_html = full_html.replace('{{MONGOLIAN_FONT_BASE64}}', mongolian_font_b64)
+    full_html = full_html.replace('{app_version}', read_version())
 
     print(f"Full application HTML: {len(full_html):,} bytes")
 

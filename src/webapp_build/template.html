@@ -358,6 +358,12 @@
             display: none;
         }
 
+        #progress.cancelled {
+            background: #f0f0f0;
+            color: #666;
+            text-align: left;
+        }
+
         .spinner {
             display: inline-block;
             width: 20px;
@@ -1289,6 +1295,16 @@
                 color: #64b5f6;
             }
 
+            #progress.cancelled {
+                background: #2a2a2a;
+                color: #999;
+            }
+
+            #progress.cancelled .advanced-content {
+                background: #1e1e1e;
+                border-color: #444;
+            }
+
             .credits {
                 border-top-color: #333;
                 color: #888;
@@ -1582,6 +1598,7 @@
             <p data-i18n="credits">Built with PDF.js • pako • G4Enc • jbig2enc • Leptonica</p>
             <p><a href="javascript:void(0)" id="showLicense" data-i18n="license">Licensed under Apache 2.0 • View Licenses & Attributions</a></p>
             <p><a href="javascript:void(0)" id="showAbout" data-i18n="about">About This Project • A Study in Questionable Decisions</a></p>
+            <p id="appVersion" style="font-family: monospace; font-size: 0.85em;">{app_version}</p>
             <div class="language-switch" id="languageSwitch">
                 <label>
                     <input type="checkbox" id="useEnglishCheckbox">
@@ -1734,7 +1751,7 @@ limitations under the License.</pre>
                 <p>The app works, but let's talk about the elephant in the HTML file: <strong>it contains its own source code as a base64-encoded tar.xz archive</strong>.</p>
                 <p>Why? Because when you're compressing PDFs, why not compress your own source code too? It's compression all the way down.</p>
                 <p>The file structure is essentially:</p>
-                <pre style="font-size: 9px;">┌─────────────────────────────────────┐
+                <pre style="font-size: 9px; font-family: monospace;">┌─────────────────────────────────────┐
 │ HTML file (2.7 MB)                  │
 │ ┌─────────────────────────────────┐ │
 │ │ Decompression loader            │ │
