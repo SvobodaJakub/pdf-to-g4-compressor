@@ -6,7 +6,7 @@
 A single-file web app that compresses PDFs to monochrome (1-bit black/white) with CCITT Group 4 or JBIG2 encoding. Works completely offline in your browser. Also contains its own source code as a base64-encoded tarball inside itself, because apparently that's a thing we do now.
 
 **Live Demo:** https://svobodajakub.github.io/  
-**GitHub:** https://github.com/SvobodaJakub/pdf-to-g4-compressor
+**GitHub:** https://github.com/SvobodaJakub/pdf-to-g4-compressor  
 **Google Play:** https://play.google.com/store/apps/details?id=com.svobodajakub.pdfg4compressor
 
 ## Why
