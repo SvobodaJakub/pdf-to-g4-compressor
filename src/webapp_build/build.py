@@ -552,6 +552,11 @@ var selectedFile = null;
 var isZipMode = false;
 var zipProgressPrefix = '';
 var resultUsedJBIG2 = false;  // Track whether current result used JBIG2
+var totalPageCount = null;  // null = unknown/counting, 0+ = known
+var maxPagesPerPDF = null;  // for JBIG2 limit: max pages in any single PDF
+var inputFileSize = 0;
+var fileError = false;
+var pageRangeError = false;
 
 // Track compression settings used to create current result
 var resultSettings = {{
@@ -568,7 +573,7 @@ var resultSettings = {{
 }};
 
 // DOM element references (assigned in DOMContentLoaded)
-var pdfFileInput, filenameDisplay, convertBtn, progressDiv, progressText;
+var pdfFileInput, filenameDisplay, fileInfoDiv, convertBtn, progressDiv, progressText;
 var uploadArea, pageRangeContainer, pageRangeInput, ditherSelectedRadio;
 var dpiStandardRadio, dpiCustomRadio, dpiSliderContainer, dpiSlider, dpiValue, dpiWarning;
 var useEnglishCheckbox;
@@ -693,6 +698,16 @@ function resetAppState() {{
         includeProducer: true,
         includeTimestamp: true
     }};
+
+    // Reset file info and errors
+    totalPageCount = null;
+    maxPagesPerPDF = null;
+    inputFileSize = 0;
+    fileError = false;
+    pageRangeError = false;
+    if (fileInfoDiv) fileInfoDiv.textContent = '';
+    if (uploadArea) uploadArea.classList.remove('file-error');
+    if (pageRangeInput) {{ pageRangeInput.style.borderColor = ''; pageRangeInput.style.background = ''; }}
 
     // Reset ZIP mode
     isZipMode = false;
@@ -881,6 +896,7 @@ document.addEventListener('DOMContentLoaded', function() {{
     // DOM elements (assign to global variables)
     pdfFileInput = document.getElementById('pdfFile');
     filenameDisplay = document.getElementById('filename');
+    fileInfoDiv = document.getElementById('fileInfo');
     convertBtn = document.getElementById('convertBtn');
     progressDiv = document.getElementById('progress');
     progressText = document.getElementById('progressText');
@@ -912,30 +928,224 @@ document.addEventListener('DOMContentLoaded', function() {{
         validateControls();
     }}
 
-    // Validate controls and update button state
-    function validateControls() {{
-        // Only validate when custom DPI is selected and we have a file
-        if (!selectedFile) return;
+    function formatFileSize(bytes) {{
+        if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(1) + ' GB';
+        if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + ' MB';
+        if (bytes >= 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return bytes + ' B';
+    }}
+
+    function getCurrentDPI() {{
+        return dpiStandardRadio.checked ? 310 : (parseInt(dpiValue.value) || 310);
+    }}
+
+    function getCurrentPageSize() {{
+        return document.querySelector('input[name="pageSize"]:checked')?.value || 'a4-portrait';
+    }}
+
+    const PAGE_SIZE_INCHES = {{
+        'a4-portrait': {{ w: 8.27, h: 11.69 }},
+        'a4-landscape': {{ w: 11.69, h: 8.27 }},
+        'letter-portrait': {{ w: 8.5, h: 11 }},
+        'letter-landscape': {{ w: 11, h: 8.5 }},
+        'legal-portrait': {{ w: 8.5, h: 14 }}
+    }};
+
+    const RAM_LIMIT = 500 * 1048576;
+    const JBIG2_MAX_MPIX = 475;
+
+    function estimateRAMBytes(numPages, dpi, pageSize, useJBIG2, fileSizeBytes) {{
+        const dims = PAGE_SIZE_INCHES[pageSize] || PAGE_SIZE_INCHES['a4-portrait'];
+        const w = Math.round(dims.w * dpi);
+        const h = Math.round(dims.h * dpi);
+        const renderPeak = w * h * 16;
+        const base = fileSizeBytes * 2 + 150 * 1048576;
+        if (useJBIG2) {{
+            const bilevelPerPage = Math.ceil(w / 8) * h;
+            return base + renderPeak + bilevelPerPage * numPages * 2.5 + numPages * 800000;
+        }}
+        return base + renderPeak + numPages * 200000;
+    }}
+
+    function findMaxSafeDPI(numPages, pageSize, useJBIG2, fileSizeBytes) {{
+        let lo = 72, hi = 1200, best = 0;
+        while (lo <= hi) {{
+            const mid = Math.floor((lo + hi) / 2);
+            if (estimateRAMBytes(numPages, mid, pageSize, useJBIG2, fileSizeBytes) <= RAM_LIMIT) {{
+                best = mid;
+                lo = mid + 1;
+            }} else {{
+                hi = mid - 1;
+            }}
+        }}
+        return best;
+    }}
+
+    function autoAdjustDPI() {{
+        if (totalPageCount === null || totalPageCount === 0) return;
+        const pageSize = getCurrentPageSize();
+        if (estimateRAMBytes(totalPageCount, 310, pageSize, false, inputFileSize) <= RAM_LIMIT) {{
+            // This document fits at 310 DPI — restore Standard if it was auto-lowered
+            dpiStandardRadio.checked = true;
+            dpiSliderContainer.classList.remove('show');
+            dpiSlider.value = 310;
+            dpiValue.value = 310;
+            updateDPIWarning();
+            return;
+        }}
+        const safeDPI = findMaxSafeDPI(totalPageCount, pageSize, false, inputFileSize);
+        if (safeDPI >= 200) {{
+            dpiCustomRadio.checked = true;
+            dpiSliderContainer.classList.add('show');
+            dpiSlider.value = safeDPI;
+            dpiValue.value = safeDPI;
+            updateDPIWarning();
+        }}
+    }}
+
+    function loadPDFWithTimeout(data, timeoutMs) {{
+        return new Promise(function(resolve, reject) {{
+            const timer = setTimeout(function() {{ reject(new Error('timeout')); }}, timeoutMs);
+            pdfjsLib.getDocument({{ data: data }}).promise.then(
+                function(pdf) {{ clearTimeout(timer); resolve(pdf); }},
+                function(err) {{ clearTimeout(timer); reject(err); }}
+            );
+        }});
+    }}
+
+    async function countPages(file) {{
+        const arrayBuffer = await file.arrayBuffer();
+        if (isZipMode) {{
+            const entries = parseZip(arrayBuffer);
+            const pdfEntries = entries.filter(function(e) {{ return e.path.toLowerCase().endsWith('.pdf'); }});
+            let total = 0;
+            let maxPerPDF = 0;
+            let failures = 0;
+            for (const entry of pdfEntries) {{
+                try {{
+                    const pdf = await loadPDFWithTimeout(entry.data, 5000);
+                    total += pdf.numPages;
+                    if (pdf.numPages > maxPerPDF) maxPerPDF = pdf.numPages;
+                    pdf.destroy();
+                }} catch (e) {{
+                    failures++;
+                }}
+            }}
+            maxPagesPerPDF = maxPerPDF;
+            if (failures > 0) throw new Error('Unreadable PDFs in ZIP');
+            return total;
+        }} else {{
+            const pdf = await loadPDFWithTimeout(new Uint8Array(arrayBuffer), 10000);
+            const count = pdf.numPages;
+            maxPagesPerPDF = count;
+            pdf.destroy();
+            return count;
+        }}
+    }}
+
+    // Single source of truth for compress button, file info warnings, and override checkbox.
+    // Called on every relevant state change: file select, DPI, page size, JBIG2 toggle, override toggle.
+    function updateCompressButton() {{
+        if (conversionInProgress) return;
+        if (!selectedFile) {{
+            if (fileInfoDiv) fileInfoDiv.textContent = '';
+            return;
+        }}
 
         const currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
+        const dpi = getCurrentDPI();
+        const pageSize = getCurrentPageSize();
+        const n = totalPageCount;
+        const known = n !== null;
+        const dims = PAGE_SIZE_INCHES[pageSize] || PAGE_SIZE_INCHES['a4-portrait'];
 
-        if (dpiCustomRadio.checked) {{
-            const dpi = parseInt(dpiValue.value);
-            // Disable button if DPI is out of valid range
-            if (isNaN(dpi) || dpi < 72 || dpi > 1200) {{
-                convertBtn.classList.add('disabled');
-                convertBtn.setAttribute('aria-disabled', 'true');
-            }} else {{
-                convertBtn.classList.remove('disabled');
-                convertBtn.setAttribute('aria-disabled', 'false');
-                convertBtn.textContent = currentT.compressButton || 'Compress';
-            }}
+        // ── JBIG2 feasibility (Leptonica 5M symbol limit + 120-page hard cap) ──
+        const jbig2Pages    = maxPagesPerPDF || n || 0;
+        const jbig2Mpix     = known ? (Math.round(dims.w * dpi) * Math.round(dims.h * dpi) * jbig2Pages) / 1000000 : 0;
+        const jbig2TooLarge = known && (jbig2Mpix > JBIG2_MAX_MPIX || jbig2Pages > 120);
+        const jbig2Requested = document.getElementById('useJBIG2')?.checked || false;
+        const useJBIG2      = jbig2Requested && !jbig2TooLarge;
+
+        // ── Resource state ──────────────────────────────────────────────
+        const dpiValid      = !dpiCustomRadio.checked || (!isNaN(dpi) && dpi >= 72 && dpi <= 1200);
+        const fileSizeOver  = inputFileSize > RAM_LIMIT;
+        const pagesOver     = known && n > 500;
+        const ramEst        = estimateRAMBytes(n || 0, dpi, pageSize, useJBIG2, inputFileSize);
+        const ramOver       = known && ramEst > RAM_LIMIT;
+
+        // Would default settings (310 DPI, G4) already exceed the limit?
+        // True for inherently heavy documents regardless of current DPI.
+        const heavyDoc      = known && estimateRAMBytes(n, 310, pageSize, false, inputFileSize) > RAM_LIMIT;
+
+        // Button is blocked when current settings exceed limits (unless overridden)
+        const needsOverride = fileSizeOver || pagesOver || ramOver;
+        const overrideChecked = document.getElementById('ramOverride')?.checked || false;
+        const blocked       = fileError || pageRangeError || !dpiValid || (needsOverride && !overrideChecked);
+
+        // ── 1. Compress button ──────────────────────────────────────────
+        if (blocked) {{
+            convertBtn.classList.add('disabled');
+            convertBtn.setAttribute('aria-disabled', 'true');
         }} else {{
-            // Standard DPI mode - always valid if file is selected
             convertBtn.classList.remove('disabled');
             convertBtn.setAttribute('aria-disabled', 'false');
             convertBtn.textContent = currentT.compressButton || 'Compress';
         }}
+
+        // ── 2. File info (page count + file size) ───────────────────────
+        if (fileInfoDiv) {{
+            let lines = [];
+            if (known) {{
+                const p = String(n);
+                lines.push((heavyDoc || needsOverride) ? '⚠️ ' + p + ' ⚠️' : p);
+            }} else {{
+                lines.push('...');
+            }}
+            const sz = formatFileSize(inputFileSize);
+            lines.push(fileSizeOver ? '⚠️ ' + sz + ' ⚠️' : sz);
+            fileInfoDiv.innerHTML = lines.join('<br>');
+        }}
+
+        // ── 3. Override checkbox in Advanced Tricks ──────────────────────
+        const container = document.getElementById('ramOverrideContainer');
+        if (container) {{
+            if (!dpiValid || !needsOverride) {{
+                container.style.display = 'none';
+                if (!needsOverride) {{
+                    const cb = document.getElementById('ramOverride');
+                    if (cb) cb.checked = false;
+                }}
+            }} else {{
+                container.style.display = 'flex';
+                const label = container.querySelector('label');
+                if (label) {{
+                    const nukeSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36"><circle cx="16" cy="33" r="4" fill="#b0b0b0"/><circle cx="20" cy="33" r="4" fill="#a8a8a8"/><circle cx="18" cy="31" r="4.5" fill="#c0c0c0"/><circle cx="15" cy="29" r="3.5" fill="#b8b8b8"/><circle cx="21" cy="29" r="3.5" fill="#b0b0b0"/><circle cx="18" cy="27" r="4" fill="#c8c8c8"/><circle cx="16" cy="25" r="3.5" fill="#bfbfbf"/><circle cx="20" cy="25" r="3.5" fill="#c0c0c0"/><ellipse cx="18" cy="23" rx="14" ry="4" fill="#e8720a"/><ellipse cx="18" cy="23" rx="10" ry="3" fill="#f5a623"/><circle cx="7" cy="18" r="8" fill="#e8720a"/><circle cx="29" cy="18" r="8" fill="#e8720a"/><circle cx="18" cy="19" r="9" fill="#f5a623"/><circle cx="11" cy="13" r="7" fill="#c0392b"/><circle cx="25" cy="13" r="7" fill="#c0392b"/><circle cx="18" cy="14" r="8" fill="#d44030"/><circle cx="14" cy="8" r="5.5" fill="#808080"/><circle cx="22" cy="8" r="5.5" fill="#808080"/><circle cx="18" cy="9" r="6" fill="#909090"/><circle cx="18" cy="5" r="4" fill="#a0a0a0"/><circle cx="18" cy="3" r="2.5" fill="#b0b0b0"/></svg>';
+                    label.innerHTML = formatFileSize(ramEst) + ' RAM 🔥💻⚡️⚠️ 💥&nbsp;&nbsp; 🐕☕🔥 &nbsp;&nbsp;¯\\\\_(ツ)_/¯&nbsp;&nbsp; <img src="data:image/svg+xml;base64,' + btoa(nukeSvg) + '" style="height:1.2em;vertical-align:-0.15em" alt=""><span style="font-size:0">🍄</span>😎';
+                }}
+            }}
+        }}
+
+        // ── 4. JBIG2 checkbox feasibility ───────────────────────────────
+        const jbig2Cb = document.getElementById('useJBIG2');
+        if (jbig2Cb) {{
+            const jbig2Warn = jbig2Cb.parentElement.nextElementSibling;
+            if (jbig2TooLarge) {{
+                jbig2Cb.checked = false;
+                jbig2Cb.disabled = true;
+                jbig2Cb.parentElement.style.opacity = '0.4';
+                if (jbig2Warn) jbig2Warn.style.opacity = '0.4';
+                const opts = document.getElementById('jbig2ThresholdOptions');
+                if (opts) opts.style.display = 'none';
+            }} else {{
+                jbig2Cb.disabled = false;
+                jbig2Cb.parentElement.style.opacity = '';
+                if (jbig2Warn) jbig2Warn.style.opacity = '';
+            }}
+        }}
+    }}
+
+    function validateControls() {{
+        updateCompressButton();
     }}
 
     // Check DPI and dithering mode, show appropriate warnings
@@ -1029,12 +1239,97 @@ document.addEventListener('DOMContentLoaded', function() {{
     }});
 
     // Validate when page range changes
-    pageRangeInput.addEventListener('input', validateFormMatchesResult);
+    pageRangeInput.addEventListener('input', function() {{
+        const val = this.value.trim();
+        if (val && ditherSelectedRadio.checked) {{
+            try {{
+                parsePageRange(val, totalPageCount);
+                clearPageRangeError();
+            }} catch (e) {{
+                setPageRangeError();
+            }}
+        }} else {{
+            clearPageRangeError();
+        }}
+        validateFormMatchesResult();
+    }});
 
     // Validate when page size changes
     document.querySelectorAll('input[name="pageSize"]').forEach(radio => {{
-        radio.addEventListener('change', validateFormMatchesResult);
+        radio.addEventListener('change', function() {{
+            updateCompressButton();
+            validateFormMatchesResult();
+        }});
     }});
+
+    function cleanupPreviousResult() {{
+        // Free large result data
+        window.resultPDF = null;
+        window.resultFilename = null;
+        window.originalSize = null;
+        window.resultSize = null;
+        window.ditherMode = null;
+        resultUsedJBIG2 = false;
+        conversionInProgress = false;
+        cancellationRequested = false;
+        resultSettings = {{
+            fileName: null, ditherMode: null, pageRange: null,
+            dpi: null, pageSize: null, useJBIG2: false,
+            jbig2Threshold: 0.97, preserveRotation: false,
+            includeProducer: true, includeTimestamp: true
+        }};
+        const hadAdvancedTricks = progressBoxState !== null;
+        progressBoxState = null;
+        if (progressDiv) {{
+            progressDiv.classList.remove('cancelled');
+            progressDiv.style.background = '';
+            progressDiv.style.borderColor = '';
+            progressDiv.style.color = '';
+            if (hadAdvancedTricks) {{
+                progressBoxState = 'cancelled';
+                progressDiv.classList.add('cancelled');
+                progressDiv.innerHTML = '<div style="margin-top: 0;">' + buildAdvancedTricksHTML(false) + '</div>';
+                progressDiv.style.display = 'block';
+                attachAdvancedTricksListeners(false);
+            }} else {{
+                progressDiv.style.display = 'none';
+                progressDiv.innerHTML = '';
+            }}
+        }}
+        // Free canvas backing stores
+        var previewCanvas = document.getElementById('previewCanvas');
+        if (previewCanvas) {{
+            previewCanvas.width = 0;
+            previewCanvas.height = 0;
+        }}
+    }}
+
+    function setFileError() {{
+        fileError = true;
+        uploadArea.classList.add('file-error');
+        updateCompressButton();
+    }}
+
+    function clearFileError() {{
+        fileError = false;
+        uploadArea.classList.remove('file-error');
+    }}
+
+    function setPageRangeError() {{
+        pageRangeError = true;
+        pageRangeInput.style.borderColor = '#c0392b';
+        const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        pageRangeInput.style.background = isDark ? '#3a2020' : '#fdf0ef';
+        updateCompressButton();
+    }}
+
+    function clearPageRangeError() {{
+        if (!pageRangeError) return;
+        pageRangeError = false;
+        pageRangeInput.style.borderColor = '';
+        pageRangeInput.style.background = '';
+        updateCompressButton();
+    }}
 
     // Detect file type by magic bytes and update ZIP mode state
     async function detectFileType(file) {{
@@ -1076,13 +1371,27 @@ document.addEventListener('DOMContentLoaded', function() {{
         console.log('File selected:', e.target.files[0]);
         selectedFile = e.target.files[0];
         if (selectedFile) {{
+            cleanupPreviousResult();
+            clearFileError();
+            inputFileSize = selectedFile.size;
+            totalPageCount = null;
             await detectFileType(selectedFile);
             const currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
             filenameDisplay.textContent = selectedFile.name;
             convertBtn.textContent = currentT.compressButton || 'Compress';
-            validateControls();
+            updateCompressButton();
             validateFormMatchesResult();
-            console.log('Button enabled, isZipMode:', isZipMode);
+            try {{
+                totalPageCount = await countPages(selectedFile);
+            }} catch (e) {{
+                totalPageCount = 0;
+            }}
+            if (totalPageCount <= 0) {{
+                setFileError();
+                return;
+            }}
+            autoAdjustDPI();
+            updateCompressButton();
         }}
     }});
 
@@ -1099,15 +1408,31 @@ document.addEventListener('DOMContentLoaded', function() {{
     uploadArea.addEventListener('drop', async function(e) {{
         e.preventDefault();
         uploadArea.classList.remove('dragover');
+        if (conversionInProgress) return;
 
         if (e.dataTransfer.files.length > 0) {{
             selectedFile = e.dataTransfer.files[0];
+            cleanupPreviousResult();
+            clearFileError();
+            inputFileSize = selectedFile.size;
+            totalPageCount = null;
             await detectFileType(selectedFile);
             const currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
             filenameDisplay.textContent = selectedFile.name;
             convertBtn.textContent = currentT.compressButton || 'Compress';
-            validateControls();
+            updateCompressButton();
             validateFormMatchesResult();
+            try {{
+                totalPageCount = await countPages(selectedFile);
+            }} catch (e2) {{
+                totalPageCount = 0;
+            }}
+            if (totalPageCount <= 0) {{
+                setFileError();
+                return;
+            }}
+            autoAdjustDPI();
+            updateCompressButton();
         }}
     }});
 
@@ -1149,14 +1474,14 @@ document.addEventListener('DOMContentLoaded', function() {{
         }} else if (ditherMode === 'dither-selected') {{
             const pageRangeStr = pageRangeInput.value.trim();
             if (!pageRangeStr) {{
-                alert('Please enter page numbers or ranges (e.g., 1, 3-5, 8)');
+                setPageRangeError();
                 return;
             }}
             try {{
-                const pages = parsePageRange(pageRangeStr);
+                const pages = parsePageRange(pageRangeStr, totalPageCount);
                 ditherConfig = {{ mode: 'selected', pages: pages }};
             }} catch (error) {{
-                alert('Invalid page range: ' + error.message);
+                setPageRangeError();
                 return;
             }}
         }} else {{
@@ -1180,6 +1505,7 @@ document.addEventListener('DOMContentLoaded', function() {{
             progressText.textContent = 'Loading PDF...';
 
             // Disable all controls during conversion (except convert button for cancellation)
+            pdfFileInput.disabled = true;
             dpiSlider.disabled = true;
             pageRangeInput.disabled = true;
             document.querySelectorAll('input[name="mode"]').forEach(radio => {{
@@ -1211,18 +1537,17 @@ document.addEventListener('DOMContentLoaded', function() {{
                 showCancelledBox();
             }} else {{
                 console.error('Conversion error:', error);
-                alert('Error during conversion: ' + error.message);
                 progressBoxState = null;
                 if (progressDiv) {{
                     progressDiv.style.display = 'none';
                 }}
+                setFileError();
             }}
         }} finally {{
             conversionInProgress = false;
             cancellationRequested = false;
-            // Re-enable all controls
-            convertBtn.classList.remove('disabled');
-            convertBtn.setAttribute('aria-disabled', 'false');
+            // Re-enable form controls (not the compress button — that's managed by updateCompressButton)
+            pdfFileInput.disabled = false;
             dpiSlider.disabled = false;
             pageRangeInput.disabled = false;
             document.querySelectorAll('input[name="mode"]').forEach(radio => {{
@@ -1234,40 +1559,40 @@ document.addEventListener('DOMContentLoaded', function() {{
             document.querySelectorAll('input[name="pageSize"]').forEach(radio => {{
                 radio.disabled = false;
             }});
-            // Keep dither-selected disabled in ZIP mode
             if (isZipMode) {{
                 updateZipModeUI();
             }}
+            updateCompressButton();
         }}
     }});
 
     // Parse page range string (e.g., "1, 3-5, 8, 10-12")
-    function parsePageRange(rangeStr) {{
+    function parsePageRange(rangeStr, maxPage) {{
         const pages = new Set();
         const parts = rangeStr.split(',').map(s => s.trim()).filter(s => s);
 
         for (const part of parts) {{
-            if (part.includes('-')) {{
-                // Range like "3-5"
+            if (/^\\d+\\s*-\\s*\\d+$/.test(part)) {{
                 const [start, end] = part.split('-').map(s => parseInt(s.trim(), 10));
-                if (isNaN(start) || isNaN(end) || start < 1 || end < start) {{
-                    throw new Error(`Invalid range: ${{part}}`);
-                }}
+                if (start < 1 || end < start) throw new Error('Invalid range');
+                if (maxPage && end > maxPage) throw new Error('Page out of range');
                 for (let i = start; i <= end; i++) {{
+                    if (pages.has(i)) throw new Error('Duplicate page');
                     pages.add(i);
                 }}
-            }} else {{
-                // Single page like "3"
+            }} else if (/^\\d+$/.test(part)) {{
                 const page = parseInt(part, 10);
-                if (isNaN(page) || page < 1) {{
-                    throw new Error(`Invalid page number: ${{part}}`);
-                }}
+                if (page < 1) throw new Error('Invalid page');
+                if (maxPage && page > maxPage) throw new Error('Page out of range');
+                if (pages.has(page)) throw new Error('Duplicate page');
                 pages.add(page);
+            }} else {{
+                throw new Error('Invalid input');
             }}
         }}
 
         if (pages.size === 0) {{
-            throw new Error('No valid pages specified');
+            throw new Error('No valid pages');
         }}
 
         return pages;
@@ -1285,36 +1610,30 @@ document.addEventListener('DOMContentLoaded', function() {{
         progressText.textContent = 'Loading PDF with PDF.js...';
         console.log('Loading PDF, size:', pdfData.length, 'bytes');
 
-        // Render PDF pages to images (with appropriate encoding)
-        const pages = await renderPDFPages(pdfData, ditherConfig, targetDPI, pageSize, useJBIG2, preserveRotation);
-
-        if (!pages || pages.length === 0) {{
-            throw new Error('No pages rendered from PDF');
-        }}
-
-        console.log(`Successfully processed ${{pages.length}} page(s)`);
-
         let finalPDF;
 
         if (useJBIG2) {{
-            // JBIG2 encoding path
+            // JBIG2 encoding path: init encoder BEFORE rendering so pages
+            // are written as PBMs incrementally (no bilevel accumulation in JS)
             progressText.textContent = 'Initializing JBIG2 encoder...';
+            await new Promise(r => setTimeout(r, 0));
 
             const encoder = new JBIG2Encoder();
             await encoder.init();
+            encoder.prepareEncoding();
 
-            progressText.textContent = 'Encoding with JBIG2...';
+            // Render pages — each page's bilevel data is written to WASM FS
+            // and immediately discarded from JS. Only metadata is kept.
+            const pages = await renderPDFPages(pdfData, ditherConfig, targetDPI, pageSize, useJBIG2, preserveRotation, encoder);
 
-            // Prepare pages for JBIG2 (bilevel data)
-            const bilevelPages = pages.map(p => ({{
-                width: p.width,
-                height: p.height,
-                data: p.data,
-                rotate: p.rotate || 0
-            }}));
+            if (!pages || pages.length === 0) {{
+                throw new Error('No pages rendered from PDF');
+            }}
 
-            // Encode with JBIG2
-            const jbig2Result = await encoder.encode(bilevelPages, {{
+            progressText.textContent = `Encoding ${{pages.length}} pages with JBIG2...`;
+            await new Promise(r => setTimeout(r, 0));
+
+            const jbig2Result = await encoder.encode({{
                 lossy: true,
                 threshold: jbig2Threshold,
                 symbolCoding: true,
@@ -1323,10 +1642,10 @@ document.addEventListener('DOMContentLoaded', function() {{
                 }}
             }});
 
-            progressText.textContent = 'Generating JBIG2-compressed PDF...';
+            progressText.textContent = `Generating JBIG2-compressed PDF (${{pages.length}} pages)...`;
+            await new Promise(r => setTimeout(r, 0));
 
-            // Create PDF/A-1B with JBIG2 streams
-            const jbig2Pages = bilevelPages.map((p, i) => ({{
+            const jbig2Pages = pages.map((p, i) => ({{
                 width: p.width,
                 height: p.height,
                 data: jbig2Result.pages[i],
@@ -1339,15 +1658,24 @@ document.addEventListener('DOMContentLoaded', function() {{
                 metadataOptions: metadataOpts
             }});
 
-            progressText.textContent = 'Applying FlateDecode compression...';
-            finalPDF = compressPDF(jbig2PDF, pako);
+            finalPDF = await compressPDF(jbig2PDF, pako, (current, total) => {{
+                progressText.textContent = `FlateDecode compression: stream ${{current}} / ${{total}}...`;
+            }});
         }} else {{
-            // CCITT G4 encoding path (original)
-            progressText.textContent = 'Generating CCITT-compressed PDF...';
+            // CCITT G4 path: each page is G4-compressed inline during rendering
+            const pages = await renderPDFPages(pdfData, ditherConfig, targetDPI, pageSize, useJBIG2, preserveRotation);
+
+            if (!pages || pages.length === 0) {{
+                throw new Error('No pages rendered from PDF');
+            }}
+
+            progressText.textContent = `Generating CCITT-compressed PDF (${{pages.length}} pages)...`;
+            await new Promise(r => setTimeout(r, 0));
             const compressedPDF = createPDF(pages, metadataOpts);
 
-            progressText.textContent = 'Applying FlateDecode compression...';
-            finalPDF = compressPDF(compressedPDF, pako);
+            finalPDF = await compressPDF(compressedPDF, pako, (current, total) => {{
+                progressText.textContent = `FlateDecode compression: stream ${{current}} / ${{total}}...`;
+            }});
         }}
 
         // Store result for later download
@@ -1361,7 +1689,7 @@ document.addEventListener('DOMContentLoaded', function() {{
         // Save all compression settings for validation
         resultSettings.fileName = file.name;
         resultSettings.ditherMode = ditherConfig.mode;
-        resultSettings.pageRange = ditherConfig.mode === 'selected' ? (ditherConfig.pages || []).join(',') : null;
+        resultSettings.pageRange = ditherConfig.mode === 'selected' ? [...(ditherConfig.pages || [])].join(',') : null;
         resultSettings.dpi = targetDPI;
         resultSettings.pageSize = pageSize;
         resultSettings.useJBIG2 = useJBIG2;
@@ -1413,28 +1741,24 @@ document.addEventListener('DOMContentLoaded', function() {{
             // Set progress prefix for renderPDFPages
             zipProgressPrefix = fileLabel + ': ';
 
-            progressText.textContent = fileLabel + ': Loading PDF...';
-            var pages = await renderPDFPages(entry.data, ditherConfig, targetDPI, pageSize, useJBIG2, preserveRotation);
-
-            if (!pages || pages.length === 0) {{
-                console.warn('No pages rendered from ' + entry.path + ', skipping');
-                continue;
-            }}
-
             var finalPDF;
 
             if (useJBIG2) {{
-                // JBIG2 encoding path
-                progressText.textContent = fileLabel + ': Encoding with JBIG2...';
+                // JBIG2: prepare encoder, render pages writing PBMs incrementally
+                jbig2Encoder.prepareEncoding();
 
-                const bilevelPages = pages.map(p => ({{
-                    width: p.width,
-                    height: p.height,
-                    data: p.data,
-                    rotate: p.rotate || 0
-                }}));
+                progressText.textContent = fileLabel + ': Loading PDF...';
+                var pages = await renderPDFPages(entry.data, ditherConfig, targetDPI, pageSize, useJBIG2, preserveRotation, jbig2Encoder);
 
-                const jbig2Result = await jbig2Encoder.encode(bilevelPages, {{
+                if (!pages || pages.length === 0) {{
+                    console.warn('No pages rendered from ' + entry.path + ', skipping');
+                    continue;
+                }}
+
+                progressText.textContent = fileLabel + `: Encoding ${{pages.length}} pages with JBIG2...`;
+                await new Promise(r => setTimeout(r, 0));
+
+                const jbig2Result = await jbig2Encoder.encode({{
                     lossy: true,
                     threshold: jbig2Threshold,
                     symbolCoding: true,
@@ -1443,9 +1767,10 @@ document.addEventListener('DOMContentLoaded', function() {{
                     }}
                 }});
 
-                progressText.textContent = fileLabel + ': Generating JBIG2-compressed PDF...';
+                progressText.textContent = fileLabel + `: Generating JBIG2-compressed PDF (${{pages.length}} pages)...`;
+                await new Promise(r => setTimeout(r, 0));
 
-                const jbig2Pages = bilevelPages.map((p, idx) => ({{
+                const jbig2Pages = pages.map((p, idx) => ({{
                     width: p.width,
                     height: p.height,
                     data: jbig2Result.pages[idx],
@@ -1458,15 +1783,26 @@ document.addEventListener('DOMContentLoaded', function() {{
                     metadataOptions: metadataOpts
                 }});
 
-                progressText.textContent = fileLabel + ': Applying FlateDecode compression...';
-                finalPDF = compressPDF(jbig2PDF, pako);
+                finalPDF = await compressPDF(jbig2PDF, pako, (current, total) => {{
+                    progressText.textContent = fileLabel + `: FlateDecode compression: stream ${{current}} / ${{total}}...`;
+                }});
             }} else {{
-                // CCITT G4 encoding path
-                progressText.textContent = fileLabel + ': Generating CCITT-compressed PDF...';
+                // CCITT G4 path
+                progressText.textContent = fileLabel + ': Loading PDF...';
+                var pages = await renderPDFPages(entry.data, ditherConfig, targetDPI, pageSize, useJBIG2, preserveRotation);
+
+                if (!pages || pages.length === 0) {{
+                    console.warn('No pages rendered from ' + entry.path + ', skipping');
+                    continue;
+                }}
+
+                progressText.textContent = fileLabel + `: Generating CCITT-compressed PDF (${{pages.length}} pages)...`;
+                await new Promise(r => setTimeout(r, 0));
                 var compressedPDF = createPDF(pages, metadataOpts);
 
-                progressText.textContent = fileLabel + ': Applying FlateDecode compression...';
-                finalPDF = compressPDF(compressedPDF, pako);
+                finalPDF = await compressPDF(compressedPDF, pako, (current, total) => {{
+                    progressText.textContent = fileLabel + `: FlateDecode compression: stream ${{current}} / ${{total}}...`;
+                }});
             }}
 
             resultEntries.push({{ path: entry.path, data: finalPDF }});
@@ -1493,7 +1829,7 @@ document.addEventListener('DOMContentLoaded', function() {{
         // Save all compression settings for validation
         resultSettings.fileName = file.name;
         resultSettings.ditherMode = ditherConfig.mode;
-        resultSettings.pageRange = ditherConfig.mode === 'selected' ? (ditherConfig.pages || []).join(',') : null;
+        resultSettings.pageRange = ditherConfig.mode === 'selected' ? [...(ditherConfig.pages || [])].join(',') : null;
         resultSettings.dpi = targetDPI;
         resultSettings.pageSize = pageSize;
         resultSettings.useJBIG2 = useJBIG2;
@@ -1556,6 +1892,10 @@ document.addEventListener('DOMContentLoaded', function() {{
                             <label for="includeTimestamp" style="cursor: pointer; color: #333;">${{currentT.includeTimestampLabel || 'Include Created & Modified timestamps'}}</label>
                         </div>
                     </div>
+                    <div id="ramOverrideContainer" style="display: none; align-items: center; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid #eee;">
+                        <input type="checkbox" id="ramOverride" style="width: 18px; height: 18px; cursor: pointer;">
+                        <label for="ramOverride" style="cursor: pointer; color: #333; font-weight: 500;"></label>
+                    </div>
                 </div>`;
     }}
 
@@ -1581,7 +1921,7 @@ document.addEventListener('DOMContentLoaded', function() {{
             }});
         }}
 
-        // JBIG2 checkbox: always show/hide threshold options
+        // JBIG2 checkbox: show/hide threshold options + recalculate RAM estimate
         var useJBIG2Checkbox = document.getElementById('useJBIG2');
         if (useJBIG2Checkbox) {{
             useJBIG2Checkbox.addEventListener('change', function() {{
@@ -1589,9 +1929,18 @@ document.addEventListener('DOMContentLoaded', function() {{
                 if (thresholdOptions) {{
                     thresholdOptions.style.display = this.checked ? 'block' : 'none';
                 }}
+                updateCompressButton();
                 if (withValidation) validateFormMatchesResult();
             }});
         }}
+
+        // RAM override checkbox
+        var ramOverrideCb = document.getElementById('ramOverride');
+        if (ramOverrideCb) {{
+            ramOverrideCb.addEventListener('change', updateCompressButton);
+        }}
+
+        updateCompressButton();
 
         if (withValidation) {{
             var preserveRotationCb = document.getElementById('preserveRotation');
@@ -1762,7 +2111,7 @@ document.addEventListener('DOMContentLoaded', function() {{
         if (compareDitherMode === 'selected' && currentPageRange) {{
             try {{
                 const pages = parsePageRange(currentPageRange);
-                normalizedCurrentPageRange = pages.join(',');
+                normalizedCurrentPageRange = [...pages].join(',');
             }} catch (e) {{
                 // Invalid page range - doesn't match
                 normalizedCurrentPageRange = 'INVALID';
@@ -1796,7 +2145,7 @@ document.addEventListener('DOMContentLoaded', function() {{
     }}
 
     // Render PDF pages using PDF.js
-    async function renderPDFPages(pdfData, ditherConfig, targetDPI, pageSize, useJBIG2, preserveRotation) {{
+    async function renderPDFPages(pdfData, ditherConfig, targetDPI, pageSize, useJBIG2, preserveRotation, jbig2Encoder) {{
         // Load PDF document
         const loadingTask = pdfjsLib.getDocument({{ data: pdfData }});
         const pdf = await loadingTask.promise;
@@ -1910,10 +2259,11 @@ document.addEventListener('DOMContentLoaded', function() {{
             // Composite temporary canvas onto A4 canvas
             context.drawImage(tempCanvas, offsetX, offsetY);
 
-            console.log(`Page ${{pageNum}} rendered: ${{Math.floor(scaledViewport.width)}}x${{Math.floor(scaledViewport.height)}} centered on ${{A4_WIDTH_PX}}x${{A4_HEIGHT_PX}} canvas`);
+            // Free temp canvas backing store immediately
+            tempCanvas.width = 0;
+            tempCanvas.height = 0;
 
-            // Preview info disabled - uncomment to show preview info
-            // previewInfo.textContent = `Page ${{pageNum}}/${{pdf.numPages}}: ${{previewCanvas.width}}×${{previewCanvas.height}}px @ ${{targetDPI}} DPI`;
+            console.log(`Page ${{pageNum}} rendered: ${{Math.floor(scaledViewport.width)}}x${{Math.floor(scaledViewport.height)}} centered on ${{A4_WIDTH_PX}}x${{A4_HEIGHT_PX}} canvas`);
 
             // Get image data from canvas
             const imageData = context.getImageData(0, 0, previewCanvas.width, previewCanvas.height);
@@ -1936,13 +2286,14 @@ document.addEventListener('DOMContentLoaded', function() {{
             console.log(`Page ${{pageNum}} bilevel: ${{processed.width}}x${{processed.height}}, bytesPerRow: ${{bytesPerRow}}`);
 
             if (useJBIG2) {{
-                // JBIG2 path: just store bilevel data for later encoding
+                // JBIG2 path: write bilevel PBM to WASM FS immediately, don't accumulate in JS
                 progressText.textContent = zipProgressPrefix + `Prepared page ${{pageNum}} for JBIG2 encoding...`;
+
+                jbig2Encoder.addPage(processed.width, processed.height, processed.data);
 
                 pages.push({{
                     width: processed.width,
                     height: processed.height,
-                    data: processed.data,  // Raw bilevel data (1 bit per pixel, MSB first)
                     pageWidthPt: Math.round(pageDimensions.width * 72),
                     pageHeightPt: Math.round(pageDimensions.height * 72),
                     rotate: additionalRotation !== null ? 270 : 0
@@ -1955,16 +2306,15 @@ document.addEventListener('DOMContentLoaded', function() {{
                 const encoder = new G4Encoder();
                 encoder.init(processed.width, processed.height, G4ENC_MSB_FIRST);
 
-                // CRITICAL FIX: G4 encoder expects bit=1 for WHITE, but our bilevel has bit=1 for BLACK
-                // Invert all bits before encoding
-                const invertedData = new Uint8Array(processed.data.length);
+                // G4 encoder expects bit=1 for WHITE, but our bilevel has bit=1 for BLACK
+                // Invert in-place (processed.data is not used after this)
                 for (let i = 0; i < processed.data.length; i++) {{
-                    invertedData[i] = ~processed.data[i] & 0xFF;
+                    processed.data[i] = ~processed.data[i] & 0xFF;
                 }}
 
                 for (let y = 0; y < processed.height; y++) {{
                     const rowStart = y * bytesPerRow;
-                    const rowData = invertedData.slice(rowStart, rowStart + bytesPerRow);
+                    const rowData = processed.data.subarray(rowStart, rowStart + bytesPerRow);
                     const result = encoder.addLine(rowData);
 
                     if (result === G4ENC_IMAGE_COMPLETE) {{
@@ -1989,8 +2339,11 @@ document.addEventListener('DOMContentLoaded', function() {{
                     rotate: additionalRotation !== null ? 270 : 0
                 }});
             }}
+
+            page.cleanup();
         }}
 
+        pdf.cleanup();
         return pages;
     }}
 

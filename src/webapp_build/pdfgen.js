@@ -23,30 +23,49 @@ const A4_WIDTH_PT = 595;
 const A4_HEIGHT_PT = 842;
 
 /**
- * Create a PDF from CCITT compressed pages
- * @param {Array} pages - Array of page objects {width, height, data (CCITT compressed)}
- * @param {Object} [metadataOptions] - Metadata options
- * @param {boolean} [metadataOptions.includeProducer=true] - Include Producer/CreatorTool
- * @param {boolean} [metadataOptions.includeTimestamp=true] - Include real timestamps
- * @returns {Uint8Array} PDF file data
+ * Create a PDF from CCITT compressed pages.
+ * Uses single-pass Uint8Array assembly to minimize memory usage.
  */
 function createPDF(pages, metadataOptions) {
     const mdOpts = metadataOptions || {};
     const includeProducer = mdOpts.includeProducer !== false;
     const includeTimestamp = mdOpts.includeTimestamp !== false;
-    const encoder = new TextEncoder();
+    const enc = new TextEncoder();
+
+    const parts = [];
+    let currentOffset = 0;
+
+    function addBytes(data) {
+        if (typeof data === 'string') {
+            data = enc.encode(data);
+        }
+        parts.push(data);
+        currentOffset += data.length;
+    }
 
     // PDF header with binary marker
-    let pdf = encoder.encode("%PDF-1.4\n%\xe2\xe3\xcf\xd3\n");
+    addBytes('%PDF-1.4\n');
+    addBytes(new Uint8Array([0x25, 0xe2, 0xe3, 0xcf, 0xd3, 0x0a]));
 
     // CalGray colorspace (PDF/A compliant)
     const calgrayColorspace = "[/CalGray << /WhitePoint [0.9505 1.0000 1.0890] /Gamma 1.0 >>]";
 
-    const objects = [];
+    const offsets = [];
     let objNum = 1;
 
-    // Reserve object number for Pages
-    const pagesObjNum = objNum + (pages.length * 3); // Each page: image + content + page obj
+    // Pre-calculate pagesObjNum: each page creates 3 objects (image, content, page)
+    const pagesObjNum = 1 + pages.length * 3;
+
+    function beginObj() {
+        offsets.push(currentOffset);
+        const num = objNum++;
+        addBytes(`${num} 0 obj\n`);
+        return num;
+    }
+
+    function endObj() {
+        addBytes('\nendobj\n');
+    }
 
     // Create objects for each page
     const pageObjNums = [];
@@ -54,17 +73,12 @@ function createPDF(pages, metadataOptions) {
     for (let i = 0; i < pages.length; i++) {
         const page = pages[i];
 
-        // Get page dimensions (use provided dimensions or fall back to A4)
         const pageWidthPt = page.pageWidthPt || A4_WIDTH_PT;
         const pageHeightPt = page.pageHeightPt || A4_HEIGHT_PT;
 
-        // ====================================================================
         // Image XObject
-        // ====================================================================
-        const imgObjNum = objNum++;
-        const dataLength = page.data.length;
-
-        const imgDict = encoder.encode(
+        const imgObjNum = beginObj();
+        addBytes(
             `<< /Type /XObject ` +
             `/Subtype /Image ` +
             `/Width ${page.width} ` +
@@ -75,112 +89,59 @@ function createPDF(pages, metadataOptions) {
             `/DecodeParms << /K -1 /BlackIs1 false ` +
             `/Columns ${page.width} /Rows ${page.height} >> ` +
             `/Decode [0 1] ` +
-            `/Length ${dataLength} >>`
+            `/Length ${page.data.length} >>\nstream\n`
         );
+        addBytes(page.data);
+        addBytes('\nendstream');
+        endObj();
 
-        const imgObj = new Uint8Array(imgDict.length + 8 + page.data.length + 10);
-        let imgObjPos = 0;
-
-        imgObj.set(imgDict, imgObjPos);
-        imgObjPos += imgDict.length;
-
-        imgObj.set(encoder.encode("\nstream\n"), imgObjPos);
-        imgObjPos += 8;
-
-        imgObj.set(page.data, imgObjPos);
-        imgObjPos += page.data.length;
-
-        imgObj.set(encoder.encode("\nendstream"), imgObjPos);
-
-        objects.push(imgObj);
-
-        // ====================================================================
-        // Content Stream - Scale and center image on page
-        // ====================================================================
-        const contentObjNum = objNum++;
-
-        // Calculate scaling
+        // Content Stream
+        const contentObjNum = beginObj();
         const imgAspect = page.width / page.height;
         const pageAspect = pageWidthPt / pageHeightPt;
-
-        let scale;
-        if (imgAspect > pageAspect) {
-            scale = pageWidthPt / page.width;
-        } else {
-            scale = pageHeightPt / page.height;
-        }
-
+        const scale = imgAspect > pageAspect
+            ? pageWidthPt / page.width
+            : pageHeightPt / page.height;
         const scaledWidth = page.width * scale;
         const scaledHeight = page.height * scale;
         const xOffset = (pageWidthPt - scaledWidth) / 2;
         const yOffset = (pageHeightPt - scaledHeight) / 2;
+        const contentStream = `q\n${scaledWidth.toFixed(4)} 0 0 ${scaledHeight.toFixed(4)} ` +
+            `${xOffset.toFixed(4)} ${yOffset.toFixed(4)} cm\n/Im${i} Do\nQ\n`;
+        const contentBytes = enc.encode(contentStream);
+        addBytes(`<< /Length ${contentBytes.length} >>\nstream\n`);
+        addBytes(contentBytes);
+        addBytes('\nendstream');
+        endObj();
 
-        const contentStream = encoder.encode(
-            `q\n${scaledWidth.toFixed(4)} 0 0 ${scaledHeight.toFixed(4)} ` +
-            `${xOffset.toFixed(4)} ${yOffset.toFixed(4)} cm\n/Im${i} Do\nQ\n`
-        );
-
-        const contentObj = encoder.encode(
-            `<< /Length ${contentStream.length} >>`
-        );
-
-        const fullContentObj = new Uint8Array(contentObj.length + 8 + contentStream.length + 10);
-        let contentObjPos = 0;
-
-        fullContentObj.set(contentObj, contentObjPos);
-        contentObjPos += contentObj.length;
-
-        fullContentObj.set(encoder.encode("\nstream\n"), contentObjPos);
-        contentObjPos += 8;
-
-        fullContentObj.set(contentStream, contentObjPos);
-        contentObjPos += contentStream.length;
-
-        fullContentObj.set(encoder.encode("\nendstream"), contentObjPos);
-
-        objects.push(fullContentObj);
-
-        // ====================================================================
         // Page Object
-        // ====================================================================
-        const pageObjNum = objNum++;
+        const pageObjNum = beginObj();
         pageObjNums.push(pageObjNum);
-
         const rotateEntry = page.rotate ? `/Rotate ${page.rotate} ` : '';
-        const pageObj = encoder.encode(
+        addBytes(
             `<< /Type /Page /Parent ${pagesObjNum} 0 R ` +
             `/MediaBox [0 0 ${pageWidthPt} ${pageHeightPt}] ` +
             rotateEntry +
             `/Resources << /XObject << /Im${i} ${imgObjNum} 0 R >> >> ` +
             `/Contents ${contentObjNum} 0 R >>`
         );
-
-        objects.push(pageObj);
+        endObj();
     }
 
-    // ========================================================================
     // Pages Object
-    // ========================================================================
-    objNum++; // This should equal pagesObjNum
-
+    beginObj();
     const kids = pageObjNums.map(n => `${n} 0 R`).join(' ');
-    const pagesObj = encoder.encode(
-        `<< /Type /Pages /Kids [${kids}] /Count ${pages.length} >>`
-    );
-    objects.push(pagesObj);
+    addBytes(`<< /Type /Pages /Kids [${kids}] /Count ${pages.length} >>`);
+    endObj();
 
-    // ========================================================================
     // XMP Metadata
-    // ========================================================================
-    const metadataObjNum = objNum++;
-
+    const metadataObjNum = beginObj();
     const timestamp = includeTimestamp
         ? new Date().toISOString().replace(/\.\d{3}Z$/, '+00:00')
         : '1970-01-01T00:00:00+00:00';
     const creatorTool = includeProducer ? 'PDF Monochrome G4 Compressor' : '';
     const producer = includeProducer ? 'PDF Monochrome G4 Compressor' : '';
-
-    const xmpMetadata = encoder.encode(
+    const xmpMetadata =
         `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>\n` +
         `<x:xmpmeta xmlns:x="adobe:ns:meta/">\n` +
         `  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">\n` +
@@ -202,118 +163,59 @@ function createPDF(pages, metadataOptions) {
         `    </rdf:Description>\n` +
         `  </rdf:RDF>\n` +
         `</x:xmpmeta>\n` +
-        `<?xpacket end="w"?>`
-    );
+        `<?xpacket end="w"?>`;
+    const xmpBytes = enc.encode(xmpMetadata);
+    addBytes(`<< /Type /Metadata /Subtype /XML /Length ${xmpBytes.length} >>\nstream\n`);
+    addBytes(xmpBytes);
+    addBytes('\nendstream');
+    endObj();
 
-    const metadataObj = encoder.encode(
-        `<< /Type /Metadata /Subtype /XML /Length ${xmpMetadata.length} >>`
-    );
-
-    const fullMetadataObj = new Uint8Array(metadataObj.length + 8 + xmpMetadata.length + 10);
-    let metadataObjPos = 0;
-
-    fullMetadataObj.set(metadataObj, metadataObjPos);
-    metadataObjPos += metadataObj.length;
-
-    fullMetadataObj.set(encoder.encode("\nstream\n"), metadataObjPos);
-    metadataObjPos += 8;
-
-    fullMetadataObj.set(xmpMetadata, metadataObjPos);
-    metadataObjPos += xmpMetadata.length;
-
-    fullMetadataObj.set(encoder.encode("\nendstream"), metadataObjPos);
-
-    objects.push(fullMetadataObj);
-
-    // ========================================================================
     // OutputIntent
-    // ========================================================================
-    const outputIntentObjNum = objNum++;
-
-    const outputIntentObj = encoder.encode(
+    const outputIntentObjNum = beginObj();
+    addBytes(
         `<< /Type /OutputIntent ` +
         `/S /GTS_PDFA1 ` +
         `/OutputConditionIdentifier (Gray Gamma 2.2) ` +
         `/Info (Grayscale with Gamma 2.2) >>`
     );
+    endObj();
 
-    objects.push(outputIntentObj);
-
-    // ========================================================================
     // Catalog
-    // ========================================================================
-    const catalogObjNum = objNum++;
-
-    const catalogObj = encoder.encode(
+    const catalogObjNum = beginObj();
+    addBytes(
         `<< /Type /Catalog /Pages ${pagesObjNum} 0 R ` +
         `/Metadata ${metadataObjNum} 0 R ` +
         `/OutputIntents [${outputIntentObjNum} 0 R] ` +
         `/MarkInfo << /Marked true >> ` +
         `/ViewerPreferences << /DisplayDocTitle true >> >>`
     );
+    endObj();
 
-    objects.push(catalogObj);
-
-    // ========================================================================
-    // Write objects and build xref table
-    // ========================================================================
-    const offsets = [];
-
-    for (let i = 0; i < objects.length; i++) {
-        offsets.push(pdf.length);
-
-        const objHeader = encoder.encode(`${i + 1} 0 obj\n`);
-        const objFooter = encoder.encode("\nendobj\n");
-
-        const newPdf = new Uint8Array(pdf.length + objHeader.length + objects[i].length + objFooter.length);
-        newPdf.set(pdf, 0);
-        newPdf.set(objHeader, pdf.length);
-        newPdf.set(objects[i], pdf.length + objHeader.length);
-        newPdf.set(objFooter, pdf.length + objHeader.length + objects[i].length);
-
-        pdf = newPdf;
-    }
-
-    // ========================================================================
-    // Write xref table
-    // ========================================================================
-    const xrefOffset = pdf.length;
-
-    let xrefTable = encoder.encode(`xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`);
-
+    // xref table
+    const xrefOffset = currentOffset;
+    let xrefStr = `xref\n0 ${offsets.length + 1}\n0000000000 65535 f \n`;
     for (const offset of offsets) {
-        const offsetStr = String(offset).padStart(10, '0');
-        const xrefEntry = encoder.encode(`${offsetStr} 00000 n \n`);
-
-        const newXref = new Uint8Array(xrefTable.length + xrefEntry.length);
-        newXref.set(xrefTable, 0);
-        newXref.set(xrefEntry, xrefTable.length);
-        xrefTable = newXref;
+        xrefStr += `${String(offset).padStart(10, '0')} 00000 n \n`;
     }
+    addBytes(xrefStr);
 
-    const newPdf = new Uint8Array(pdf.length + xrefTable.length);
-    newPdf.set(pdf, 0);
-    newPdf.set(xrefTable, pdf.length);
-    pdf = newPdf;
-
-    // ========================================================================
-    // Trailer and finish
-    // ========================================================================
+    // Trailer
     const fileId = generateFileId(pages.length);
-
-    const trailer = encoder.encode(
-        `trailer\n` +
-        `<< /Size ${objects.length + 1} ` +
+    addBytes(
+        `trailer\n<< /Size ${offsets.length + 1} ` +
         `/Root ${catalogObjNum} 0 R ` +
         `/ID [<${fileId}> <${fileId}>] >>\n` +
         `startxref\n${xrefOffset}\n%%EOF\n`
     );
 
-    const finalPdf = new Uint8Array(pdf.length + trailer.length);
-    finalPdf.set(pdf, 0);
-    finalPdf.set(trailer, pdf.length);
-
-    return finalPdf;
+    // Single concatenation into final array
+    const result = new Uint8Array(currentOffset);
+    let pos = 0;
+    for (const part of parts) {
+        result.set(part, pos);
+        pos += part.length;
+    }
+    return result;
 }
 
 /**
@@ -326,14 +228,14 @@ function generateFileId(pageCount) {
 }
 
 /**
- * Simple hash function (poor man's MD5 for browser compatibility)
+ * Simple hash function for browser compatibility
  */
 function simpleHash(str) {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
         const char = str.charCodeAt(i);
         hash = ((hash << 5) - hash) + char;
-        hash = hash & hash; // Convert to 32bit integer
+        hash = hash & hash;
     }
     return Math.abs(hash).toString(16);
 }

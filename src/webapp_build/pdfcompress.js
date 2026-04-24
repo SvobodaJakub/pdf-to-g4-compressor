@@ -22,7 +22,7 @@
  * @param {object} pako - pako library reference
  * @returns {Uint8Array} Compressed PDF data
  */
-function compressPDF(pdfData, pako) {
+async function compressPDF(pdfData, pako, progressCallback) {
     const decoder = new TextDecoder('latin1');
     const encoder = new TextEncoder();
 
@@ -53,8 +53,10 @@ function compressPDF(pdfData, pako) {
     // Process each object (compress streams)
     const compressedObjects = [];
     let stats = { compressed: 0, cascaded: 0, skipped: 0 };
+    let lastYield = Date.now();
 
-    for (const obj of objects) {
+    for (let objIdx = 0; objIdx < objects.length; objIdx++) {
+        const obj = objects[objIdx];
         const result = parseStreamObject(obj.data);
 
         if (!result.streamData) {
@@ -105,31 +107,41 @@ function compressPDF(pdfData, pako) {
         } else {
             stats.compressed++;
         }
+
+        if (progressCallback) {
+            const now = Date.now();
+            if (now - lastYield >= 80) {
+                progressCallback(objIdx + 1, objects.length);
+                await new Promise(r => setTimeout(r, 0));
+                lastYield = Date.now();
+            }
+        }
     }
 
-    // Rebuild PDF
-    let newPdf = header;
+    // Rebuild PDF using collect-and-concat to avoid O(n²) copying
+    const allParts = [header];
+    let runningSize = header.length;
     const offsets = [];
 
     for (let i = 0; i < compressedObjects.length; i++) {
-        offsets.push(newPdf.length);
+        offsets.push(runningSize);
 
         const objHeader = encoder.encode(`${i + 1} 0 obj\n`);
         const objFooter = encoder.encode('\nendobj\n');
 
-        newPdf = concatArrays([newPdf, objHeader, compressedObjects[i], objFooter]);
+        allParts.push(objHeader, compressedObjects[i], objFooter);
+        runningSize += objHeader.length + compressedObjects[i].length + objFooter.length;
     }
 
-    // Write xref table
-    const xrefOffset = newPdf.length;
-    let xref = encoder.encode(`xref\n0 ${compressedObjects.length + 1}\n0000000000 65535 f \n`);
-
+    // Build xref table as a single string
+    const xrefOffset = runningSize;
+    let xrefStr = `xref\n0 ${compressedObjects.length + 1}\n0000000000 65535 f \n`;
     for (const offset of offsets) {
-        const offsetStr = String(offset).padStart(10, '0');
-        xref = concatArrays([xref, encoder.encode(`${offsetStr} 00000 n \n`)]);
+        xrefStr += `${String(offset).padStart(10, '0')} 00000 n \n`;
     }
-
-    newPdf = concatArrays([newPdf, xref]);
+    const xrefBytes = encoder.encode(xrefStr);
+    allParts.push(xrefBytes);
+    runningSize += xrefBytes.length;
 
     // Copy trailer from original PDF
     const trailerMatch = findPattern(pdfData, encoder.encode('trailer\n'));
@@ -143,13 +155,18 @@ function compressPDF(pdfData, pako) {
     }
 
     const trailerDict = pdfData.slice(trailerMatch + 8, startxrefMatch);
+    const trailerHeader = encoder.encode('trailer\n');
+    const trailerFooter = encoder.encode(`startxref\n${xrefOffset}\n%%EOF\n`);
+    allParts.push(trailerHeader, trailerDict, trailerFooter);
+    runningSize += trailerHeader.length + trailerDict.length + trailerFooter.length;
 
-    newPdf = concatArrays([
-        newPdf,
-        encoder.encode('trailer\n'),
-        trailerDict,
-        encoder.encode(`startxref\n${xrefOffset}\n%%EOF\n`)
-    ]);
+    // Single concatenation
+    const newPdf = new Uint8Array(runningSize);
+    let pos = 0;
+    for (const part of allParts) {
+        newPdf.set(part, pos);
+        pos += part.length;
+    }
 
     console.log(`Compressed ${stats.compressed} streams, cascaded ${stats.cascaded}, skipped ${stats.skipped}`);
     console.log(`Original: ${pdfData.length} bytes, Compressed: ${newPdf.length} bytes`);

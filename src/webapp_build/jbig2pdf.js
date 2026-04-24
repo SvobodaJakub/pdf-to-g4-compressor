@@ -115,11 +115,8 @@ function readJBIG2Metadata(jbig2Data) {
 }
 
 /**
- * Create PDF/A-1B from JBIG2 encoded pages
- * @param {Object} params
- * @param {Uint8Array|null} params.globalData - Global symbol dictionary (*.sym file)
- * @param {Array<{width: number, height: number, data: Uint8Array}>} params.pages - Page segments
- * @returns {Uint8Array} - PDF file data
+ * Create PDF/A-1B from JBIG2 encoded pages.
+ * Uses single-pass Uint8Array assembly to minimize memory usage.
  */
 function createJBIG2PDF({ globalData = null, pages, metadataOptions = {} }) {
     const includeProducer = metadataOptions.includeProducer !== false;
@@ -128,270 +125,208 @@ function createJBIG2PDF({ globalData = null, pages, metadataOptions = {} }) {
         throw new Error('No pages provided');
     }
 
-    // PDF header with binary marker
-    const pdfParts = [];
-    pdfParts.push('%PDF-1.4\n%\xe2\xe3\xcf\xd3\n');
+    const enc = new TextEncoder();
+    const parts = [];
+    let currentOffset = 0;
 
-    // A4 portrait in points
-    const pageWidthPt = 595;
-    const pageHeightPt = 842;
-
-    const objects = [];
-    let objNum = 1;
-
-    // CalGray color space (PDF/A compliant)
-    const calgrayColorspace = '[/CalGray << /WhitePoint [0.9505 1.0000 1.0890] /Gamma 1.0 >>]';
-
-    // ========================================================================
-    // Global JBIG2 dictionary stream (if present)
-    // ========================================================================
-    let globalObjNum = null;
-    if (globalData) {
-        globalObjNum = objNum++;
-
-        const globalObj = `<< /Length ${globalData.length} >>\nstream\n` +
-                         arrayToString(globalData) +
-                         `\nendstream`;
-        objects.push(globalObj);
+    function addBytes(data) {
+        if (typeof data === 'string') {
+            data = enc.encode(data);
+        }
+        parts.push(data);
+        currentOffset += data.length;
     }
 
-    // Create image and content objects for each page
+    // PDF header with binary marker
+    addBytes('%PDF-1.4\n');
+    addBytes(new Uint8Array([0x25, 0xe2, 0xe3, 0xcf, 0xd3, 0x0a]));
+
+    const pageWidthPt = 595;
+    const pageHeightPt = 842;
+    const calgrayColorspace = '[/CalGray << /WhitePoint [0.9505 1.0000 1.0890] /Gamma 1.0 >>]';
+
+    const offsets = [];
+    let objNum = 1;
+
+    // Pre-calculate pagesObjNum so page objects can reference their parent
+    const pagesObjNum = 1 + (globalData ? 1 : 0) + pages.length * 3;
+
+    function beginObj() {
+        offsets.push(currentOffset);
+        const num = objNum++;
+        addBytes(`${num} 0 obj\n`);
+        return num;
+    }
+
+    function endObj() {
+        addBytes('\nendobj\n');
+    }
+
+    // Global JBIG2 dictionary stream (if present)
+    let globalObjNum = null;
+    if (globalData) {
+        globalObjNum = beginObj();
+        addBytes(`<< /Length ${globalData.length} >>\nstream\n`);
+        addBytes(globalData);
+        addBytes('\nendstream');
+        endObj();
+    }
+
     const pageObjNums = [];
 
     for (let i = 0; i < pages.length; i++) {
         const page = pages[i];
 
-        // ====================================================================
         // Image XObject - JBIG2Decode
-        // ====================================================================
-        const imgObjNum = objNum++;
-        const dataLength = page.data.length;
-
-        // Build DecodeParms
-        let decodeParms;
-        if (globalObjNum) {
-            decodeParms = `<< /JBIG2Globals ${globalObjNum} 0 R >>`;
-        } else {
-            decodeParms = '<< >>';
-        }
-
-        const imgDict = `<< /Type /XObject ` +
-            `/Subtype /Image ` +
-            `/Width ${page.width} ` +
-            `/Height ${page.height} ` +
+        const imgObjNum = beginObj();
+        const decodeParms = globalObjNum
+            ? `<< /JBIG2Globals ${globalObjNum} 0 R >>`
+            : '<< >>';
+        addBytes(
+            `<< /Type /XObject /Subtype /Image ` +
+            `/Width ${page.width} /Height ${page.height} ` +
             `/ColorSpace ${calgrayColorspace} ` +
             `/BitsPerComponent 1 ` +
             `/Filter /JBIG2Decode ` +
             `/DecodeParms ${decodeParms} ` +
             `/Decode [0 1] ` +
-            `/Length ${dataLength} >>`;
+            `/Length ${page.data.length} >>\nstream\n`
+        );
+        addBytes(page.data);
+        addBytes('\nendstream');
+        endObj();
 
-        const imgObj = imgDict + '\nstream\n' + arrayToString(page.data) + '\nendstream';
-        objects.push(imgObj);
-
-        // ====================================================================
         // Content Stream - A4 scaling and centering
-        // ====================================================================
-        const contentObjNum = objNum++;
-
-        // Calculate aspect ratios and scale to fit A4
+        const contentObjNum = beginObj();
         const imgAspect = page.width / page.height;
         const pageAspect = pageWidthPt / pageHeightPt;
-
-        let scale;
-        if (imgAspect > pageAspect) {
-            scale = pageWidthPt / page.width;
-        } else {
-            scale = pageHeightPt / page.height;
-        }
-
+        const scale = imgAspect > pageAspect
+            ? pageWidthPt / page.width
+            : pageHeightPt / page.height;
         const scaledWidth = page.width * scale;
         const scaledHeight = page.height * scale;
-
-        // Center image on A4 page
         const xOffset = (pageWidthPt - scaledWidth) / 2;
         const yOffset = (pageHeightPt - scaledHeight) / 2;
-
         const contentStream = `q\n${scaledWidth.toFixed(4)} 0 0 ${scaledHeight.toFixed(4)} ${xOffset.toFixed(4)} ${yOffset.toFixed(4)} cm\n/Im${i} Do\nQ\n`;
+        addBytes(`<< /Length ${contentStream.length} >>\nstream\n${contentStream}\nendstream`);
+        endObj();
 
-        const contentObj = `<< /Length ${contentStream.length} >>\nstream\n${contentStream}\nendstream`;
-        objects.push(contentObj);
-
-        // ====================================================================
         // Page object
-        // ====================================================================
-        const pageObjNum = objNum++;
+        const pageObjNum = beginObj();
         pageObjNums.push(pageObjNum);
-
         const rotateEntry = page.rotate ? `/Rotate ${page.rotate} ` : '';
-        const pageObj = `<< /Type /Page /Parent ${objNum} 0 R ` +
+        addBytes(
+            `<< /Type /Page /Parent ${pagesObjNum} 0 R ` +
             `/MediaBox [0 0 ${pageWidthPt} ${pageHeightPt}] ` +
             rotateEntry +
             `/Resources << /XObject << /Im${i} ${imgObjNum} 0 R >> >> ` +
-            `/Contents ${contentObjNum} 0 R >>`;
-        objects.push(pageObj);
+            `/Contents ${contentObjNum} 0 R >>`
+        );
+        endObj();
     }
 
-    // ========================================================================
     // Pages object
-    // ========================================================================
-    const pagesObjNum = objNum++;
-
+    beginObj();
     const kids = pageObjNums.map(n => `${n} 0 R`).join(' ');
-    const pagesObj = `<< /Type /Pages /Kids [${kids}] /Count ${pages.length} >>`;
-    objects.push(pagesObj);
+    addBytes(`<< /Type /Pages /Kids [${kids}] /Count ${pages.length} >>`);
+    endObj();
 
-    // Fix page parent references
-    for (let i = 0; i < pageObjNums.length; i++) {
-        const idx = pageObjNums[i] - 1;  // Object array is 0-indexed
-        objects[idx] = objects[idx].replace(`/Parent ${objNum - 1} 0 R`, `/Parent ${pagesObjNum} 0 R`);
-    }
-
-    // ========================================================================
-    // XMP Metadata stream - PDF/A-1B requirement
-    // ========================================================================
-    const metadataObjNum = objNum++;
-
+    // XMP Metadata stream
+    const metadataObjNum = beginObj();
     const timestamp = includeTimestamp
         ? new Date().toISOString().replace(/\.\d{3}Z$/, '+00:00')
         : '1970-01-01T00:00:00+00:00';
     const creatorTool = includeProducer ? 'PDF Monochrome G4 Compressor' : '';
     const producer = includeProducer ? 'PDF Monochrome G4 Compressor' : '';
+    const xmpMetadata =
+        `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>\n` +
+        `<x:xmpmeta xmlns:x="adobe:ns:meta/">\n` +
+        `  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">\n` +
+        `    <rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/">\n` +
+        `      <dc:format>application/pdf</dc:format>\n` +
+        `    </rdf:Description>\n` +
+        `    <rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">\n` +
+        `      <pdfaid:part>1</pdfaid:part>\n` +
+        `      <pdfaid:conformance>B</pdfaid:conformance>\n` +
+        `    </rdf:Description>\n` +
+        `    <rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/">\n` +
+        `      <xmp:CreateDate>${timestamp}</xmp:CreateDate>\n` +
+        `      <xmp:ModifyDate>${timestamp}</xmp:ModifyDate>\n` +
+        `      <xmp:MetadataDate>${timestamp}</xmp:MetadataDate>\n` +
+        `      <xmp:CreatorTool>${creatorTool}</xmp:CreatorTool>\n` +
+        `    </rdf:Description>\n` +
+        `    <rdf:Description rdf:about="" xmlns:pdf="http://ns.adobe.com/pdf/1.3/">\n` +
+        `      <pdf:Producer>${producer}</pdf:Producer>\n` +
+        `    </rdf:Description>\n` +
+        `  </rdf:RDF>\n` +
+        `</x:xmpmeta>\n` +
+        `<?xpacket end="w"?>`;
+    const xmpBytes = enc.encode(xmpMetadata);
+    addBytes(`<< /Type /Metadata /Subtype /XML /Length ${xmpBytes.length} >>\nstream\n`);
+    addBytes(xmpBytes);
+    addBytes('\nendstream');
+    endObj();
 
-    const xmpMetadata = `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
-<x:xmpmeta xmlns:x="adobe:ns:meta/">
-  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-    <rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/">
-      <dc:format>application/pdf</dc:format>
-    </rdf:Description>
-    <rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
-      <pdfaid:part>1</pdfaid:part>
-      <pdfaid:conformance>B</pdfaid:conformance>
-    </rdf:Description>
-    <rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/">
-      <xmp:CreateDate>${timestamp}</xmp:CreateDate>
-      <xmp:ModifyDate>${timestamp}</xmp:ModifyDate>
-      <xmp:MetadataDate>${timestamp}</xmp:MetadataDate>
-      <xmp:CreatorTool>${creatorTool}</xmp:CreatorTool>
-    </rdf:Description>
-    <rdf:Description rdf:about="" xmlns:pdf="http://ns.adobe.com/pdf/1.3/">
-      <pdf:Producer>${producer}</pdf:Producer>
-    </rdf:Description>
-  </rdf:RDF>
-</x:xmpmeta>
-<?xpacket end="w"?>`;
-
-    const metadataObj = `<< /Type /Metadata /Subtype /XML /Length ${xmpMetadata.length} >>\nstream\n${xmpMetadata}\nendstream`;
-    objects.push(metadataObj);
-
-    // ========================================================================
-    // OutputIntent - PDF/A-1B requirement
-    // ========================================================================
-    const outputIntentObjNum = objNum++;
-
-    const outputIntentObj = `<< /Type /OutputIntent ` +
+    // OutputIntent
+    const outputIntentObjNum = beginObj();
+    addBytes(
+        `<< /Type /OutputIntent ` +
         `/S /GTS_PDFA1 ` +
         `/OutputConditionIdentifier (Gray Gamma 2.2) ` +
-        `/Info (Grayscale with Gamma 2.2) >>`;
-    objects.push(outputIntentObj);
+        `/Info (Grayscale with Gamma 2.2) >>`
+    );
+    endObj();
 
-    // ========================================================================
     // Catalog
-    // ========================================================================
-    const catalogObjNum = objNum++;
-
-    const catalogObj = `<< /Type /Catalog /Pages ${pagesObjNum} 0 R ` +
+    const catalogObjNum = beginObj();
+    addBytes(
+        `<< /Type /Catalog /Pages ${pagesObjNum} 0 R ` +
         `/Metadata ${metadataObjNum} 0 R ` +
         `/OutputIntents [${outputIntentObjNum} 0 R] ` +
         `/MarkInfo << /Marked true >> ` +
-        `/ViewerPreferences << /DisplayDocTitle true >> >>`;
-    objects.push(catalogObj);
+        `/ViewerPreferences << /DisplayDocTitle true >> >>`
+    );
+    endObj();
 
-    // ========================================================================
-    // Write PDF structure
-    // ========================================================================
-    const offsets = [];
-    for (let i = 0; i < objects.length; i++) {
-        offsets.push(pdfParts.join('').length);
-        pdfParts.push(`${i + 1} 0 obj\n${objects[i]}\nendobj\n`);
-    }
-
-    // Write xref table
-    const xrefOffset = pdfParts.join('').length;
-    pdfParts.push('xref\n');
-    pdfParts.push(`0 ${objects.length + 1}\n`);
-    pdfParts.push('0000000000 65535 f \n');
+    // xref table
+    const xrefOffset = currentOffset;
+    let xrefStr = `xref\n0 ${offsets.length + 1}\n0000000000 65535 f \n`;
     for (const offset of offsets) {
-        pdfParts.push(`${String(offset).padStart(10, '0')} 00000 n \n`);
+        xrefStr += `${String(offset).padStart(10, '0')} 00000 n \n`;
     }
+    addBytes(xrefStr);
 
-    // ========================================================================
     // Trailer with ID array
-    // ========================================================================
-    // Generate file ID
     const idSource = `${timestamp}${pages.length}`;
     const fileId = md5(idSource).toUpperCase();
+    addBytes(
+        `trailer\n<< /Size ${offsets.length + 1} ` +
+        `/Root ${catalogObjNum} 0 R ` +
+        `/ID [<${fileId}> <${fileId}>] >>\n` +
+        `startxref\n${xrefOffset}\n%%EOF\n`
+    );
 
-    pdfParts.push('trailer\n');
-    pdfParts.push(`<< /Size ${objects.length + 1} ` +
-                 `/Root ${catalogObjNum} 0 R ` +
-                 `/ID [<${fileId}> <${fileId}>] >>\n`);
-    pdfParts.push('startxref\n');
-    pdfParts.push(`${xrefOffset}\n`);
-    pdfParts.push('%%EOF\n');
-
-    // Convert to Uint8Array
-    return stringToArray(pdfParts.join(''));
-}
-
-// ============================================================================
-// Utility Functions
-// ============================================================================
-
-/**
- * Convert Uint8Array to binary string (for PDF)
- * @param {Uint8Array} array
- * @returns {string}
- */
-function arrayToString(array) {
-    let result = '';
-    for (let i = 0; i < array.length; i++) {
-        result += String.fromCharCode(array[i]);
+    // Single concatenation into final array
+    const result = new Uint8Array(currentOffset);
+    let pos = 0;
+    for (const part of parts) {
+        result.set(part, pos);
+        pos += part.length;
     }
     return result;
 }
 
 /**
- * Convert string to Uint8Array
- * @param {string} str
- * @returns {Uint8Array}
- */
-function stringToArray(str) {
-    const array = new Uint8Array(str.length);
-    for (let i = 0; i < str.length; i++) {
-        array[i] = str.charCodeAt(i);
-    }
-    return array;
-}
-
-/**
- * Simple MD5 implementation (for file ID generation)
- * @param {string} str
- * @returns {string} - Hex string
+ * Simple hash for file ID generation (not cryptographic)
  */
 function md5(str) {
-    // For browser environments, we can use a simple hash
-    // This doesn't need cryptographic security, just uniqueness
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
         const char = str.charCodeAt(i);
         hash = ((hash << 5) - hash) + char;
-        hash = hash & hash; // Convert to 32bit integer
+        hash = hash & hash;
     }
-
-    // Convert to hex and pad to 32 characters
     let hex = Math.abs(hash).toString(16).padStart(8, '0');
-    // Duplicate to make it 32 characters (MD5-like)
     return (hex + hex + hex + hex).substring(0, 32);
 }
 
