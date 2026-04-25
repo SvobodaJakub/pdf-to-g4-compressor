@@ -84,6 +84,7 @@ const IntroAnimation = {
         var pdfIcon = document.getElementById('introPDFIcon');
         if (pdfIcon) pdfIcon.remove();
 
+        document.body.classList.remove('fe-intro-active');
         this.restoreHelpButton();
         this.isRunning = false;
     },
@@ -371,6 +372,7 @@ const IntroAnimation = {
         if (overlay) {
             overlay.remove();
         }
+        document.body.classList.remove('fe-intro-active');
 
         // Clean up PDF icon if it exists
         const pdfIcon = document.getElementById('introPDFIcon');

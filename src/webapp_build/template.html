@@ -1481,6 +1481,27 @@
                 background: #3d4b7a;
             }
         }
+
+        /* Flat Earth background */
+        .fe-bg { display: none; }
+        body.flat-earth .fe-bg { display: block; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: -1; background: radial-gradient(ellipse at 40% 30%, #0d1137 0%, #050520 70%); overflow: hidden; }
+        body.flat-earth { background: #050520 !important; }
+        body.flat-earth .container { background: rgba(255,255,255,0.92); }
+        @media (prefers-color-scheme: dark) { body.flat-earth .container { background: rgba(30,30,30,0.92); } }
+        .fe-bg::before { content: ''; position: absolute; width: 300%; height: 300%; top: -100%; left: -100%; background-image: radial-gradient(1px 1px at 10% 20%, #fff 50%, transparent 50%), radial-gradient(1px 1px at 30% 70%, #fff 50%, transparent 50%), radial-gradient(1px 1px at 50% 10%, #fff 50%, transparent 50%), radial-gradient(1px 1px at 70% 40%, #fff 50%, transparent 50%), radial-gradient(1px 1px at 90% 80%, #fff 50%, transparent 50%), radial-gradient(1px 1px at 15% 50%, #ddf 50%, transparent 50%), radial-gradient(1px 1px at 45% 90%, #fff 50%, transparent 50%), radial-gradient(1px 1px at 75% 25%, #eef 50%, transparent 50%), radial-gradient(2px 2px at 25% 35%, #ffd 50%, transparent 50%), radial-gradient(1px 1px at 60% 55%, #fff 50%, transparent 50%), radial-gradient(1px 1px at 40% 45%, #ccf 50%, transparent 50%), radial-gradient(1px 1px at 95% 15%, #fff 50%, transparent 50%); animation: fe-twinkle 6s ease-in-out infinite alternate; }
+        @keyframes fe-twinkle { 0% { opacity: 0.5; } 100% { opacity: 1; } }
+        .fe-world-wrapper { width: 340px; height: 500px; position: absolute; }
+        .fe-world-wrapper .fe-world { width: 340px; height: 340px; perspective: 600px; position: absolute; top: 0; left: 0; z-index: 2; }
+        .fe-slab { width: 100%; height: 100%; transform-style: preserve-3d; transform: rotateX(58deg); position: relative; }
+        .fe-top { position: absolute; width: 100%; height: 100%; border-radius: 50%; transform: translateZ(15px); overflow: hidden; }
+        .fe-side { position: absolute; width: 100%; height: 100%; border-radius: 50%; box-sizing: border-box; }
+        .fe-sun-orbit { position: absolute; width: 100%; height: 100%; transform-style: preserve-3d; animation: fe-sun-spin linear infinite; }
+        .fe-sun { position: absolute; width: 14px; height: 14px; background: radial-gradient(circle, #fff 0%, #ffe44d 35%, #ffaa00 70%, transparent 100%); border-radius: 50%; box-shadow: 0 0 10px 4px rgba(255,220,0,0.35); top: -7px; left: calc(50% - 7px); transform: translateZ(35px); }
+        @keyframes fe-sun-spin { from { transform: translateZ(15px) rotateZ(0deg); } to { transform: translateZ(15px) rotateZ(-360deg); } }
+        .fe-water-back { position: absolute; top: 0; left: 0; width: 340px; height: 500px; pointer-events: none; z-index: 1; }
+        .fe-water-front { position: absolute; top: 0; left: 0; width: 340px; height: 500px; pointer-events: none; z-index: 3; }
+        body.flat-earth .intro-overlay { background: transparent !important; }
+        body.flat-earth.fe-intro-active .fe-bg { z-index: 99999 !important; pointer-events: none; }
     </style>
 
     <!-- Placeholder for intro overlay - normal UI loads underneath -->
@@ -1496,6 +1517,9 @@
     </style>
 </head>
 <body>
+    <!-- Flat Earth background (hidden by default, populated dynamically when en-FE locale is active) -->
+    <div class="fe-bg" id="feBg"></div>
+
     <!-- GitHub Corner -->
     <a href="https://github.com/SvobodaJakub/pdf-to-g4-compressor" class="github-corner" aria-label="View source on GitHub" target="_blank" rel="noopener noreferrer">
         <svg width="40" height="40" viewBox="0 0 250 250" style="fill:#667eea; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true">

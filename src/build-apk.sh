@@ -19,8 +19,8 @@ KEYSTORE_DIR="$PROJECT_ROOT/android-private"
 # Increment these for each Google Play release:
 #   versionCode: Integer, must increase with each release (1, 2, 3, ...)
 #   versionName: User-visible version string (e.g., "1.0", "1.1.0", "2.0")
-VERSION_CODE=15
-VERSION_NAME="1.2.5"
+VERSION_CODE=16
+VERSION_NAME="1.2.6"
 
 echo "Script directory: $SCRIPT_DIR"
 echo "Source directory: $SRC_DIR"
@@ -1937,8 +1937,10 @@ def create_android_resources(languages, res_dir):
     created_count = 0
 
     for js_code, app_name in sorted(languages.items()):
-        # Skip mn-Mong - Android resource system doesn't support it
-        if js_code == 'mn-Mong':
+        # Skip locales incompatible with Android resource directory naming
+        # mn-Mong: Android doesn't support Mongolian traditional script resources
+        # *-FE, 67: joke locales (flat earth, brainrot) — not valid Android locale codes
+        if js_code == 'mn-Mong' or js_code.endswith('-FE') or js_code == '67':
             continue
 
         android_code = js_to_android_locale(js_code)

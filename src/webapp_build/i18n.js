@@ -86,6 +86,11 @@ const LOCALE_FALLBACK = {
     'eu-ES': 'eu',
     // Tibetan variants
     'bo-CN': 'bo', 'bo-IN': 'bo',
+    // Joke locales
+    'en-FE': 'en-FE',
+    'cs-FE': 'cs-FE',
+    'sk-FE': 'sk-FE',
+    '67': '67',
 };
 
 const TRANSLATIONS = {

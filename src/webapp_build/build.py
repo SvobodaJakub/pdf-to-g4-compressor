@@ -273,6 +273,12 @@ def main():
     pdfcompress = read_file('pdfcompress.js')
     ziputil = read_file('ziputil.js')
     intro = read_file('intro.js')
+    flatearth_js_raw = read_file('flatearth.js')
+    import json as _json
+    with open('flatearth-paths.json', 'r') as _f:
+        _fe_paths = _json.load(_f)
+    _fe_paths_str = ','.join('"' + p + '"' for p in _fe_paths)
+    flatearth_js = flatearth_js_raw.replace('FLATEARTH_PATHS_PLACEHOLDER', _fe_paths_str)
 
     # Read JBIG2 components
     print("Reading JBIG2 modules...")
@@ -535,6 +541,11 @@ const SOURCE_TARBALL_BASE64 = '{source_tarball_b64}';
 {intro}
 
 // ============================================================================
+// Flat Earth Background (en-FE locale)
+// ============================================================================
+{flatearth_js}
+
+// ============================================================================
 // Pristine HTML (for self-download feature)
 // ============================================================================
 // The loader sets window.PRISTINE_HTML with the decompressed full HTML
@@ -788,11 +799,30 @@ document.addEventListener('DOMContentLoaded', function() {{
     detectedLang = detectLanguage(); // User's preferred language (assign to global)
     currentLang = detectedLang;  // Assign to global variable
     console.log('Detected language:', currentLang);
+
+    // April 1st: auto-switch to flat earth locale
+    var today = new Date();
+    if (today.getMonth() === 3 && today.getDate() === 1) {{
+        var feMap = {{ 'en': 'en-FE', 'cs': 'cs-FE', 'sk': 'sk-FE' }};
+        var baseLang = currentLang.split('-')[0];
+        if (feMap[baseLang] && !currentLang.endsWith('-FE')) {{
+            currentLang = feMap[baseLang];
+            console.log('April Fools! Switching to', currentLang);
+        }}
+    }}
+
     applyTranslations(currentLang);
 
     // Apply Mongolian script class if needed
     if (currentLang === 'mn-Mong') {{
         document.body.classList.add('mongolian-script');
+    }}
+
+    // Activate flat earth background if FE locale
+    if (currentLang.endsWith('-FE')) {{
+        document.body.classList.add('flat-earth');
+        document.body.classList.add('fe-intro-active');
+        if (typeof feInit === 'function') feInit();
     }}
 
     // Get current translations for dynamic content
@@ -2634,7 +2664,11 @@ document.addEventListener('DOMContentLoaded', function() {{
         'ta': 'தமிழ்', 'te': 'తెలుగు', 'tg': 'Тоҷикӣ', 'th': 'ไทย', 'tk': 'Türkmen',
         'tl': 'Tagalog', 'tr': 'Türkçe', 'tt': 'Татар', 'uk': 'Українська', 'ur': 'اردو',
         'uz': 'Oʻzbek', 'vi': 'Tiếng Việt', 'yi': 'ייִדיש', 'zh-Hans': '简体中文', 'zh-Hant': '繁體中文',
-        'zu': 'isiZulu'
+        'zu': 'isiZulu',
+        '67': 'brainrot',
+        'cs-FE': 'Čeština (plochozemská)',
+        'en-FE': 'English (Flat Earth)',
+        'sk-FE': 'Slovenčina (plochozemská)'
     }};
 
     const languageModal = document.getElementById('languageModal');
@@ -2649,7 +2683,14 @@ document.addEventListener('DOMContentLoaded', function() {{
         // Get all available languages and sort by code
         const allLanguages = Object.keys(TRANSLATIONS).sort();
 
+        // Joke locales (FE, 67) are hidden unless GitHub corner is visible or it's April 1st
+        const isAprilFirst = (function() {{ var d = new Date(); return d.getMonth() === 3 && d.getDate() === 1; }})();
+        const githubVisible = (function() {{ var g = document.querySelector('.github-corner'); return g && g.style.display !== 'none'; }})();
+        const showJokes = isAprilFirst || githubVisible;
+
         allLanguages.forEach(code => {{
+            // Hide joke locales when not appropriate
+            if ((code.endsWith('-FE') || code === '67') && !showJokes) return;
             const item = document.createElement('div');
             item.className = 'language-item';
             if (code === currentLang) {{
@@ -2724,6 +2765,15 @@ document.addEventListener('DOMContentLoaded', function() {{
                     if (!isMongolianRelevant && mongolianSwitch) {{
                         mongolianSwitch.classList.remove('show');
                     }}
+                }}
+
+                // Toggle Flat Earth background
+                if (code.endsWith('-FE')) {{
+                    document.body.classList.add('flat-earth');
+                    if (typeof feInit === 'function') feInit();
+                }} else {{
+                    document.body.classList.remove('flat-earth');
+                    if (typeof feStop === 'function') feStop();
                 }}
 
                 // Refresh DPI warning in new language
@@ -2923,6 +2973,9 @@ document.addEventListener('DOMContentLoaded', function() {{
             // - Offline prelude 10x slower (0.1 speed multiplier)
             // - PDF demo 6.25x slower (0.16 speed multiplier)
             if (typeof IntroAnimation !== 'undefined') {{
+                if (document.body.classList.contains('flat-earth')) {{
+                    document.body.classList.add('fe-intro-active');
+                }}
                 IntroAnimation.start(0.1, 0.16);
             }}
         }});
