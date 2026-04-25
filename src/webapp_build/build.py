@@ -545,6 +545,51 @@ if (typeof window.PRISTINE_HTML === 'undefined') {{
     window.PRISTINE_HTML = document.documentElement.outerHTML;
 }}
 
+// ============================================================================
+// STATE MACHINE
+// ============================================================================
+//
+// States: EMPTY → FILE_LOADED → CONVERTING → RESULT / CANCELLED / ERROR_RECOVERY
+//
+// EMPTY (initial):
+//   selectedFile=null, progressBoxState=null
+//   Button: disabled ("Choose PDF File")
+//
+// FILE_LOADED:
+//   selectedFile set, totalPageCount known, progressBoxState=null|'cancelled'
+//   Button: enabled (unless fileError, pageRangeError, DPI invalid, or RAM limit)
+//   Transition: handleFileSelected(file) runs the file-open flow:
+//     cleanupPreviousResult → clearFileError → detectFileType → countPages
+//     → autoAdjustDPI → updateCompressButton
+//
+// CONVERTING:
+//   conversionInProgress=true, controls disabled
+//   Button: clickable (for cancellation only)
+//   Transition: convertBtn.click → setFormControlsEnabled(false) → convertPDF/convertZIP
+//
+// RESULT:
+//   progressBoxState='result', window.resultPDF set
+//   Shows: size comparison, save button, Advanced Tricks
+//   validateFormMatchesResult enables/disables save button
+//
+// CANCELLED:
+//   progressBoxState='cancelled'
+//   Shows: Advanced Tricks (collapsed)
+//   User cancelled mid-conversion
+//
+// ERROR_RECOVERY:
+//   Unexpected conversion error → recoverFromError()
+//   Saves user settings, replays handleFileSelected with same file,
+//   restores dither/pageSize/rotation settings → back to FILE_LOADED
+//
+// Key functions:
+//   updateCompressButton() — single source of truth for button, file info,
+//     JBIG2 feasibility, RAM override, DPI warning
+//   handleFileSelected(file) — file-open flow (used by input, drop, recovery)
+//   setFormControlsEnabled(enabled) — enable/disable all form controls
+//   defaultResultSettings() — canonical default for resultSettings object
+// ============================================================================
+
 // Global variables for state management
 var currentLang = 'en';  // Will be set during initialization
 var detectedLang = 'en';  // Original detected language
@@ -559,18 +604,15 @@ var fileError = false;
 var pageRangeError = false;
 
 // Track compression settings used to create current result
-var resultSettings = {{
-    fileName: null,
-    ditherMode: null,
-    pageRange: null,
-    dpi: null,
-    pageSize: null,
-    useJBIG2: false,
-    jbig2Threshold: 0.97,
-    preserveRotation: false,
-    includeProducer: true,
-    includeTimestamp: true
-}};
+function defaultResultSettings() {{
+    return {{
+        fileName: null, ditherMode: null, pageRange: null,
+        dpi: null, pageSize: null, useJBIG2: false,
+        jbig2Threshold: 0.97, preserveRotation: false,
+        includeProducer: true, includeTimestamp: true
+    }};
+}}
+var resultSettings = defaultResultSettings();
 
 // DOM element references (assigned in DOMContentLoaded)
 var pdfFileInput, filenameDisplay, fileInfoDiv, convertBtn, progressDiv, progressText;
@@ -686,18 +728,7 @@ function resetAppState() {{
     resultUsedJBIG2 = false;
 
     // Clear result settings
-    resultSettings = {{
-        fileName: null,
-        ditherMode: null,
-        pageRange: null,
-        dpi: null,
-        pageSize: null,
-        useJBIG2: false,
-        jbig2Threshold: 0.97,
-        preserveRotation: false,
-        includeProducer: true,
-        includeTimestamp: true
-    }};
+    resultSettings = defaultResultSettings();
 
     // Reset file info and errors
     totalPageCount = null;
@@ -1288,6 +1319,22 @@ document.addEventListener('DOMContentLoaded', function() {{
         }});
     }});
 
+    function setFormControlsEnabled(enabled) {{
+        pdfFileInput.disabled = !enabled;
+        dpiSlider.disabled = !enabled;
+        pageRangeInput.disabled = !enabled;
+        document.querySelectorAll('input[name="mode"]').forEach(radio => {{
+            radio.disabled = !enabled;
+        }});
+        document.querySelectorAll('input[name="dpiMode"]').forEach(radio => {{
+            radio.disabled = !enabled;
+        }});
+        document.querySelectorAll('input[name="pageSize"]').forEach(radio => {{
+            radio.disabled = !enabled;
+        }});
+        if (enabled && isZipMode) updateZipModeUI();
+    }}
+
     function cleanupPreviousResult() {{
         // Free large result data
         window.resultPDF = null;
@@ -1298,12 +1345,7 @@ document.addEventListener('DOMContentLoaded', function() {{
         resultUsedJBIG2 = false;
         conversionInProgress = false;
         cancellationRequested = false;
-        resultSettings = {{
-            fileName: null, ditherMode: null, pageRange: null,
-            dpi: null, pageSize: null, useJBIG2: false,
-            jbig2Threshold: 0.97, preserveRotation: false,
-            includeProducer: true, includeTimestamp: true
-        }};
+        resultSettings = defaultResultSettings();
         const hadAdvancedTricks = progressBoxState !== null;
         progressBoxState = null;
         if (progressDiv) {{
@@ -1328,6 +1370,78 @@ document.addEventListener('DOMContentLoaded', function() {{
             previewCanvas.width = 0;
             previewCanvas.height = 0;
         }}
+    }}
+
+    async function recoverFromError() {{
+        // Read form settings (these survive since they're in the main form, not the progress box)
+        const savedFile = selectedFile;
+        const savedDitherMode = document.querySelector('input[name="mode"]:checked')?.value || 'nodither';
+        const savedPageRange = (savedDitherMode === 'dither-selected' && pageRangeInput.value.trim()) ? pageRangeInput.value.trim() : null;
+        const savedPageSize = document.querySelector('input[name="pageSize"]:checked')?.value || 'a4-portrait';
+
+        // Read Advanced Tricks settings from resultSettings (saved before conversion started,
+        // since the DOM checkboxes were destroyed when the progress spinner replaced them)
+        const savedPreserveRotation = resultSettings.preserveRotation;
+        const savedIncludeProducer = resultSettings.includeProducer;
+        const savedIncludeTimestamp = resultSettings.includeTimestamp;
+
+        // Validate page range — only keep it if it was valid
+        let pageRangeValid = false;
+        if (savedPageRange) {{
+            try {{
+                parsePageRange(savedPageRange, totalPageCount);
+                pageRangeValid = true;
+            }} catch (e) {{ /* invalid, don't restore */ }}
+        }}
+
+        // Full reset and re-open the same file
+        clearPageRangeError();
+        if (savedFile) {{
+            await handleFileSelected(savedFile);
+            if (fileError) return;
+        }}
+
+        // Restore page size
+        const pageSizeRadio = document.querySelector('input[name="pageSize"][value="' + savedPageSize + '"]');
+        if (pageSizeRadio) pageSizeRadio.checked = true;
+
+        // Restore dither mode and page range
+        if (savedDitherMode && !isZipMode) {{
+            const ditherRadio = document.getElementById(
+                savedDitherMode === 'dither' ? 'dither' :
+                savedDitherMode === 'dither-selected' ? 'ditherSelected' : 'noDither'
+            );
+            if (ditherRadio && !ditherRadio.disabled) {{
+                ditherRadio.checked = true;
+                if (savedDitherMode === 'dither-selected') {{
+                    pageRangeContainer.classList.add('show');
+                    if (pageRangeValid && savedPageRange) {{
+                        pageRangeInput.value = savedPageRange;
+                    }}
+                }}
+            }}
+        }}
+
+        // Restore Advanced Tricks settings (expand if any non-default)
+        const needsExpand = savedPreserveRotation || !savedIncludeProducer || !savedIncludeTimestamp;
+        const cb = document.getElementById('preserveRotation');
+        if (cb) cb.checked = savedPreserveRotation;
+        const prodCb = document.getElementById('includeProducer');
+        if (prodCb) prodCb.checked = savedIncludeProducer;
+        const tsCb = document.getElementById('includeTimestamp');
+        if (tsCb) tsCb.checked = savedIncludeTimestamp;
+
+        if (needsExpand) {{
+            const content = document.getElementById('advancedTricksContent');
+            const toggle = document.getElementById('advancedTricksToggle');
+            if (content) content.style.display = 'block';
+            if (toggle) {{
+                const currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
+                toggle.textContent = '▼ ' + (currentT.advancedTricks || 'Advanced technological tricks');
+            }}
+        }}
+
+        updateCompressButton();
     }}
 
     function setFileError() {{
@@ -1392,33 +1506,34 @@ document.addEventListener('DOMContentLoaded', function() {{
         }}
     }}
 
+    async function handleFileSelected(file) {{
+        selectedFile = file;
+        cleanupPreviousResult();
+        clearFileError();
+        inputFileSize = file.size;
+        totalPageCount = null;
+        maxPagesPerPDF = null;
+        await detectFileType(file);
+        const currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
+        filenameDisplay.textContent = file.name;
+        convertBtn.textContent = currentT.compressButton || 'Compress';
+        updateCompressButton();
+        try {{
+            totalPageCount = await countPages(file);
+        }} catch (e) {{
+            totalPageCount = 0;
+        }}
+        if (totalPageCount <= 0) {{
+            setFileError();
+            return;
+        }}
+        autoAdjustDPI();
+        updateCompressButton();
+    }}
+
     // File upload handling
     pdfFileInput.addEventListener('change', async function(e) {{
-        console.log('File selected:', e.target.files[0]);
-        selectedFile = e.target.files[0];
-        if (selectedFile) {{
-            cleanupPreviousResult();
-            clearFileError();
-            inputFileSize = selectedFile.size;
-            totalPageCount = null;
-            await detectFileType(selectedFile);
-            const currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
-            filenameDisplay.textContent = selectedFile.name;
-            convertBtn.textContent = currentT.compressButton || 'Compress';
-            updateCompressButton();
-            validateFormMatchesResult();
-            try {{
-                totalPageCount = await countPages(selectedFile);
-            }} catch (e) {{
-                totalPageCount = 0;
-            }}
-            if (totalPageCount <= 0) {{
-                setFileError();
-                return;
-            }}
-            autoAdjustDPI();
-            updateCompressButton();
-        }}
+        if (e.target.files[0]) await handleFileSelected(e.target.files[0]);
     }});
 
     // Drag and drop
@@ -1435,31 +1550,7 @@ document.addEventListener('DOMContentLoaded', function() {{
         e.preventDefault();
         uploadArea.classList.remove('dragover');
         if (conversionInProgress) return;
-
-        if (e.dataTransfer.files.length > 0) {{
-            selectedFile = e.dataTransfer.files[0];
-            cleanupPreviousResult();
-            clearFileError();
-            inputFileSize = selectedFile.size;
-            totalPageCount = null;
-            await detectFileType(selectedFile);
-            const currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
-            filenameDisplay.textContent = selectedFile.name;
-            convertBtn.textContent = currentT.compressButton || 'Compress';
-            updateCompressButton();
-            validateFormMatchesResult();
-            try {{
-                totalPageCount = await countPages(selectedFile);
-            }} catch (e2) {{
-                totalPageCount = 0;
-            }}
-            if (totalPageCount <= 0) {{
-                setFileError();
-                return;
-            }}
-            autoAdjustDPI();
-            updateCompressButton();
-        }}
+        if (e.dataTransfer.files.length > 0) await handleFileSelected(e.dataTransfer.files[0]);
     }});
 
     // Convert button - keyboard activation for role="button" div
@@ -1514,8 +1605,17 @@ document.addEventListener('DOMContentLoaded', function() {{
             ditherConfig = {{ mode: 'none' }};
         }}
 
+        // Save Advanced Tricks settings into resultSettings so that
+        // showCancelledBox/buildAdvancedTricksHTML can restore them
+        resultSettings.preserveRotation = preserveRotationForThisRun;
+        resultSettings.includeProducer = includeProducerForThisRun;
+        resultSettings.includeTimestamp = includeTimestampForThisRun;
+        resultSettings.useJBIG2 = useJBIG2ForThisRun;
+        resultSettings.jbig2Threshold = jbig2ThresholdForThisRun;
+
         conversionInProgress = true;
         cancellationRequested = false;
+        let errorRecoveryNeeded = false;
 
         try {{
             // Reset progress box to show processing state (in case result box was displayed)
@@ -1531,18 +1631,7 @@ document.addEventListener('DOMContentLoaded', function() {{
             progressText.textContent = 'Loading PDF...';
 
             // Disable all controls during conversion (except convert button for cancellation)
-            pdfFileInput.disabled = true;
-            dpiSlider.disabled = true;
-            pageRangeInput.disabled = true;
-            document.querySelectorAll('input[name="mode"]').forEach(radio => {{
-                radio.disabled = true;
-            }});
-            document.querySelectorAll('input[name="dpiMode"]').forEach(radio => {{
-                radio.disabled = true;
-            }});
-            document.querySelectorAll('input[name="pageSize"]').forEach(radio => {{
-                radio.disabled = true;
-            }});
+            setFormControlsEnabled(false);
 
             // Get selected DPI (use 310 if standard mode is selected)
             const targetDPI = dpiStandardRadio.checked ? 310 : parseInt(dpiSlider.value);
@@ -1563,30 +1652,14 @@ document.addEventListener('DOMContentLoaded', function() {{
                 showCancelledBox();
             }} else {{
                 console.error('Conversion error:', error);
-                progressBoxState = null;
-                if (progressDiv) {{
-                    progressDiv.style.display = 'none';
-                }}
-                setFileError();
+                errorRecoveryNeeded = true;
             }}
         }} finally {{
             conversionInProgress = false;
             cancellationRequested = false;
-            // Re-enable form controls (not the compress button — that's managed by updateCompressButton)
-            pdfFileInput.disabled = false;
-            dpiSlider.disabled = false;
-            pageRangeInput.disabled = false;
-            document.querySelectorAll('input[name="mode"]').forEach(radio => {{
-                radio.disabled = false;
-            }});
-            document.querySelectorAll('input[name="dpiMode"]').forEach(radio => {{
-                radio.disabled = false;
-            }});
-            document.querySelectorAll('input[name="pageSize"]').forEach(radio => {{
-                radio.disabled = false;
-            }});
-            if (isZipMode) {{
-                updateZipModeUI();
+            setFormControlsEnabled(true);
+            if (errorRecoveryNeeded) {{
+                await recoverFromError();
             }}
             updateCompressButton();
         }}

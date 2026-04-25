@@ -59,10 +59,20 @@ class JBIG2Encoder {
         }
 
         const FS = this.module.FS;
+
+        // Aggressively clean up any leftover state from previous runs
+        // (e.g., if encode() was never called after prepareEncoding due to cancellation)
+        try {
+            this.cleanupDirectory(this.workDir);
+            try { FS.rmdir(this.workDir); } catch (e2) {}
+        } catch (e) {}
+
         try {
             FS.mkdir(this.workDir);
         } catch (e) {
-            this.cleanupDirectory(this.workDir);
+            // If mkdir still fails, try one more time with force cleanup
+            try { this.cleanupDirectory(this.workDir); } catch (e2) {}
+            try { FS.rmdir(this.workDir); } catch (e2) {}
             FS.mkdir(this.workDir);
         }
         this.pageCount = 0;
