@@ -37,13 +37,17 @@ REQUIRED_FIELDS = [
     'pageSizeLetterPortrait', 'pageSizeLetterLandscape', 'pageSizeLegalPortrait',
     'outputDpi', 'dpiStandard', 'dpiCustom', 'dpiHint',
     'compressButton', 'processing', 'credits', 'license', 'about',
-    'lowQualityWarning', 'highFilesizeWarning', 'highComputeWarning',
+    'lowQualityWarning',
     'resultSaveButton', 'resultRecommendIgnore', 'resultDidntCompressWell',
-    'resultBecameBigger', 'resultAppPurpose', 'resultDitheringNote', 'resultDitheringAdvice'
+    'resultBecameBigger', 'resultAppPurpose', 'resultDitheringNote', 'resultDitheringAdvice',
+    'advancedTricks', 'useJBIG2Label', 'jbig2Warning',
+    'preserveRotationLabel', 'metadataSection', 'includeTimestampLabel',
+    'ramWarningHigh', 'ramWarningCritical',
+    'jbig2DisabledMpix', 'jbig2DisabledPages', 'ramOverrideAcceptRisk',
 ]
 
 # Deprecated fields that should NOT exist
-DEPRECATED_FIELDS = ['outputFormat', 'dpiDimensions']
+DEPRECATED_FIELDS = ['outputFormat', 'dpiDimensions', 'highFilesizeWarning', 'highComputeWarning']
 
 def extract_translations(filepath):
     """Extract all language translations from JavaScript file."""
@@ -53,13 +57,20 @@ def extract_translations(filepath):
     # Find TRANSLATIONS object or ADDITIONAL_TRANSLATIONS
     translations = {}
 
-    # Pattern to match language blocks: langCode: { ... }, or "langCode": { ... },
-    # Handles both quoted and unquoted language keys
-    pattern = r'^\s+["\']?([a-z]{2}(?:-[A-Za-z]+)?)["\']?:\s*\{([^}]+(?:\{[^}]*\}[^}]*)*)\},'
+    # Find language blocks by matching opening patterns and counting braces
+    lang_header = re.compile(r'^\s*["\']?([a-z]{2}(?:-[A-Za-z]+)?)["\']?\s*:\s*\{', re.MULTILINE)
 
-    for match in re.finditer(pattern, content, re.MULTILINE | re.DOTALL):
+    for match in lang_header.finditer(content):
         lang_code = match.group(1)
-        lang_block = match.group(2)
+        start = match.end()
+        # Find matching closing brace by counting
+        depth = 1
+        pos = start
+        while pos < len(content) and depth > 0:
+            if content[pos] == '{': depth += 1
+            elif content[pos] == '}': depth -= 1
+            pos += 1
+        lang_block = content[start:pos - 1]
 
         # Extract fields from this language block
         fields = {}

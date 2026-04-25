@@ -923,8 +923,6 @@ document.addEventListener('DOMContentLoaded', function() {{
     function updateDPIDisplay() {{
         const dpi = parseInt(dpiSlider.value);
         dpiValue.value = dpi;
-
-        updateDPIWarning();
         validateControls();
     }}
 
@@ -990,7 +988,6 @@ document.addEventListener('DOMContentLoaded', function() {{
             dpiSliderContainer.classList.remove('show');
             dpiSlider.value = 310;
             dpiValue.value = 310;
-            updateDPIWarning();
             return;
         }}
         const safeDPI = findMaxSafeDPI(totalPageCount, pageSize, false, inputFileSize);
@@ -999,7 +996,6 @@ document.addEventListener('DOMContentLoaded', function() {{
             dpiSliderContainer.classList.add('show');
             dpiSlider.value = safeDPI;
             dpiValue.value = safeDPI;
-            updateDPIWarning();
         }}
     }}
 
@@ -1117,11 +1113,6 @@ document.addEventListener('DOMContentLoaded', function() {{
                 }}
             }} else {{
                 container.style.display = 'flex';
-                const label = container.querySelector('label');
-                if (label) {{
-                    const nukeSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36"><circle cx="16" cy="33" r="4" fill="#b0b0b0"/><circle cx="20" cy="33" r="4" fill="#a8a8a8"/><circle cx="18" cy="31" r="4.5" fill="#c0c0c0"/><circle cx="15" cy="29" r="3.5" fill="#b8b8b8"/><circle cx="21" cy="29" r="3.5" fill="#b0b0b0"/><circle cx="18" cy="27" r="4" fill="#c8c8c8"/><circle cx="16" cy="25" r="3.5" fill="#bfbfbf"/><circle cx="20" cy="25" r="3.5" fill="#c0c0c0"/><ellipse cx="18" cy="23" rx="14" ry="4" fill="#e8720a"/><ellipse cx="18" cy="23" rx="10" ry="3" fill="#f5a623"/><circle cx="7" cy="18" r="8" fill="#e8720a"/><circle cx="29" cy="18" r="8" fill="#e8720a"/><circle cx="18" cy="19" r="9" fill="#f5a623"/><circle cx="11" cy="13" r="7" fill="#c0392b"/><circle cx="25" cy="13" r="7" fill="#c0392b"/><circle cx="18" cy="14" r="8" fill="#d44030"/><circle cx="14" cy="8" r="5.5" fill="#808080"/><circle cx="22" cy="8" r="5.5" fill="#808080"/><circle cx="18" cy="9" r="6" fill="#909090"/><circle cx="18" cy="5" r="4" fill="#a0a0a0"/><circle cx="18" cy="3" r="2.5" fill="#b0b0b0"/></svg>';
-                    label.innerHTML = formatFileSize(ramEst) + ' RAM 🔥💻⚡️⚠️ 💥&nbsp;&nbsp; 🐕☕🔥 &nbsp;&nbsp;¯\\\\_(ツ)_/¯&nbsp;&nbsp; <img src="data:image/svg+xml;base64,' + btoa(nukeSvg) + '" style="height:1.2em;vertical-align:-0.15em" alt=""><span style="font-size:0">🍄</span>😎';
-                }}
             }}
         }}
 
@@ -1129,6 +1120,7 @@ document.addEventListener('DOMContentLoaded', function() {{
         const jbig2Cb = document.getElementById('useJBIG2');
         if (jbig2Cb) {{
             const jbig2Warn = jbig2Cb.parentElement.nextElementSibling;
+            const jbig2DisabledBox = document.getElementById('jbig2DisabledExplain');
             if (jbig2TooLarge) {{
                 jbig2Cb.checked = false;
                 jbig2Cb.disabled = true;
@@ -1136,46 +1128,82 @@ document.addEventListener('DOMContentLoaded', function() {{
                 if (jbig2Warn) jbig2Warn.style.opacity = '0.4';
                 const opts = document.getElementById('jbig2ThresholdOptions');
                 if (opts) opts.style.display = 'none';
+                if (jbig2DisabledBox) {{
+                    const currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
+                    if (jbig2Pages > 120) {{
+                        const msg = currentT.jbig2DisabledPages || 'JBIG2 is disabled: this PDF has {{pages}} pages, exceeding the 120-page limit.';
+                        jbig2DisabledBox.textContent = msg.replace('{{pages}}', String(jbig2Pages));
+                    }} else {{
+                        const msg = currentT.jbig2DisabledMpix || 'JBIG2 is disabled: total image data ({{mpix}} megapixels) exceeds the 475 megapixel limit.';
+                        jbig2DisabledBox.textContent = msg.replace('{{mpix}}', String(Math.round(jbig2Mpix))).replace('{{pages}}', String(jbig2Pages));
+                    }}
+                    jbig2DisabledBox.style.display = 'block';
+                }}
             }} else {{
                 jbig2Cb.disabled = false;
                 jbig2Cb.parentElement.style.opacity = '';
                 if (jbig2Warn) jbig2Warn.style.opacity = '';
+                if (jbig2DisabledBox) jbig2DisabledBox.style.display = 'none';
             }}
         }}
+
+        // ── 5. Override risk acceptance text ─────────────────────────────
+        const overrideCb = document.getElementById('ramOverride');
+        const overrideLabel = overrideCb ? container.querySelector('label') : null;
+        if (overrideLabel && needsOverride) {{
+            const nukeSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36"><circle cx="16" cy="33" r="4" fill="#b0b0b0"/><circle cx="20" cy="33" r="4" fill="#a8a8a8"/><circle cx="18" cy="31" r="4.5" fill="#c0c0c0"/><circle cx="15" cy="29" r="3.5" fill="#b8b8b8"/><circle cx="21" cy="29" r="3.5" fill="#b0b0b0"/><circle cx="18" cy="27" r="4" fill="#c8c8c8"/><circle cx="16" cy="25" r="3.5" fill="#bfbfbf"/><circle cx="20" cy="25" r="3.5" fill="#c0c0c0"/><ellipse cx="18" cy="23" rx="14" ry="4" fill="#e8720a"/><ellipse cx="18" cy="23" rx="10" ry="3" fill="#f5a623"/><circle cx="7" cy="18" r="8" fill="#e8720a"/><circle cx="29" cy="18" r="8" fill="#e8720a"/><circle cx="18" cy="19" r="9" fill="#f5a623"/><circle cx="11" cy="13" r="7" fill="#c0392b"/><circle cx="25" cy="13" r="7" fill="#c0392b"/><circle cx="18" cy="14" r="8" fill="#d44030"/><circle cx="14" cy="8" r="5.5" fill="#808080"/><circle cx="22" cy="8" r="5.5" fill="#808080"/><circle cx="18" cy="9" r="6" fill="#909090"/><circle cx="18" cy="5" r="4" fill="#a0a0a0"/><circle cx="18" cy="3" r="2.5" fill="#b0b0b0"/></svg>';
+            let labelHtml = formatFileSize(ramEst) + ' RAM 🔥💻⚡️⚠️ 💥 🐕☕🔥 ¯\\\\_(ツ)_/¯ <img src="data:image/svg+xml;base64,' + btoa(nukeSvg) + '" style="height:1.2em;vertical-align:-0.15em" alt=""><span style="font-size:0">🍄</span>😎';
+            if (overrideCb.checked) {{
+                const currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
+                const riskText = currentT.ramOverrideAcceptRisk || ' (my device can run out of memory or run hot, the application might crash, and I accept that risk, just let me click the Compress button)';
+                labelHtml += '<span style="font-style: italic; opacity: 0.8;">' + riskText + '</span>';
+            }}
+            overrideLabel.innerHTML = labelHtml;
+        }}
+
+        // ── 6. DPI warning (depends on RAM estimate) ────────────────────
+        updateDPIWarning();
     }}
 
     function validateControls() {{
         updateCompressButton();
     }}
 
-    // Check DPI and dithering mode, show appropriate warnings
     function updateDPIWarning() {{
-        // Get current DPI (use 310 if standard mode is selected)
         const dpi = dpiStandardRadio.checked ? 310 : parseInt(dpiSlider.value);
-
-        // Check if dithering is enabled (mode 2 or 3)
         const ditherEnabled = document.querySelector('input[name="mode"]:checked').value !== 'nodither';
 
-        // Clear all warning classes
         dpiWarning.classList.remove('show', 'low-quality', 'high-filesize', 'high-compute');
         dpiWarning.textContent = '';
 
-        // Get current translations
         const currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
+        const n = totalPageCount;
+        const known = n !== null && n > 0;
 
-        // Check for warnings (priority: high-compute > low-quality > high-filesize)
-        if (dpi > 600) {{
-            // High computational intensity warning
-            dpiWarning.classList.add('show', 'high-compute');
-            dpiWarning.textContent = currentT.highComputeWarning || 'Warning: Processing at DPI above 600 is computationally intensive.';
-        }} else if ((!ditherEnabled && dpi < 200) || (ditherEnabled && dpi < 240)) {{
-            // Low quality warning
+        // RAM-based warnings (when page count is known)
+        if (known && selectedFile) {{
+            const useJBIG2 = document.getElementById('useJBIG2')?.checked || false;
+            const pageSize = getCurrentPageSize();
+            const est = estimateRAMBytes(n, dpi, pageSize, useJBIG2, inputFileSize);
+            const ramStr = formatFileSize(est);
+
+            if (est > RAM_LIMIT) {{
+                dpiWarning.classList.add('show', 'high-compute');
+                const msg = currentT.ramWarningCritical || 'Warning: Very high estimated resource usage ({{ram}}).';
+                dpiWarning.textContent = msg.replace('{{ram}}', ramStr);
+                return;
+            }} else if (est > 400 * 1048576) {{
+                dpiWarning.classList.add('show', 'high-filesize');
+                const msg = currentT.ramWarningHigh || 'Note: High estimated resource usage ({{ram}}).';
+                dpiWarning.textContent = msg.replace('{{ram}}', ramStr);
+                return;
+            }}
+        }}
+
+        // DPI-only warnings (when page count unknown or RAM is fine)
+        if ((!ditherEnabled && dpi < 200) || (ditherEnabled && dpi < 240)) {{
             dpiWarning.classList.add('show', 'low-quality');
             dpiWarning.textContent = currentT.lowQualityWarning || 'Warning: Low DPI may result in poor quality output.';
-        }} else if ((!ditherEnabled && dpi > 400) || (ditherEnabled && dpi > 320)) {{
-            // High filesize warning
-            dpiWarning.classList.add('show', 'high-filesize');
-            dpiWarning.textContent = currentT.highFilesizeWarning || 'Warning: High DPI will result in larger file sizes.';
         }}
     }}
 
@@ -1197,7 +1225,6 @@ document.addEventListener('DOMContentLoaded', function() {{
             }} else {{
                 dpiSlider.value = val;
             }}
-            updateDPIWarning();
         }}
 
         // Validate controls to disable/enable convert button
@@ -1219,7 +1246,6 @@ document.addEventListener('DOMContentLoaded', function() {{
             }} else {{
                 dpiSliderContainer.classList.remove('show');
             }}
-            updateDPIWarning();
             validateControls();
             validateFormMatchesResult();
         }});
@@ -1858,6 +1884,7 @@ document.addEventListener('DOMContentLoaded', function() {{
                         <label for="useJBIG2" style="cursor: pointer; color: #333; font-weight: 500;">${{currentT.useJBIG2Label || 'Use lossy JBIG2 compression instead of CCITT G4'}}</label>
                     </div>
                     <div style="font-size: 13px; color: #856404; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 10px; line-height: 1.5;">${{currentT.jbig2Warning || '⚠️ Improve compression by using JBIG2 compression instead of CCITT G4 compression. Small similar characters might be confused (e.g. 6 with 8). Old devices might be unable to open the PDF.'}}</div>
+                    <div id="jbig2DisabledExplain" style="display: none; font-size: 13px; color: #856404; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 10px; line-height: 1.5; margin-top: 8px;"></div>
 
                     <div id="jbig2ThresholdOptions" style="display: ${{jbig2Checked ? 'block' : 'none'}}; margin-top: 12px; padding: 12px; background: #f8f9fa; border-radius: 4px; border: 1px solid #e0e0e0;">
                         <div style="display: flex; flex-direction: column; gap: 8px;">

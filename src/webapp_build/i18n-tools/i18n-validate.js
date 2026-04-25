@@ -21,13 +21,25 @@ const REQUIRED_FIELDS = [
     'pageSizeLetterPortrait', 'pageSizeLetterLandscape', 'pageSizeLegalPortrait',
     'outputDpi', 'dpiStandard', 'dpiCustom', 'dpiHint',
     'compressButton', 'processing', 'credits', 'license', 'about',
-    'lowQualityWarning', 'highFilesizeWarning', 'highComputeWarning',
+    'lowQualityWarning',
     'resultSaveButton', 'resultRecommendIgnore', 'resultDidntCompressWell',
-    'resultBecameBigger', 'resultAppPurpose', 'resultDitheringNote', 'resultDitheringAdvice'
+    'resultBecameBigger', 'resultAppPurpose', 'resultDitheringNote', 'resultDitheringAdvice',
+    'advancedTricks', 'useJBIG2Label', 'jbig2Warning',
+    'preserveRotationLabel', 'metadataSection', 'includeTimestampLabel',
+    'ramWarningHigh', 'ramWarningCritical',
+    'jbig2DisabledMpix', 'jbig2DisabledPages', 'ramOverrideAcceptRisk'
 ];
 
 // Deprecated fields
-const DEPRECATED_FIELDS = ['outputFormat', 'dpiDimensions'];
+const DEPRECATED_FIELDS = ['outputFormat', 'dpiDimensions', 'highFilesizeWarning', 'highComputeWarning'];
+
+// Fields that must contain specific placeholders
+const PLACEHOLDER_REQUIREMENTS = {
+    'ramWarningHigh': ['{ram}'],
+    'ramWarningCritical': ['{ram}'],
+    'jbig2DisabledMpix': ['{mpix}'],
+    'jbig2DisabledPages': ['{pages}'],
+};
 
 function extractTranslationsFromFile(filepath) {
     const content = fs.readFileSync(filepath, 'utf-8');
@@ -255,6 +267,30 @@ function main() {
         // Don't count as critical issues
     } else {
         console.log('  ✅ No unexpected fields found');
+    }
+
+    // Check for required placeholders
+    console.log('\n' + '='.repeat(80));
+    console.log('Checking for required placeholders...');
+    console.log('='.repeat(80));
+    const placeholderIssues = [];
+    for (const [lang, fields] of Object.entries(allTranslations)) {
+        if (typeof fields !== 'object' || fields === null) continue;
+        for (const [field, placeholders] of Object.entries(PLACEHOLDER_REQUIREMENTS)) {
+            if (field in fields) {
+                for (const ph of placeholders) {
+                    if (!fields[field].includes(ph)) {
+                        placeholderIssues.push(`${lang}.${field}: Missing required placeholder ${ph}`);
+                    }
+                }
+            }
+        }
+    }
+    if (placeholderIssues.length > 0) {
+        placeholderIssues.forEach(issue => console.log(`  ❌ ${issue}`));
+        totalIssues += placeholderIssues.length;
+    } else {
+        console.log('  ✅ All required placeholders present');
     }
 
     // Check for empty values
