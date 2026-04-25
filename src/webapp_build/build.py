@@ -1748,6 +1748,8 @@ document.addEventListener('DOMContentLoaded', function() {{
                 width: p.width,
                 height: p.height,
                 data: jbig2Result.pages[i],
+                pageWidthPt: p.pageWidthPt,
+                pageHeightPt: p.pageHeightPt,
                 rotate: p.rotate || 0
             }}));
 

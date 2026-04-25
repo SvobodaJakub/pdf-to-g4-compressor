@@ -141,8 +141,8 @@ function createJBIG2PDF({ globalData = null, pages, metadataOptions = {} }) {
     addBytes('%PDF-1.4\n');
     addBytes(new Uint8Array([0x25, 0xe2, 0xe3, 0xcf, 0xd3, 0x0a]));
 
-    const pageWidthPt = 595;
-    const pageHeightPt = 842;
+    const A4_WIDTH_PT = 595;
+    const A4_HEIGHT_PT = 842;
     const calgrayColorspace = '[/CalGray << /WhitePoint [0.9505 1.0000 1.0890] /Gamma 1.0 >>]';
 
     const offsets = [];
@@ -196,8 +196,10 @@ function createJBIG2PDF({ globalData = null, pages, metadataOptions = {} }) {
         addBytes('\nendstream');
         endObj();
 
-        // Content Stream - A4 scaling and centering
+        // Content Stream - scaling and centering on page
         const contentObjNum = beginObj();
+        const pageWidthPt = page.pageWidthPt || A4_WIDTH_PT;
+        const pageHeightPt = page.pageHeightPt || A4_HEIGHT_PT;
         const imgAspect = page.width / page.height;
         const pageAspect = pageWidthPt / pageHeightPt;
         const scale = imgAspect > pageAspect
