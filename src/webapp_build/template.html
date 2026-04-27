@@ -1502,6 +1502,309 @@
         .fe-water-front { position: absolute; top: 0; left: 0; width: 340px; height: 500px; pointer-events: none; z-index: 3; }
         body.flat-earth .intro-overlay { background: transparent !important; }
         body.flat-earth.fe-intro-active .fe-bg { z-index: 99999 !important; pointer-events: none; }
+
+        /* AI Auto-Setter Fabulous Button */
+        .ai-autosetter {
+            display: none;
+            position: relative;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            min-height: 130px;
+            background: linear-gradient(135deg, #ff6b9d, #c44dff, #ff6b9d, #ffd700, #ff6b9d);
+            background-size: 500% 500%;
+            animation: ai-shift 6s ease infinite;
+            border: 3px solid rgba(255, 215, 0, 0.7);
+            box-shadow: 0 4px 20px rgba(255, 107, 157, 0.4), 0 0 40px rgba(196, 77, 255, 0.2), inset 0 0 30px rgba(255, 255, 255, 0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .ai-autosetter.show { display: block; }
+        .ai-autosetter:hover:not(.running) {
+            transform: scale(1.02);
+            box-shadow: 0 6px 30px rgba(255, 107, 157, 0.6), 0 0 60px rgba(196, 77, 255, 0.3), inset 0 0 40px rgba(255, 255, 255, 0.15);
+        }
+        .ai-autosetter:active:not(.running) { transform: scale(0.98); }
+        .ai-autosetter.running { cursor: default; animation: none; }
+        @keyframes ai-shift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .ai-progress-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(135deg, rgba(60,20,100,0.7), rgba(90,30,140,0.65), rgba(50,15,90,0.7));
+            border-right: 2px solid rgba(200,160,255,0.5);
+            transform-origin: left center;
+            transform: scaleX(0);
+            transition: transform 4s linear;
+            will-change: transform;
+            z-index: 1;
+        }
+        .ai-sparkles {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 2;
+            pointer-events: none;
+        }
+        .ai-sparkle {
+            position: absolute;
+            width: 5px;
+            height: 5px;
+            background: #ffd700;
+            border-radius: 50%;
+            box-shadow: 0 0 4px #ffd700, 0 0 8px rgba(255,215,0,0.4);
+            animation: ai-sparkle-pulse 2s ease-in-out infinite;
+        }
+        @keyframes ai-sparkle-pulse {
+            0%, 100% { transform: scale(0.3); opacity: 0.15; }
+            50% { transform: scale(1.6); opacity: 1; }
+        }
+        .ai-star-shape {
+            position: absolute;
+            background: #ffd700;
+            clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+            animation: ai-star-twinkle 3s ease-in-out infinite;
+            z-index: 2;
+            pointer-events: none;
+        }
+        @keyframes ai-star-twinkle {
+            0%, 100% { transform: rotate(0deg) scale(0.6); opacity: 0.3; }
+            50% { transform: rotate(72deg) scale(1.3); opacity: 1; }
+        }
+        .ai-content {
+            position: relative;
+            z-index: 3;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 20px 28px;
+            min-height: 130px;
+            gap: 4px;
+        }
+        .ai-label {
+            font-size: 15px;
+            font-weight: 600;
+            color: white;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+            user-select: none;
+        }
+        .ai-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            white-space: nowrap;
+        }
+        .ai-text-main {
+            font-size: 52px;
+            font-weight: 900;
+            color: white;
+            text-shadow: 0 0 10px rgba(255,215,0,0.8), 0 0 20px rgba(255,105,180,0.6), 0 2px 4px rgba(0,0,0,0.3);
+            letter-spacing: 6px;
+            user-select: none;
+        }
+        .ai-unicorn-svg {
+            width: 60px;
+            height: 60px;
+            filter: drop-shadow(0 2px 6px rgba(0,0,0,0.2));
+            flex-shrink: 0;
+        }
+        .ai-status-text {
+            position: absolute;
+            bottom: 8px;
+            left: 0; right: 0;
+            text-align: center;
+            font-size: 11px;
+            color: rgba(255,255,255,0.9);
+            z-index: 4;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+            pointer-events: none;
+        }
+        @media (max-width: 640px) {
+            .ai-row { transform: scale(0.7); transform-origin: center; }
+            .ai-autosetter { min-height: 100px; }
+            .ai-content { min-height: 100px; padding: 15px 15px 25px; }
+        }
+        /* Unicorn rainbow arcs — stroke-dash draw/erase animation */
+        .ai-unicorn-wrap {
+            position: relative;
+            display: inline-flex;
+            flex-shrink: 0;
+        }
+        .ai-rainbow-puke, .ai-rainbow-poo {
+            position: absolute;
+            overflow: visible;
+            pointer-events: none;
+        }
+        .ai-rainbow-puke {
+            left: 42px;
+            top: 24px;
+            width: 30px;
+            height: 40px;
+        }
+        .ai-rainbow-poo {
+            left: -10px;
+            top: 30px;
+            width: 25px;
+            height: 35px;
+        }
+        .ai-rainbow-puke path, .ai-rainbow-poo path {
+            stroke-dashoffset: 80;
+        }
+        .ai-autosetter.ai-puking .ai-rainbow-puke path {
+            animation: ai-rb-puke 2.5s ease-in-out forwards;
+        }
+        .ai-autosetter.ai-pooping .ai-rainbow-poo path {
+            animation: ai-rb-poo 2.5s ease-in-out forwards;
+        }
+        @keyframes ai-rb-puke {
+            0% { stroke-dashoffset: 80; }
+            40% { stroke-dashoffset: 0; }
+            80% { stroke-dashoffset: -80; }
+            100% { stroke-dashoffset: -80; }
+        }
+        @keyframes ai-rb-poo {
+            0% { stroke-dashoffset: 80; }
+            40% { stroke-dashoffset: 0; }
+            80% { stroke-dashoffset: -80; }
+            100% { stroke-dashoffset: -80; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .ai-autosetter { animation: none; }
+            .ai-sparkle, .ai-star-shape { animation: none; opacity: 0.6; }
+        }
+        @media (prefers-color-scheme: dark) {
+            .ai-autosetter {
+                box-shadow: 0 4px 20px rgba(255,107,157,0.3), 0 0 40px rgba(196,77,255,0.15);
+                border-color: rgba(255,215,0,0.5);
+            }
+        }
+        body.mongolian-script .ai-autosetter,
+        body.mongolian-script .ai-autosetter * {
+            writing-mode: horizontal-tb !important;
+            text-orientation: mixed !important;
+        }
+
+        /* Fabulous save button (after AI auto-setter) */
+        .save-fabulous {
+            position: relative;
+            overflow: hidden;
+            border: 2px solid rgba(255, 215, 0, 0.6) !important;
+            background: linear-gradient(135deg, #ff6b9d, #c44dff, #ff6b9d, #ffd700, #ff6b9d) !important;
+            background-size: 500% 500% !important;
+            animation: ai-shift 6s ease infinite;
+            box-shadow: 0 4px 16px rgba(255, 107, 157, 0.4), 0 0 30px rgba(196, 77, 255, 0.15);
+        }
+        .save-fabulous .save-fab-text {
+            position: relative;
+            z-index: 3;
+        }
+        .save-fabulous .save-fab-cloud {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 2;
+            background: radial-gradient(ellipse at center, #667eea 0%, #667eea 40%, transparent 75%);
+            pointer-events: none;
+        }
+        .save-fabulous .save-fab-stars {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 1;
+            pointer-events: none;
+        }
+        .save-fab-sparkle {
+            position: absolute;
+            background: #ffd700;
+            border-radius: 50%;
+            box-shadow: 0 0 3px #ffd700;
+            animation: ai-sparkle-pulse 2s ease-in-out infinite;
+        }
+        .save-fab-star {
+            position: absolute;
+            background: #ffd700;
+            clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+            animation: ai-star-twinkle 3s ease-in-out infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .save-fabulous { animation: none; }
+            .save-fab-sparkle, .save-fab-star { animation: none; opacity: 0.6; }
+        }
+
+        /* Fabulous size win banner (above save button) */
+        .save-win-banner {
+            position: relative;
+            overflow: hidden;
+            border-radius: 8px;
+            padding: 14px 20px;
+            margin-top: 16px;
+            text-align: center;
+            background: linear-gradient(135deg, #ff6b9d, #c44dff, #ff6b9d, #ffd700, #ff6b9d);
+            background-size: 500% 500%;
+            animation: ai-shift 6s ease infinite;
+        }
+        .save-win-banner .win-text {
+            position: relative;
+            z-index: 2;
+            font-size: 18px;
+            font-weight: 700;
+            color: white;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+        .save-win-banner .win-sparkles {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 1;
+            pointer-events: none;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .save-win-banner { animation: none; }
+        }
+
+        /* Hide form controls during AI auto-setter */
+        body.ai-running .options,
+        body.ai-running #convertBtn,
+        body.ai-running #progress { display: none !important; }
+
+        /* Hide bottom-left buttons during any conversion */
+        body.ai-running .help-button,
+        body.ai-running .language-selector-button,
+        body.converting .help-button,
+        body.converting .language-selector-button { display: none !important; }
+
+        /* AI Refresh Box (reset form to defaults) */
+        .ai-refresh {
+            display: none;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            min-height: 130px;
+            background: #f5f5f5;
+            border: 2px dashed #ccc;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        .ai-refresh.show { display: flex; }
+        .ai-refresh:hover { background: #eaeaea; border-color: #aaa; }
+        .ai-refresh:active { transform: scale(0.98); }
+        .ai-refresh-icon { color: #999; transition: color 0.2s; }
+        .ai-refresh:hover .ai-refresh-icon { color: #666; }
+        @media (prefers-color-scheme: dark) {
+            .ai-refresh { background: #2a2a2a; border-color: #444; }
+            .ai-refresh:hover { background: #333; border-color: #666; }
+            .ai-refresh-icon { color: #777; }
+            .ai-refresh:hover .ai-refresh-icon { color: #aaa; }
+        }
+        body.mongolian-script .ai-refresh,
+        body.mongolian-script .ai-refresh * {
+            writing-mode: horizontal-tb !important;
+            text-orientation: mixed !important;
+        }
     </style>
 
     <!-- Placeholder for intro overlay - normal UI loads underneath -->
@@ -1817,6 +2120,30 @@ limitations under the License.</pre>
                     <li>Outputs PDF/A-1B compliant files</li>
                     <li>Typical result: 10-80 KB per text page (CCITT G4), 5-50 KB (JBIG2)</li>
                 </ul>
+            </div>
+
+            <div class="license-section">
+                <h3>The Fabulous ✨ &ldquo;AI&rdquo; ✨ Button</h3>
+                <p>You may have noticed the magnificent pink-and-purple button with unicorns, stars, and glitter that appears when you open a file. It says &ldquo;AI&rdquo; in giant letters. Let us be perfectly transparent about what this button does and does not do.</p>
+                <p><strong>What it does:</strong></p>
+                <ul style="margin-left: 20px; color: #666; line-height: 1.6;">
+                    <li>Tries several combinations of DPI, dithering, and compression codec (CCITT G4 vs JBIG2) on your file</li>
+                    <li>Stops at the first combination that compresses well enough; if none do, keeps the smallest result</li>
+                    <li>Auto-detects your page format (A4, Letter, Legal) by looking at the first page's aspect ratio</li>
+                    <li>Enables automatic page rotation</li>
+                    <li>Doesn't try to use more than half a gig of memory</li>
+                    <li>Shows a time estimate and a smooth progress bar</li>
+                </ul>
+                <p style="margin-top: 15px;"><strong>What it does NOT do:</strong></p>
+                <ul style="margin-left: 20px; color: #666; line-height: 1.6;">
+                    <li>It does not use artificial intelligence, machine learning, neural networks, large language models, blockchain, quantum computing, or cloud services</li>
+                    <li>It does not &ldquo;enhance&rdquo; your images, &ldquo;upscale&rdquo; anything, or apply any processing beyond what the normal Compress button does</li>
+                    <li>It does not phone home, collect data, or require an internet connection</li>
+                    <li>It does not justify the unicorns</li>
+                </ul>
+                <p style="margin-top: 15px;">The button is essentially a for loop with a gradient background. Do not feed the output back into it &mdash; downsampled images will get downsampled again and quality will degrade. Use the manual settings instead if you want to fine-tune.</p>
+                <p style="margin-top: 15px;">What you are looking at is, technically speaking, a clown-grade implementation of control engineering (try searching that on Wikipedia). It measures an output, compares it to a target, and adjusts parameters. No neurons were harmed. A disturbing amount of what gets sold as &ldquo;AI&rdquo; in the real world is control engineering with a marketing department. And a disturbing amount of things that should be automated through efficient deterministic automata are instead controlled by LLMs. We chose to be honest about both problems and add unicorns instead.</p>
+                <p style="margin-top: 10px;">The ironic quotation marks around &ldquo;AI&rdquo; are load-bearing.</p>
             </div>
 
             <div class="license-section">

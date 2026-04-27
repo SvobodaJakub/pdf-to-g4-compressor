@@ -635,6 +635,9 @@ var useEnglishCheckbox;
 var conversionInProgress = false;
 var cancellationRequested = false;
 
+// AI Auto-Setter
+var autoSetterRunning = false;
+
 // Track which box is currently shown so language changes can re-render it
 var progressBoxState = null;  // null, 'result', or 'cancelled'
 
@@ -717,7 +720,15 @@ function resetAppState() {{
     // Reset conversion state
     conversionInProgress = false;
     cancellationRequested = false;
+    autoSetterRunning = false;
     progressBoxState = null;
+
+    // Hide AI auto-setter / refresh boxes
+    var aiBtn = document.getElementById('aiAutoSetter');
+    if (aiBtn) aiBtn.classList.remove('show');
+    var aiRef = document.getElementById('aiRefresh');
+    if (aiRef) aiRef.classList.remove('show');
+    document.body.classList.remove('ai-running');
 
     // Hide progress/result indicator
     if (progressDiv) {{
@@ -900,6 +911,12 @@ document.addEventListener('DOMContentLoaded', function() {{
         // Re-render the progress box in the new language if visible
         if (progressBoxState === 'result') showResultBox();
         else if (progressBoxState === 'cancelled') showCancelledBox();
+
+        // Re-render AI button with new language label
+        if (!autoSetterRunning) {{
+            var oldAi = document.getElementById('aiAutoSetter');
+            if (oldAi) {{ var wasShown = oldAi.classList.contains('show'); oldAi.remove(); if (wasShown && selectedFile && !fileError) showAutoSetterOrRefresh(); }}
+        }}
     }});
 
     // Handle Mongolian script switch
@@ -950,6 +967,12 @@ document.addEventListener('DOMContentLoaded', function() {{
         // Re-render the progress box in the new language if visible
         if (progressBoxState === 'result') showResultBox();
         else if (progressBoxState === 'cancelled') showCancelledBox();
+
+        // Re-render AI button with new language label
+        if (!autoSetterRunning) {{
+            var oldAi = document.getElementById('aiAutoSetter');
+            if (oldAi) {{ var wasShown = oldAi.classList.contains('show'); oldAi.remove(); if (wasShown && selectedFile && !fileError) showAutoSetterOrRefresh(); }}
+        }}
     }});
 
     // selectedFile is now a global variable (declared above)
@@ -1290,12 +1313,12 @@ document.addEventListener('DOMContentLoaded', function() {{
 
         // Validate controls to disable/enable convert button
         validateControls();
-        validateFormMatchesResult();
+        validateFormMatchesResult(true);
     }});
 
     dpiSlider.addEventListener('input', function() {{
         updateDPIDisplay();
-        validateFormMatchesResult();
+        validateFormMatchesResult(true);
     }});
     updateDPIDisplay(); // Initialize display
 
@@ -1308,7 +1331,7 @@ document.addEventListener('DOMContentLoaded', function() {{
                 dpiSliderContainer.classList.remove('show');
             }}
             validateControls();
-            validateFormMatchesResult();
+            validateFormMatchesResult(true);
         }});
     }});
 
@@ -1321,7 +1344,7 @@ document.addEventListener('DOMContentLoaded', function() {{
                 pageRangeContainer.classList.remove('show');
             }}
             updateDPIWarning(); // Update warning when dithering mode changes
-            validateFormMatchesResult();
+            validateFormMatchesResult(true);
         }});
     }});
 
@@ -1338,14 +1361,14 @@ document.addEventListener('DOMContentLoaded', function() {{
         }} else {{
             clearPageRangeError();
         }}
-        validateFormMatchesResult();
+        validateFormMatchesResult(true);
     }});
 
     // Validate when page size changes
     document.querySelectorAll('input[name="pageSize"]').forEach(radio => {{
         radio.addEventListener('change', function() {{
             updateCompressButton();
-            validateFormMatchesResult();
+            validateFormMatchesResult(true);
         }});
     }});
 
@@ -1537,6 +1560,10 @@ document.addEventListener('DOMContentLoaded', function() {{
     }}
 
     async function handleFileSelected(file) {{
+        var aiBtnHide = document.getElementById('aiAutoSetter');
+        if (aiBtnHide) aiBtnHide.classList.remove('show');
+        var aiRefHide = document.getElementById('aiRefresh');
+        if (aiRefHide) aiRefHide.classList.remove('show');
         selectedFile = file;
         cleanupPreviousResult();
         clearFileError();
@@ -1561,9 +1588,17 @@ document.addEventListener('DOMContentLoaded', function() {{
         updateCompressButton();
     }}
 
+    // Allow re-selecting the same file (clear value so change event fires)
+    pdfFileInput.addEventListener('click', function() {{
+        this.value = '';
+    }});
+
     // File upload handling
     pdfFileInput.addEventListener('change', async function(e) {{
-        if (e.target.files[0]) await handleFileSelected(e.target.files[0]);
+        if (e.target.files[0]) {{
+            await handleFileSelected(e.target.files[0]);
+            if (!fileError && !autoSetterRunning) showAutoSetterOrRefresh();
+        }}
     }});
 
     // Drag and drop
@@ -1580,7 +1615,10 @@ document.addEventListener('DOMContentLoaded', function() {{
         e.preventDefault();
         uploadArea.classList.remove('dragover');
         if (conversionInProgress) return;
-        if (e.dataTransfer.files.length > 0) await handleFileSelected(e.dataTransfer.files[0]);
+        if (e.dataTransfer.files.length > 0) {{
+            await handleFileSelected(e.dataTransfer.files[0]);
+            if (!fileError && !autoSetterRunning) showAutoSetterOrRefresh();
+        }}
     }});
 
     // Convert button - keyboard activation for role="button" div
@@ -1591,6 +1629,11 @@ document.addEventListener('DOMContentLoaded', function() {{
         }}
     }});
     convertBtn.addEventListener('click', async function() {{
+        var aiBtnOnConvert = document.getElementById('aiAutoSetter');
+        if (aiBtnOnConvert) aiBtnOnConvert.classList.remove('show');
+        var aiRefOnConvert = document.getElementById('aiRefresh');
+        if (aiRefOnConvert) aiRefOnConvert.classList.remove('show');
+
         if (!selectedFile) return;
 
         // If conversion is in progress, cancel it
@@ -1646,6 +1689,7 @@ document.addEventListener('DOMContentLoaded', function() {{
         conversionInProgress = true;
         cancellationRequested = false;
         let errorRecoveryNeeded = false;
+        document.body.classList.add('converting');
 
         try {{
             // Reset progress box to show processing state (in case result box was displayed)
@@ -1687,6 +1731,7 @@ document.addEventListener('DOMContentLoaded', function() {{
         }} finally {{
             conversionInProgress = false;
             cancellationRequested = false;
+            document.body.classList.remove('converting');
             setFormControlsEnabled(true);
             if (errorRecoveryNeeded) {{
                 await recoverFromError();
@@ -2062,7 +2107,7 @@ document.addEventListener('DOMContentLoaded', function() {{
                     thresholdOptions.style.display = this.checked ? 'block' : 'none';
                 }}
                 updateCompressButton();
-                if (withValidation) validateFormMatchesResult();
+                if (withValidation) validateFormMatchesResult(true);
             }});
         }}
 
@@ -2108,6 +2153,7 @@ document.addEventListener('DOMContentLoaded', function() {{
     }}
 
     function showResultBox() {{
+        if (autoSetterRunning) return;
         progressBoxState = 'result';
         const currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
         const originalSize = window.originalSize;
@@ -2181,16 +2227,38 @@ document.addEventListener('DOMContentLoaded', function() {{
 
         // Build HTML with advanced tricks and save button (always shown)
         const advancedTricksExpanded = resultSettings.useJBIG2 || resultSettings.preserveRotation || !resultSettings.includeProducer || !resultSettings.includeTimestamp;
+
         let resultHTML = `
             <div style="font-weight: bold; margin-bottom: 15px;">${{message}}</div>
             <div style="margin-top: 20px;">
                 ${{buildAdvancedTricksHTML(advancedTricksExpanded)}}
             </div>
-            <div id="saveResultBtn" class="action-btn" role="button" tabindex="0" style="width: auto; padding: 10px 20px; background: #667eea; border-radius: 4px; margin-top: 20px;">${{currentT.resultSaveButton}}</div>
+            <div id="saveResultBtn" class="action-btn" role="button" tabindex="0" style="width: auto; padding: 10px 20px; background: #667eea; border-radius: 4px; margin-top: 12px;">${{currentT.resultSaveButton}}</div>
         `;
 
         progressDiv.innerHTML = resultHTML;
         progressDiv.style.display = 'block';
+
+        // Insert fabulous win banner above save button when file got smaller
+        if (ratio < 1.0) {{
+            var winSizeLine = isRTL ? '<span dir="ltr">' + formatSize(originalSize) + ' → ' + formatSize(resultSize) + '</span>'
+                                    : formatSize(originalSize) + ' → ' + formatSize(resultSize);
+            var winHTML = '';
+            var wspData = [[12,6,0,4],[15,90,0.4,3],[80,8,0.8,3],[85,92,0.2,4],[50,20,0.6,3],[50,80,1.0,3],[40,50,0.3,3],[60,50,0.9,3]];
+            for (var wi = 0; wi < wspData.length; wi++) {{
+                winHTML += '<span class="ai-sparkle" style="top:' + wspData[wi][0] + '%;left:' + wspData[wi][1] + '%;animation-delay:' + wspData[wi][2] + 's;width:' + wspData[wi][3] + 'px;height:' + wspData[wi][3] + 'px"></span>';
+            }}
+            var wstData = [[20,3,0,8],[10,95,0.7,10],[80,4,1.1,7],[75,94,0.4,9]];
+            for (var wj = 0; wj < wstData.length; wj++) {{
+                winHTML += '<span class="ai-star-shape" style="top:' + wstData[wj][0] + '%;left:' + wstData[wj][1] + '%;animation-delay:' + wstData[wj][2] + 's;width:' + wstData[wj][3] + 'px;height:' + wstData[wj][3] + 'px"></span>';
+            }}
+            var banner = document.createElement('div');
+            banner.id = 'saveWinBanner';
+            banner.className = 'save-win-banner';
+            banner.innerHTML = '<div class="win-sparkles">' + winHTML + '</div><div class="win-text">' + winSizeLine + '</div>';
+            var saveBtnEl = document.getElementById('saveResultBtn');
+            if (saveBtnEl) saveBtnEl.parentNode.insertBefore(banner, saveBtnEl);
+        }}
 
         // Attach save button handler
         var saveBtn = document.getElementById('saveResultBtn');
@@ -2212,7 +2280,8 @@ document.addEventListener('DOMContentLoaded', function() {{
     }}
 
     // Validate that current form settings match the compressed result
-    function validateFormMatchesResult() {{
+    function validateFormMatchesResult(userInteraction) {{
+        if (userInteraction) removeSaveFabulous();
         const saveBtn = document.getElementById('saveResultBtn');
         if (!saveBtn) return;  // Save button doesn't exist (no result shown)
         if (!resultSettings.fileName) return;  // No result to compare against
@@ -2783,6 +2852,12 @@ document.addEventListener('DOMContentLoaded', function() {{
                 if (progressBoxState === 'result') showResultBox();
                 else if (progressBoxState === 'cancelled') showCancelledBox();
 
+                // Re-render AI button with new language label
+                if (!autoSetterRunning) {{
+                    var oldAi = document.getElementById('aiAutoSetter');
+                    if (oldAi) {{ var wasShown = oldAi.classList.contains('show'); oldAi.remove(); if (wasShown && selectedFile && !fileError) showAutoSetterOrRefresh(); }}
+                }}
+
                 // Close all modals
                 const aboutModal = document.getElementById('aboutModal');
                 const licenseModal = document.getElementById('licenseModal');
@@ -2980,6 +3055,758 @@ document.addEventListener('DOMContentLoaded', function() {{
             }}
         }});
     }}
+
+    // ============================================================================
+    // AI AUTO-SETTER
+    // Automatically tries different compression settings to find the best result
+    // ============================================================================
+
+    async function detectPageFormat(file) {{
+        var arrayBuffer = await file.arrayBuffer();
+        var pdfData;
+        if (isZipMode) {{
+            var entries = parseZip(arrayBuffer);
+            var pdfEntries = entries.filter(function(e) {{ return e.path.toLowerCase().endsWith('.pdf'); }});
+            if (pdfEntries.length === 0) return 'a4-portrait';
+            pdfData = pdfEntries[0].data;
+        }} else {{
+            pdfData = new Uint8Array(arrayBuffer);
+        }}
+        var pdf = await loadPDFWithTimeout(pdfData, 10000);
+        var page = await pdf.getPage(1);
+        var vp = page.getViewport({{ scale: 1.0 }});
+        var aspect = vp.width / vp.height;
+        pdf.destroy();
+        var formats = {{
+            'a4-portrait': 595.28 / 841.89,
+            'a4-landscape': 841.89 / 595.28,
+            'letter-portrait': 612 / 792,
+            'letter-landscape': 792 / 612,
+            'legal-portrait': 612 / 1008
+        }};
+        var bestFormat = 'a4-portrait';
+        var bestDiff = Infinity;
+        for (var name in formats) {{
+            var diff = Math.abs(aspect - formats[name]);
+            if (diff < bestDiff) {{
+                bestDiff = diff;
+                bestFormat = name;
+            }}
+        }}
+        return bestFormat;
+    }}
+
+    function isJBIG2AllowableForTrial(dpi, pageSize) {{
+        var dims = PAGE_SIZE_INCHES[pageSize] || PAGE_SIZE_INCHES['a4-portrait'];
+        var w = Math.round(dims.w * dpi);
+        var h = Math.round(dims.h * dpi);
+        var pages = maxPagesPerPDF || totalPageCount || 0;
+        var mpix = (w * h * pages) / 1000000;
+        return mpix <= JBIG2_MAX_MPIX && pages <= 120;
+    }}
+
+    function isFormAtDefaults() {{
+        var mode = document.querySelector('input[name="mode"]:checked');
+        if (mode && mode.value !== 'nodither') return false;
+        var ps = document.querySelector('input[name="pageSize"]:checked');
+        if (ps && ps.value !== 'a4-portrait') return false;
+        if (pageRangeInput && pageRangeInput.value.trim() !== '') return false;
+        return true;
+    }}
+
+    function resetFormToDefaults() {{
+        document.getElementById('noDither').checked = true;
+        pageRangeContainer.classList.remove('show');
+        pageRangeInput.value = '';
+        var a4Radio = document.querySelector('input[name="pageSize"][value="a4-portrait"]');
+        if (a4Radio) a4Radio.checked = true;
+        dpiStandardRadio.checked = true;
+        dpiSliderContainer.classList.remove('show');
+        dpiSlider.value = 310;
+        dpiValue.value = 310;
+        clearPageRangeError();
+        updateCompressButton();
+    }}
+
+    function hideAIBoxes() {{
+        stopRainbowTimers();
+        var ai = document.getElementById('aiAutoSetter');
+        if (ai) {{ ai.classList.remove('show'); ai.classList.remove('ai-puking', 'ai-pooping'); }}
+        var ref = document.getElementById('aiRefresh');
+        if (ref) ref.classList.remove('show');
+    }}
+
+    var pukeTimerId = null;
+    var pooTimerId = null;
+
+    function schedulePuke() {{
+        if (pukeTimerId) clearTimeout(pukeTimerId);
+        pukeTimerId = setTimeout(function() {{
+            pukeTimerId = null;
+            var btn = document.getElementById('aiAutoSetter');
+            if (!btn || !btn.classList.contains('show') || btn.classList.contains('running')) return;
+            btn.classList.remove('ai-puking');
+            void btn.offsetWidth;
+            btn.classList.add('ai-puking');
+            setTimeout(function() {{
+                btn.classList.remove('ai-puking');
+                schedulePuke();
+            }}, 2800);
+        }}, Math.random() * 300000);
+    }}
+
+    function schedulePoo() {{
+        if (pooTimerId) clearTimeout(pooTimerId);
+        pooTimerId = setTimeout(function() {{
+            pooTimerId = null;
+            var btn = document.getElementById('aiAutoSetter');
+            if (!btn || !btn.classList.contains('show') || btn.classList.contains('running')) return;
+            btn.classList.remove('ai-pooping');
+            void btn.offsetWidth;
+            btn.classList.add('ai-pooping');
+            setTimeout(function() {{
+                btn.classList.remove('ai-pooping');
+                schedulePoo();
+            }}, 2800);
+        }}, Math.random() * 60000);
+    }}
+
+    function stopRainbowTimers() {{
+        if (pukeTimerId) {{ clearTimeout(pukeTimerId); pukeTimerId = null; }}
+        if (pooTimerId) {{ clearTimeout(pooTimerId); pooTimerId = null; }}
+    }}
+
+    function createAutoSetterButton() {{
+        var existing = document.getElementById('aiAutoSetter');
+        if (existing) return existing;
+
+        var btn = document.createElement('div');
+        btn.id = 'aiAutoSetter';
+        btn.className = 'ai-autosetter';
+        btn.setAttribute('role', 'button');
+        btn.setAttribute('tabindex', '0');
+
+        var sparklesHTML = '';
+        var sparkleData = [
+            [8,5,0],[72,12,0.4],[15,88,0.8],[78,92,1.2],
+            [45,30,0.2],[25,65,0.6],[60,75,1.0],[88,45,1.4],
+            [35,8,0.3],[55,95,0.9],[12,50,1.1],[82,25,0.7],
+            [42,18,0.5],[68,82,1.3],[18,72,0.15],[92,55,0.85]
+        ];
+        for (var i = 0; i < sparkleData.length; i++) {{
+            var s = sparkleData[i];
+            sparklesHTML += '<span class="ai-sparkle" style="top:' + s[0] + '%;left:' + s[1] + '%;animation-delay:' + s[2] + 's"></span>';
+        }}
+
+        var starsHTML = '';
+        var starData = [
+            [10,3,0,14],[5,93,1,18],[75,6,0.5,12],
+            [82,89,1.5,16],[40,96,0.7,10],[48,1,1.2,11],
+            [20,20,0.3,9],[65,80,0.9,13]
+        ];
+        for (var i = 0; i < starData.length; i++) {{
+            var st = starData[i];
+            starsHTML += '<span class="ai-star-shape" style="top:' + st[0] + '%;left:' + st[1] + '%;animation-delay:' + st[2] + 's;width:' + st[3] + 'px;height:' + st[3] + 'px"></span>';
+        }}
+
+        var unicornBody = '<ellipse cx="48" cy="58" rx="22" ry="14" fill="white" opacity="0.95"/>'
+            + '<circle cx="68" cy="42" r="11" fill="white" opacity="0.95"/>'
+            + '<polygon points="70,31 66,10 74,10" fill="#ffd700" stroke="#daa520" stroke-width="1"/>'
+            + '<path d="M66,14 L70,10 L68,16" fill="none" stroke="#ffec8b" stroke-width="0.5"/>'
+            + '<path d="M74,14 L70,10 L72,16" fill="none" stroke="#ffec8b" stroke-width="0.5"/>'
+            + '<circle cx="72" cy="40" r="2.5" fill="#333"/>'
+            + '<circle cx="73" cy="39" r="0.8" fill="white"/>'
+            + '<rect x="32" y="70" width="5" height="16" rx="2" fill="white" opacity="0.9"/>'
+            + '<rect x="41" y="70" width="5" height="16" rx="2" fill="white" opacity="0.9"/>'
+            + '<rect x="55" y="70" width="5" height="16" rx="2" fill="white" opacity="0.9"/>'
+            + '<rect x="62" y="70" width="5" height="16" rx="2" fill="white" opacity="0.9"/>'
+            + '<path d="M62,33 Q50,18 56,38 Q46,24 52,43 Q44,32 48,46" fill="#ff69b4" stroke="#ff1493" stroke-width="0.5"/>'
+            + '<path d="M26,53 Q10,34 16,62 Q6,44 13,68" fill="#da70d6" stroke="#9932cc" stroke-width="0.5"/>';
+
+        var unicornSvg = '<svg class="ai-unicorn-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">' + unicornBody + '</svg>';
+
+        // Rainbow arcs: bezier curves from mouth (puke) and rear (poo)
+        var rbColors = ['#8833ff','#0066ff','#00cc00','#ffff00','#ff8800','#ff0000'];
+        var mouthCurves = [
+            'M 2,0 C 35,0 38,20 38,48',
+            'M 2,0 C 30,0 33,18 33,44',
+            'M 2,0 C 25,0 28,16 28,40',
+            'M 2,0 C 20,0 23,14 23,36',
+            'M 2,0 C 15,0 18,12 18,32',
+            'M 2,0 C 10,0 13,10 13,28'
+        ];
+        var tailCurves = [
+            'M 33,0 C 0,0 -3,15 -3,43',
+            'M 33,0 C 3,0 0,14 0,39',
+            'M 33,0 C 6,0 3,13 3,35',
+            'M 33,0 C 9,0 6,12 6,31',
+            'M 33,0 C 12,0 9,11 9,27',
+            'M 33,0 C 15,0 12,10 12,23'
+        ];
+        var pukeSvg = '<svg class="ai-rainbow-puke" viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg">';
+        var pooSvg = '<svg class="ai-rainbow-poo" viewBox="0 0 35 45" xmlns="http://www.w3.org/2000/svg">';
+        for (var ri = 0; ri < 6; ri++) {{
+            pukeSvg += '<path d="' + mouthCurves[ri] + '" stroke="' + rbColors[ri] + '" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-dasharray="80" stroke-dashoffset="80" style="animation-delay:' + (ri * 0.07) + 's"/>';
+            pooSvg += '<path d="' + tailCurves[ri] + '" stroke="' + rbColors[ri] + '" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-dasharray="80" stroke-dashoffset="80" style="animation-delay:' + (ri * 0.07) + 's"/>';
+        }}
+        pukeSvg += '</svg>';
+        pooSvg += '</svg>';
+
+        var unicornL = '<div class="ai-unicorn-wrap">' + unicornSvg + pukeSvg + pooSvg + '</div>';
+        var unicornR = '<div class="ai-unicorn-wrap" style="transform:scaleX(-1)">' + unicornSvg + pukeSvg + pooSvg + '</div>';
+
+        var currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
+        var compressLabel = currentT.compressButton || 'Compress';
+
+        btn.innerHTML = '<div class="ai-progress-bar" id="aiProgress"></div>'
+            + '<div class="ai-sparkles">' + sparklesHTML + starsHTML + '</div>'
+            + '<div class="ai-content">'
+            + '<span class="ai-label">' + compressLabel + '</span>'
+            + '<div class="ai-row">'
+            + unicornL
+            + '<span class="ai-text-main">✨ “AI” ✨</span>'
+            + unicornR
+            + '</div>'
+            + '</div>'
+            + '<div class="ai-status-text" id="aiStatus"></div>';
+
+        var options = document.querySelector('.options');
+        options.parentNode.insertBefore(btn, options);
+
+        btn.addEventListener('click', function() {{
+            if (autoSetterRunning) {{
+                cancellationRequested = true;
+                return;
+            }}
+            if (!btn.classList.contains('show')) return;
+            stopRainbowTimers();
+            btn.classList.remove('ai-puking', 'ai-pooping');
+            runAutoSetter();
+        }});
+        btn.addEventListener('keydown', function(e) {{
+            if (e.key === 'Enter' || e.key === ' ') {{
+                e.preventDefault();
+                if (autoSetterRunning) {{
+                    cancellationRequested = true;
+                }} else if (btn.classList.contains('show')) {{
+                    stopRainbowTimers();
+                    btn.classList.remove('ai-puking', 'ai-pooping');
+                    runAutoSetter();
+                }}
+            }}
+        }});
+
+        return btn;
+    }}
+
+    function createRefreshBox() {{
+        var existing = document.getElementById('aiRefresh');
+        if (existing) return existing;
+
+        var box = document.createElement('div');
+        box.id = 'aiRefresh';
+        box.className = 'ai-refresh';
+        box.setAttribute('role', 'button');
+        box.setAttribute('tabindex', '0');
+        box.innerHTML = '<svg class="ai-refresh-icon" viewBox="0 0 24 24" width="40" height="40" fill="currentColor" xmlns="http://www.w3.org/2000/svg">'
+            + '<path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>'
+            + '</svg>';
+
+        var options = document.querySelector('.options');
+        options.parentNode.insertBefore(box, options);
+
+        box.addEventListener('click', function() {{
+            hideAIBoxes();
+            resetFormToDefaults();
+            showAutoSetterButton();
+        }});
+        box.addEventListener('keydown', function(e) {{
+            if (e.key === 'Enter' || e.key === ' ') {{
+                e.preventDefault();
+                hideAIBoxes();
+                resetFormToDefaults();
+                showAutoSetterButton();
+            }}
+        }});
+
+        return box;
+    }}
+
+    function showAutoSetterButton() {{
+        if (autoSetterRunning) return;
+        if (!selectedFile || fileError) return;
+        var btn = createAutoSetterButton();
+        btn.classList.remove('running', 'ai-puking', 'ai-pooping');
+        btn.classList.add('show');
+        var prog = document.getElementById('aiProgress');
+        if (prog) {{ prog.style.transition = 'none'; prog.style.transform = 'scaleX(0)'; void prog.offsetWidth; prog.style.transition = ''; }}
+        var status = document.getElementById('aiStatus');
+        if (status) status.textContent = '';
+        var lbl = btn.querySelector('.ai-label');
+        if (lbl) lbl.textContent = (TRANSLATIONS[currentLang] || TRANSLATIONS.en).compressButton || 'Compress';
+        schedulePuke();
+        schedulePoo();
+    }}
+
+    function showRefreshButton() {{
+        if (autoSetterRunning) return;
+        if (!selectedFile || fileError) return;
+        var box = createRefreshBox();
+        box.classList.add('show');
+    }}
+
+    function showAutoSetterOrRefresh() {{
+        if (autoSetterRunning) return;
+        if (!selectedFile || fileError) return;
+        hideAIBoxes();
+        if (isFormAtDefaults()) {{
+            showAutoSetterButton();
+        }} else {{
+            showRefreshButton();
+        }}
+    }}
+
+    function makeSaveFabulous() {{
+        var btn = document.getElementById('saveResultBtn');
+        if (!btn || btn.classList.contains('disabled')) return;
+        btn.classList.add('save-fabulous');
+        var text = btn.textContent;
+        var sparkles = '';
+        var sparks = [[15,8,0,4],[85,12,0.5,3],[10,75,1.0,3],[90,80,0.3,4],[50,5,0.7,3],[50,90,1.2,3],[25,50,0.4,3],[75,50,0.9,3]];
+        for (var i = 0; i < sparks.length; i++) {{
+            var sp = sparks[i];
+            sparkles += '<span class="save-fab-sparkle" style="top:' + sp[0] + '%;left:' + sp[1] + '%;animation-delay:' + sp[2] + 's;width:' + sp[3] + 'px;height:' + sp[3] + 'px"></span>';
+        }}
+        var stars = '';
+        var starData = [[8,3,0,10],[5,92,0.8,12],[88,6,1.3,9],[85,90,0.5,11]];
+        for (var i = 0; i < starData.length; i++) {{
+            var st = starData[i];
+            stars += '<span class="save-fab-star" style="top:' + st[0] + '%;left:' + st[1] + '%;animation-delay:' + st[2] + 's;width:' + st[3] + 'px;height:' + st[3] + 'px"></span>';
+        }}
+        btn.innerHTML = '<span class="save-fab-stars">' + sparkles + stars + '</span>'
+            + '<span class="save-fab-cloud"></span>'
+            + '<span class="save-fab-text">' + text + '</span>';
+    }}
+
+    function removeSaveFabulous() {{
+        var banner = document.getElementById('saveWinBanner');
+        if (banner) banner.remove();
+        var btn = document.getElementById('saveResultBtn');
+        if (!btn || !btn.classList.contains('save-fabulous')) return;
+        btn.classList.remove('save-fabulous');
+        var textEl = btn.querySelector('.save-fab-text');
+        var text = textEl ? textEl.textContent : (TRANSLATIONS[currentLang] || TRANSLATIONS.en).resultSaveButton || 'Save';
+        btn.textContent = text;
+    }}
+
+    async function runAutoSetter() {{
+        if (autoSetterRunning) return;
+        autoSetterRunning = true;
+
+        var aiBtn = document.getElementById('aiAutoSetter');
+        if (aiBtn) aiBtn.classList.add('running');
+
+        document.body.classList.add('ai-running');
+        setFormControlsEnabled(false);
+
+        progressDiv.classList.remove('cancelled');
+        progressDiv.innerHTML = '<span class="spinner"></span><span id="progressText">Detecting page format...</span>';
+        progressDiv.style.background = '#e3f2fd';
+        progressDiv.style.borderColor = '';
+        progressDiv.style.color = '#1976d2';
+        progressDiv.style.display = 'block';
+        progressText = document.getElementById('progressText');
+
+        // ── Progress tracking state ─────────────────────────────────────
+        var aiStartTime = performance.now();
+        var smoothedPct = 3;
+        var smoothedRate = 0;
+        var lastObservedPct = 3;
+        var lastUpdateTime = aiStartTime;
+        var etaSmoothed = -1;
+        var currentTrialIndex = 0;
+        var numRunnableTrials = 1;
+        var numPages = totalPageCount || 1;
+        var BOOTSTRAP_SECS = 6;
+        var currentTrialIsJBIG2 = false;
+        var postPhaseStartTime = 0;
+        var postPhaseTrialIdx = -1;
+        var lastRealPct = 0;
+        var lastCSSPct = 0;
+
+        // Show initial state immediately: progress at 3%, time as --:--
+        lastCSSPct = 3;
+        (function() {{
+            var aiProg = document.getElementById('aiProgress');
+            if (aiProg) aiProg.style.transform = 'scaleX(0.03)';
+            var aiStatus = document.getElementById('aiStatus');
+            if (aiStatus) aiStatus.textContent = '⏱ --:--';
+        }})();
+
+        function parseProgressFraction(text) {{
+            var m = text.match(/page\\s+(\\d+)\\s+of\\s+(\\d+)/i);
+            if (m) {{
+                var cur = parseInt(m[1], 10);
+                var tot = parseInt(m[2], 10);
+                if (tot > 0) return {{ phase: 'render', frac: (cur - 0.5) / tot }};
+            }}
+            m = text.match(/stream\\s+(\\d+)\\s*\\/\\s*(\\d+)/);
+            if (m) {{
+                var cur2 = parseInt(m[1], 10);
+                var tot2 = parseInt(m[2], 10);
+                if (tot2 > 0) return {{ phase: 'compress', frac: cur2 / tot2 }};
+            }}
+            if (/encoding/i.test(text) || /generating/i.test(text) || /compress/i.test(text)) {{
+                return {{ phase: 'post', frac: 0.5 }};
+            }}
+            if (/loading|reading|initializ/i.test(text)) {{
+                return {{ phase: 'render', frac: 0 }};
+            }}
+            return null;
+        }}
+
+        function computeOverallPct(trialIdx, intraFrac) {{
+            return ((trialIdx + intraFrac) / numRunnableTrials) * 100;
+        }}
+
+        function formatETA(seconds) {{
+            if (seconds < 0 || !isFinite(seconds)) return '';
+            var h = Math.floor(seconds / 3600);
+            var m = Math.floor((seconds % 3600) / 60);
+            var s = Math.floor(seconds % 60);
+            if (h > 0) return h + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+            return m + ':' + String(s).padStart(2, '0');
+        }}
+
+        function updateAIProgress(rawPct) {{
+            var now = performance.now();
+            var dt = (now - lastUpdateTime) / 1000;
+            if (dt < 0.05) return;
+            lastUpdateTime = now;
+
+            var elapsed = (now - aiStartTime) / 1000;
+
+            // During bootstrap: blend synthetic rising curve with real data
+            // Synthetic curve: starts at 3%, rises to ~12% over BOOTSTRAP_SECS
+            var displayPct;
+            if (elapsed < BOOTSTRAP_SECS) {{
+                var t = elapsed / BOOTSTRAP_SECS;
+                var syntheticPct = 3 + 9 * (1 - Math.exp(-2.5 * t));
+                var blend = t * t;
+                displayPct = syntheticPct * (1 - blend) + rawPct * blend;
+                displayPct = Math.max(displayPct, syntheticPct * 0.5);
+            }} else {{
+                displayPct = rawPct;
+            }}
+
+            // EMA smoothing on display value
+            var alpha = 1 - Math.exp(-dt / 2.0);
+            smoothedPct += (displayPct - smoothedPct) * alpha;
+            if (smoothedPct < lastObservedPct) smoothedPct = lastObservedPct;
+            lastObservedPct = smoothedPct;
+
+            var cssPct = Math.min(smoothedPct, 99.5);
+            if (cssPct > lastCSSPct) {{
+                lastCSSPct = cssPct;
+                var aiProg = document.getElementById('aiProgress');
+                if (aiProg) aiProg.style.transform = 'scaleX(' + (cssPct / 100) + ')';
+            }}
+
+            // ETA: based on real progress (rawPct), not the display-inflated smoothedPct
+            if (rawPct > lastRealPct) lastRealPct = rawPct;
+            if (lastRealPct > 0.3 && elapsed > 3) {{
+                var rate = lastRealPct / elapsed;
+                if (smoothedRate <= 0) {{
+                    smoothedRate = rate;
+                }} else {{
+                    var rateAlpha = 1 - Math.exp(-dt / 8.0);
+                    smoothedRate += (rate - smoothedRate) * rateAlpha;
+                }}
+                if (smoothedRate > 0.001) {{
+                    var remaining = (100 - lastRealPct) / smoothedRate;
+                    if (etaSmoothed < 0) {{
+                        etaSmoothed = remaining;
+                    }} else {{
+                        var etaAlpha = 1 - Math.exp(-dt / 10.0);
+                        etaSmoothed += (remaining - etaSmoothed) * etaAlpha;
+                    }}
+                    if (etaSmoothed < 0) etaSmoothed = 0;
+                }}
+            }}
+        }}
+
+        function refreshAIStatus() {{
+            var aiStatus = document.getElementById('aiStatus');
+            if (!aiStatus) return;
+            var etaStr = (etaSmoothed >= 0) ? '⏱ ' + formatETA(etaSmoothed) : '⏱ --:--';
+            aiStatus.textContent = etaStr;
+        }}
+
+        // Observe hidden progressText for fine-grained intra-trial progress
+        var observer = new MutationObserver(function() {{
+            var text = progressText ? progressText.textContent : '';
+            var parsed = parseProgressFraction(text);
+            var intraFrac = 0;
+
+            // Phase weights: JBIG2 trials spend most time in encoding,
+            // G4 trials spend most time in rendering
+            var rw = currentTrialIsJBIG2 ? 0.35 : 0.70;
+            var pw = currentTrialIsJBIG2 ? 0.50 : 0.15;
+            var cw = 1 - rw - pw;
+
+            if (parsed) {{
+                if (parsed.phase === 'render') {{
+                    intraFrac = parsed.frac * rw;
+                    postPhaseTrialIdx = -1;
+                }} else if (parsed.phase === 'post') {{
+                    // JBIG2 encoding reports no page-level progress, so use
+                    // time-based asymptotic interpolation instead of a fixed value.
+                    // tau scales with page count: more pages → longer encoding.
+                    if (postPhaseTrialIdx !== currentTrialIndex) {{
+                        postPhaseStartTime = performance.now();
+                        postPhaseTrialIdx = currentTrialIndex;
+                    }}
+                    var postElapsed = (performance.now() - postPhaseStartTime) / 1000;
+                    var tau = Math.max(numPages * 0.5, 8);
+                    var postFrac = 1 - Math.exp(-postElapsed / tau);
+                    intraFrac = rw + postFrac * pw;
+                }} else if (parsed.phase === 'compress') {{
+                    intraFrac = rw + pw + parsed.frac * cw;
+                }}
+            }}
+            var rawPct = computeOverallPct(currentTrialIndex, intraFrac);
+            updateAIProgress(rawPct);
+            refreshAIStatus();
+        }});
+
+        // ── End progress tracking ───────────────────────────────────────
+
+        var detectedPageSize;
+        try {{
+            detectedPageSize = await detectPageFormat(selectedFile);
+        }} catch (e) {{
+            detectedPageSize = 'a4-portrait';
+        }}
+
+        var pageSizeRadio = document.querySelector('input[name="pageSize"][value="' + detectedPageSize + '"]');
+        if (pageSizeRadio) pageSizeRadio.checked = true;
+
+        // Build DPI levels: start from standard tiers, then add lower ones
+        // based on the max safe DPI for this file if needed
+        var maxSafeDPI = findMaxSafeDPI(totalPageCount || 0, detectedPageSize, false, inputFileSize);
+        var dpiLevels = [];
+        var standardDPIs = [310, 250, 216];
+        for (var di = 0; di < standardDPIs.length; di++) {{
+            if (standardDPIs[di] <= maxSafeDPI) dpiLevels.push(standardDPIs[di]);
+        }}
+        // If max safe DPI is below 216, add it and a lower step
+        if (maxSafeDPI < 216 && maxSafeDPI >= 72) {{
+            dpiLevels.push(maxSafeDPI);
+            var lowerDPI = Math.max(Math.round(maxSafeDPI * 0.75), 72);
+            if (lowerDPI < maxSafeDPI) dpiLevels.push(lowerDPI);
+        }}
+
+        // Generate trials: for each DPI level, try dithered G4, dithered JBIG2 variants,
+        // then at the lowest DPI also try undithered
+        var trials = [];
+        for (var dli = 0; dli < dpiLevels.length; dli++) {{
+            var d = dpiLevels[dli];
+            var isLowest = (dli === dpiLevels.length - 1);
+            trials.push({{ dither: true, dpi: d, jbig2: false, threshold: 0.97 }});
+            if (dli === 0) {{
+                trials.push({{ dither: true, dpi: d, jbig2: true, threshold: 0.97 }});
+            }}
+            trials.push({{ dither: true, dpi: d, jbig2: true, threshold: 0.85 }});
+            if (isLowest) {{
+                trials.push({{ dither: false, dpi: d, jbig2: false, threshold: 0.97 }});
+                trials.push({{ dither: false, dpi: d, jbig2: true, threshold: 0.85 }});
+            }}
+        }}
+        // Add labels
+        for (var tli = 0; tli < trials.length; tli++) {{
+            var tr = trials[tli];
+            tr.label = tr.dpi + ' DPI, ' + (tr.dither ? 'dithered' : 'sharp') + ', ' + (tr.jbig2 ? 'JBIG2 ' + tr.threshold : 'CCITT G4');
+        }}
+
+        var runnableTrials = [];
+        for (var i = 0; i < trials.length; i++) {{
+            if (trials[i].jbig2 && !isJBIG2AllowableForTrial(trials[i].dpi, detectedPageSize)) continue;
+            var est = estimateRAMBytes(totalPageCount || 0, trials[i].dpi, detectedPageSize, trials[i].jbig2, inputFileSize);
+            if (est > RAM_LIMIT) continue;
+            runnableTrials.push(trials[i]);
+        }}
+        numRunnableTrials = runnableTrials.length || 1;
+
+        var bestResultData = null;
+        var bestTrial = null;
+
+        for (var ti = 0; ti < runnableTrials.length; ti++) {{
+            var trial = runnableTrials[ti];
+            currentTrialIndex = ti;
+            currentTrialIsJBIG2 = trial.jbig2;
+            postPhaseTrialIdx = -1;
+
+            if (cancellationRequested) break;
+
+            refreshAIStatus();
+
+            if (trial.dither) {{
+                document.getElementById('dither').checked = true;
+            }} else {{
+                document.getElementById('noDither').checked = true;
+            }}
+            pageRangeContainer.classList.remove('show');
+
+            if (trial.dpi === 310) {{
+                dpiStandardRadio.checked = true;
+                dpiSliderContainer.classList.remove('show');
+            }} else {{
+                dpiCustomRadio.checked = true;
+                dpiSliderContainer.classList.add('show');
+                dpiSlider.value = trial.dpi;
+                dpiValue.value = trial.dpi;
+            }}
+
+            conversionInProgress = true;
+            cancellationRequested = false;
+
+            var ditherConfig = trial.dither ? {{ mode: 'all' }} : {{ mode: 'none' }};
+            var metadataOpts = {{ includeProducer: true, includeTimestamp: true }};
+
+            try {{
+                progressDiv.innerHTML = '<span class="spinner"></span><span id="progressText">...</span>';
+                progressDiv.style.display = 'block';
+                progressText = document.getElementById('progressText');
+
+                // Start observing the hidden progressText for fine-grained updates
+                observer.observe(progressText, {{ childList: true, characterData: true, subtree: true }});
+
+                if (isZipMode) {{
+                    await convertZIP(selectedFile, ditherConfig, trial.dpi, detectedPageSize, trial.jbig2, trial.threshold, true, metadataOpts);
+                }} else {{
+                    await convertPDF(selectedFile, ditherConfig, trial.dpi, detectedPageSize, trial.jbig2, trial.threshold, true, metadataOpts);
+                }}
+
+                observer.disconnect();
+
+                var ratio = window.resultSize / window.originalSize;
+
+                if (!bestResultData || window.resultSize < bestResultData.resultSize) {{
+                    bestResultData = {{
+                        resultPDF: window.resultPDF,
+                        resultFilename: window.resultFilename,
+                        originalSize: window.originalSize,
+                        resultSize: window.resultSize,
+                        ditherMode: window.ditherMode
+                    }};
+                    bestTrial = trial;
+                }}
+
+                // Snap progress to end of this trial
+                updateAIProgress(computeOverallPct(ti + 1, 0));
+                refreshAIStatus();
+
+                if (ratio < 0.6) break;
+            }} catch (e) {{
+                observer.disconnect();
+                if (e.message === 'CONVERSION_CANCELLED') break;
+                console.warn('Auto-setter trial failed:', e);
+                continue;
+            }}
+
+            conversionInProgress = false;
+        }}
+
+        observer.disconnect();
+        var wasCancelled = cancellationRequested;
+        conversionInProgress = false;
+        cancellationRequested = false;
+
+        if (wasCancelled) {{
+            autoSetterRunning = false;
+            document.body.classList.remove('ai-running');
+            setFormControlsEnabled(true);
+            hideAIBoxes();
+            window.resultPDF = null;
+            resetFormToDefaults();
+            await handleFileSelected(selectedFile);
+            if (!fileError) showAutoSetterOrRefresh();
+            updateCompressButton();
+            return;
+        }}
+
+        if (bestResultData && bestTrial) {{
+            window.resultPDF = bestResultData.resultPDF;
+            window.resultFilename = bestResultData.resultFilename;
+            window.originalSize = bestResultData.originalSize;
+            window.resultSize = bestResultData.resultSize;
+            window.ditherMode = bestResultData.ditherMode;
+            resultUsedJBIG2 = bestTrial.jbig2;
+
+            resultSettings.fileName = selectedFile.name;
+            resultSettings.ditherMode = bestTrial.dither ? 'all' : 'none';
+            resultSettings.pageRange = null;
+            resultSettings.dpi = bestTrial.dpi;
+            resultSettings.pageSize = detectedPageSize;
+            resultSettings.useJBIG2 = bestTrial.jbig2;
+            resultSettings.jbig2Threshold = bestTrial.threshold;
+            resultSettings.preserveRotation = true;
+            resultSettings.includeProducer = true;
+            resultSettings.includeTimestamp = true;
+
+            if (bestTrial.dither) {{
+                document.getElementById('dither').checked = true;
+            }} else {{
+                document.getElementById('noDither').checked = true;
+            }}
+            pageRangeContainer.classList.remove('show');
+
+            if (bestTrial.dpi === 310) {{
+                dpiStandardRadio.checked = true;
+                dpiSliderContainer.classList.remove('show');
+            }} else {{
+                dpiCustomRadio.checked = true;
+                dpiSliderContainer.classList.add('show');
+                dpiSlider.value = bestTrial.dpi;
+                dpiValue.value = bestTrial.dpi;
+            }}
+        }}
+
+        var aiProgFinal = document.getElementById('aiProgress');
+        if (aiProgFinal) aiProgFinal.style.transform = 'scaleX(1)';
+
+        autoSetterRunning = false;
+        document.body.classList.remove('ai-running');
+        setFormControlsEnabled(true);
+
+        if (bestResultData) {{
+            showResultBox();
+            if (bestResultData.resultSize < bestResultData.originalSize) {{
+                makeSaveFabulous();
+                var saveEl = document.getElementById('saveResultBtn');
+                if (saveEl) {{
+                    saveEl.scrollIntoView({{ behavior: 'smooth', block: 'end' }});
+                }}
+            }}
+        }} else {{
+            showCancelledBox();
+        }}
+
+        hideAIBoxes();
+        updateCompressButton();
+    }}
+
+    // Hide AI/refresh boxes when user interacts with form controls
+    (function() {{
+        var hideOnInteract = function() {{
+            if (!autoSetterRunning) hideAIBoxes();
+        }};
+        var opts = document.querySelector('.options');
+        if (opts) {{
+            opts.addEventListener('change', hideOnInteract, true);
+            opts.addEventListener('input', hideOnInteract, true);
+        }}
+    }})();
 
     // Traditional Mongolian: convert mouse wheel to horizontal scroll on container
     (function() {{
