@@ -50,6 +50,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "A JBIG2 le van tiltva: a teljes képadat ({mpix} megapixel, oldalméret × DPI × {pages} oldal) meghaladja a JBIG2 kódoló 475 megapixeles korlátját.",
         jbig2DisabledPages: "A JBIG2 le van tiltva: ez a PDF {pages} oldalas, ami meghaladja a JBIG2 kódoló 120 oldalas korlátját.",
         ramOverrideAcceptRisk: " (az eszközöm kifogyhat a memóriából vagy felmelegedhet, az alkalmazás összeomlhat, és elfogadom ezt a kockázatot, csak hadd kattintsak a Tömörítés gombra)",
+        fileInfoPageCount: "Oldalszám: {pages}",
+        fileInfoFileSize: "Fájlméret: {size}",
+        inputHint: "Ez az alkalmazás papírdokumentumok szkennelt PDF-jeihez készült, amelyeket fekete-fehérre szeretne konvertálni és csökkenteni a fájlméretet. Ha a PDF másolható szöveget tartalmaz (irodai alkalmazásokból exportált fájlok, e-könyvek, exportált weboldalak), valószínűleg már jól optimalizált, és ez az alkalmazás nem fog jó eredményt adni. Hasonlóképpen, ha a szkennelt PDF már CCITT G4, JBIG2 vagy MRC tömörítéssel van tömörítve, az újratömörítés generációs veszteséget (minőségromlást) okoz jelentős méretcsökkenés nélkül. A legjobb eredmény érdekében mindig az eredeti, nem optimalizált szkennt tömörítse.",
     },
     // Slovenian
     sl: {
@@ -97,6 +100,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 je onemogočen: skupni slikovni podatki ({mpix} megapikslov) presegajo omejitev 475 megapikslov kodirnika JBIG2.",
         jbig2DisabledPages: "JBIG2 je onemogočen: ta PDF ima {pages} strani, kar presega omejitev 120 strani kodirnika JBIG2.",
         ramOverrideAcceptRisk: " (moji napravi lahko zmanjka pomnilnika ali se segreje, aplikacija se lahko zruši, in to tveganje sprejemam, samo pustite me klikniti gumb Stisni)",
+        fileInfoPageCount: "Število strani: {pages}",
+        fileInfoFileSize: "Velikost datoteke: {size}",
+        inputHint: "Ta aplikacija je namenjena PDF-datotekam s skeniranimi papirnatimi dokumenti, ki jih želite pretvoriti v črno-belo in zmanjšati velikost datoteke. Če vaš PDF vsebuje besedilo, ki ga je mogoče kopirati (izvozi iz pisarniških aplikacij, e-knjige, izvožene spletne strani), je verjetno že dobro optimiziran in ta aplikacija verjetno ne bo dala dobrih rezultatov. Podobno bo ponovna kompresija PDF-ja, ki je že komprimiran s CCITT G4, JBIG2 ali MRC, povzročila generacijsko izgubo (poslabšanje kakovosti pri ponovnem kodiranju) brez bistvenega zmanjšanja velikosti. Za najboljše rezultate vedno komprimirajte izvirni neoptimiziran sken.",
     },
     // Ukrainian
     uk: {
@@ -144,6 +150,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 вимкнено: загальний обсяг зображень ({mpix} мегапікселів) перевищує обмеження 475 мегапікселів кодера JBIG2.",
         jbig2DisabledPages: "JBIG2 вимкнено: цей PDF має {pages} сторінок, що перевищує обмеження 120 сторінок кодера JBIG2.",
         ramOverrideAcceptRisk: " (мій пристрій може вичерпати пам'ять або нагрітися, додаток може аварійно завершитися, і я приймаю цей ризик, просто дозвольте мені натиснути кнопку Стиснути)",
+        fileInfoPageCount: "Кількість сторінок: {pages}",
+        fileInfoFileSize: "Розмір файлу: {size}",
+        inputHint: "Цей додаток призначений для PDF-файлів зі сканами паперових документів, які ви хочете перетворити на чорно-білі та зменшити розмір файлу. Якщо ваш PDF містить текст, який можна копіювати (експорт з офісних програм, електронні книги, експортовані веб-сторінки), він, ймовірно, вже добре оптимізований і цей додаток навряд чи дасть хороші результати. Так само, якщо ваш сканований PDF вже стиснутий за допомогою CCITT G4, JBIG2 або MRC, повторне стиснення призведе до втрати поколінь (погіршення якості при перекодуванні) без суттєвого зменшення розміру. Для найкращих результатів завжди стискайте оригінальний неоптимізований скан.",
     },
 
     // Hindi (हिन्दी)
@@ -192,6 +201,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 अक्षम है: कुल छवि डेटा ({mpix} मेगापिक्सेल, पृष्ठ आकार × DPI × {pages} पृष्ठों से) JBIG2 एनकोडर की 475 मेगापिक्सेल सीमा से अधिक है।",
         jbig2DisabledPages: "JBIG2 अक्षम है: इस PDF में {pages} पृष्ठ हैं, जो JBIG2 एनकोडर की 120 पृष्ठ सीमा से अधिक है।",
         ramOverrideAcceptRisk: " (मेरे उपकरण की मेमोरी समाप्त हो सकती है या गर्म हो सकता है, एप्लिकेशन क्रैश हो सकता है, और मैं यह जोखिम स्वीकार करता/करती हूँ, बस मुझे कंप्रेस बटन क्लिक करने दें)",
+        fileInfoPageCount: "पृष्ठ संख्या: {pages}",
+        fileInfoFileSize: "फ़ाइल आकार: {size}",
+        inputHint: "यह ऐप कागज़ी दस्तावेज़ों की स्कैन वाली PDF फ़ाइलों के लिए बनाया गया है जिन्हें आप काले-सफ़ेद में बदलना और आकार छोटा करना चाहते हैं। यदि आपकी PDF में कॉपी करने योग्य टेक्स्ट है (ऑफ़िस ऐप से निर्यात, डिजिटल किताबें, वेब पेज आदि), तो यह संभवतः पहले से अच्छी तरह अनुकूलित है और इस ऐप से अच्छे परिणाम मिलने की संभावना कम है। इसी प्रकार, यदि स्कैन की गई PDF पहले से CCITT G4, JBIG2, या MRC संपीड़न से संपीड़ित है, तो यहाँ पुनः संपीड़न से जनरेशन लॉस (गुणवत्ता में कमी) होगा। सर्वोत्तम परिणामों के लिए, हमेशा मूल अन-ऑप्टिमाइज़्ड स्कैन को संपीड़ित करें।",
     },
 
     // Bengali (বাংলা)
@@ -240,6 +252,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 নিষ্ক্রিয়: মোট চিত্র ডেটা ({mpix} মেগাপিক্সেল) JBIG2 এনকোডারের 475 মেগাপিক্সেল সীমা অতিক্রম করেছে।",
         jbig2DisabledPages: "JBIG2 নিষ্ক্রিয়: এই PDF-এ {pages} পৃষ্ঠা আছে, যা JBIG2 এনকোডারের 120 পৃষ্ঠা সীমা অতিক্রম করেছে।",
         ramOverrideAcceptRisk: " (আমার ডিভাইসের মেমরি শেষ হয়ে যেতে পারে বা গরম হতে পারে, অ্যাপ্লিকেশন ক্র্যাশ হতে পারে, এবং আমি এই ঝুঁকি গ্রহণ করি, শুধু আমাকে কম্প্রেস বোতামে ক্লিক করতে দিন)",
+        fileInfoPageCount: "পৃষ্ঠা সংখ্যা: {pages}",
+        fileInfoFileSize: "ফাইলের আকার: {size}",
+        inputHint: "এই অ্যাপটি কাগজের নথির স্ক্যান সম্বলিত PDF ফাইলের জন্য তৈরি যা আপনি সাদা-কালোতে রূপান্তর করতে এবং ফাইলের আকার ছোট করতে চান। আপনার PDF-এ যদি কপিযোগ্য টেক্সট থাকে (অফিস অ্যাপ্লিকেশন থেকে রপ্তানি, ডিজিটাল বই, রপ্তানিকৃত ওয়েব পেজ), তাহলে এটি সম্ভবত ইতিমধ্যে ভালোভাবে অপ্টিমাইজ করা এবং এই অ্যাপ ভালো ফলাফল দেবে না। একইভাবে, আপনার স্ক্যান করা PDF যদি ইতিমধ্যে CCITT G4, JBIG2, বা MRC কম্প্রেশনে সংকুচিত থাকে, পুনরায় সংকোচন জেনারেশন লস ঘটাবে। সেরা ফলাফলের জন্য সর্বদা মূল অঅপ্টিমাইজড স্ক্যান সংকুচিত করুন।",
     },
 
     // Tamil (தமிழ்)
@@ -288,6 +303,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 முடக்கப்பட்டுள்ளது: மொத்த பட தரவு ({mpix} மெகாபிக்சல்கள்) JBIG2 குறியாக்கியின் 475 மெகாபிக்சல் வரம்பை மீறுகிறது।",
         jbig2DisabledPages: "JBIG2 முடக்கப்பட்டுள்ளது: இந்த PDF-ல் {pages} பக்கங்கள் உள்ளன, இது JBIG2 குறியாக்கியின் 120 பக்க வரம்பை மீறுகிறது।",
         ramOverrideAcceptRisk: " (என் சாதனத்தின் நினைவகம் தீர்ந்துவிடலாம் அல்லது சூடாகலாம், பயன்பாடு செயலிழக்கலாம், இந்த ஆபத்தை நான் ஏற்கிறேன், சுருக்கு பொத்தானை அழுத்த அனுமதியுங்கள்)",
+        fileInfoPageCount: "பக்க எண்ணிக்கை: {pages}",
+        fileInfoFileSize: "கோப்பு அளவு: {size}",
+        inputHint: "இந்த பயன்பாடு காகித ஆவணங்களின் ஸ்கேன்களைக் கொண்ட PDF கோப்புகளுக்காக வடிவமைக்கப்பட்டுள்ளது. உங்கள் PDF நகலெடுக்கக்கூடிய உரையைக் கொண்டிருந்தால் (அலுவலக பயன்பாட்டு ஏற்றுமதிகள், டிஜிட்டல் புத்தகங்கள்), அது ஏற்கனவே நன்கு மேம்படுத்தப்பட்டிருக்கும். CCITT G4, JBIG2 அல்லது MRC சுருக்கத்துடன் ஏற்கனவே சுருக்கப்பட்ட PDF-ஐ மீண்டும் சுருக்குவது தலைமுறை இழப்பை ஏற்படுத்தும். சிறந்த முடிவுகளுக்கு எப்போதும் அசல் மேம்படுத்தப்படாத ஸ்கேனை சுருக்கவும்.",
     },
 
     // Telugu (తెలుగు)
@@ -337,6 +355,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 నిలిపివేయబడింది: మొత్తం చిత్ర డేటా ({mpix} మెగాపిక్సెల్‌లు) JBIG2 ఎన్‌కోడర్ యొక్క 475 మెగాపిక్సెల్ పరిమితిని మించిపోయింది।",
         jbig2DisabledPages: "JBIG2 నిలిపివేయబడింది: ఈ PDF లో {pages} పేజీలు ఉన్నాయి, ఇది JBIG2 ఎన్‌కోడర్ యొక్క 120 పేజీల పరిమితిని మించిపోయింది।",
         ramOverrideAcceptRisk: " (నా పరికరం మెమరీ అయిపోవచ్చు లేదా వేడెక్కవచ్చు, అప్లికేషన్ క్రాష్ అవ్వవచ్చు, మరియు నేను ఈ ప్రమాదాన్ని అంగీకరిస్తున్నాను, కుదించు బటన్‌ను క్లిక్ చేయనివ్వండి)",
+        fileInfoPageCount: "పేజీల సంఖ్య: {pages}",
+        fileInfoFileSize: "ఫైల్ పరిమాణం: {size}",
+        inputHint: "ఈ యాప్ కాగిత పత్రాల స్కాన్‌లను కలిగిన PDF ఫైళ్ల కోసం రూపొందించబడింది. మీ PDF కాపీ చేయగల టెక్స్ట్‌ను కలిగి ఉంటే (ఆఫీస్ అప్లికేషన్ ఎగుమతులు, డిజిటల్ పుస్తకాలు), అది బహుశా ఇప్పటికే బాగా ఆప్టిమైజ్ చేయబడి ఉంటుంది. CCITT G4, JBIG2 లేదా MRC కంప్రెషన్‌తో ఇప్పటికే కుదించబడిన PDF‌ను మళ్ళీ కుదించడం జనరేషన్ లాస్‌కు కారణమవుతుంది. ఉత్తమ ఫలితాల కోసం ఎల్లప్పుడూ అసలు ఆప్టిమైజ్ చేయని స్కాన్‌ను కుదించండి.",
     },
 
     // Marathi (मराठी)
@@ -385,6 +406,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 अक्षम आहे: एकूण प्रतिमा डेटा ({mpix} मेगापिक्सेल) JBIG2 एनकोडरची 475 मेगापिक्सेल मर्यादा ओलांडतो।",
         jbig2DisabledPages: "JBIG2 अक्षम आहे: या PDF मध्ये {pages} पृष्ठे आहेत, जी JBIG2 एनकोडरची 120 पृष्ठ मर्यादा ओलांडतात।",
         ramOverrideAcceptRisk: " (माझ्या उपकरणाची मेमरी संपू शकते किंवा गरम होऊ शकते, अॅप्लिकेशन क्रॅश होऊ शकते, आणि मी हा धोका स्वीकारतो, फक्त मला कंप्रेस बटणावर क्लिक करू द्या)",
+        fileInfoPageCount: "पृष्ठ संख्या: {pages}",
+        fileInfoFileSize: "फाइल आकार: {size}",
+        inputHint: "हे अॅप कागदी कागदपत्रांच्या स्कॅन असलेल्या PDF फायलींसाठी तयार केले आहे ज्या तुम्हाला काळ्या-पांढऱ्यात रूपांतरित करायच्या आहेत. तुमच्या PDF मध्ये कॉपी करता येणारा मजकूर असल्यास ते कदाचित आधीच चांगले ऑप्टिमाइझ झालेले आहे. CCITT G4, JBIG2 किंवा MRC ने आधीच कॉम्प्रेस केलेली PDF पुन्हा कॉम्प्रेस केल्यास जनरेशन लॉस होईल. सर्वोत्तम परिणामांसाठी नेहमी मूळ ऑप्टिमाइझ न केलेले स्कॅन कॉम्प्रेस करा.",
     },
 
     // Albanian
@@ -433,6 +457,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 është çaktivizuar: të dhënat totale të imazhit ({mpix} megapikselë) tejkalojnë kufirin 475 megapikselëve të kodifikuesit JBIG2.",
         jbig2DisabledPages: "JBIG2 është çaktivizuar: ky PDF ka {pages} faqe, duke tejkaluar kufirin 120 faqeve të kodifikuesit JBIG2.",
         ramOverrideAcceptRisk: " (pajisjes sime mund t'i mbarojë memoria ose të nxehet, aplikacioni mund të dështojë, dhe unë e pranoj këtë rrezik, thjesht më lini të klikoj butonin Komprimo)",
+        fileInfoPageCount: "Numri i faqeve: {pages}",
+        fileInfoFileSize: "Madhësia e skedarit: {size}",
+        inputHint: "Kjo aplikacion është projektuar për skedarë PDF që përmbajnë skanime të dokumenteve në letër që dëshironi t\'i konvertoni në bardh e zi dhe të zvogëloni madhësinë. Nëse PDF-ja juaj përmban tekst të kopjueshëm (eksporte nga aplikacionet e zyrës, libra dixhitalë, faqe ueb të eksportuara), ndoshta është tashmë i optimizuar mirë. Nëse PDF-ja e skanuar tashmë është kompresuar me CCITT G4, JBIG2 ose MRC, rikompresimi do të shkaktojë humbje gjeneratash (degradim të cilësisë). Për rezultatet më të mira, kompresoni gjithmonë skanimin origjinal të paoptimizuar.",
     },
 
     // Estonian
@@ -481,6 +508,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 on keelatud: pildiandmete kogumaht ({mpix} megapikslit) ületab JBIG2 kodeerija 475 megapiksli piiri.",
         jbig2DisabledPages: "JBIG2 on keelatud: sellel PDF-il on {pages} lehekülge, mis ületab JBIG2 kodeerija 120 lehekülje piiri.",
         ramOverrideAcceptRisk: " (mu seadmel võib mälu otsa saada või kuumeneda, rakendus võib kokku joosta ja ma aktsepteerin seda riski, lihtsalt laske mul vajutada nuppu Tihenda)",
+        fileInfoPageCount: "Lehekülgede arv: {pages}",
+        fileInfoFileSize: "Faili suurus: {size}",
+        inputHint: "See rakendus on mõeldud paberidokumentide skaneeringuid sisaldavate PDF-failide jaoks, mida soovite mustvalgeks teisendada ja faili suurust vähendada. Kui teie PDF sisaldab kopeeritavat teksti (kontorirakenduste ekspordid, e-raamatud, eksporditud veebilehed), on see tõenäoliselt juba hästi optimeeritud ja see rakendus ei anna häid tulemusi. Samamoodi põhjustab CCITT G4, JBIG2 või MRC tihendusega juba tihendatud skaneeringu uuesti tihendamine põlvkonnakadu (kvaliteedi halvenemist ümerkodeerimisel) ilma olulise suuruse vähenemiseta. Parimate tulemuste saamiseks tihendage alati algset optimeerimata skaneeringut.",
     },
 
     // Finnish
@@ -529,6 +559,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 on poistettu käytöstä: kuvatietojen kokonaismäärä ({mpix} megapikseliä) ylittää JBIG2-kooderin 475 megapikselin rajan.",
         jbig2DisabledPages: "JBIG2 on poistettu käytöstä: tässä PDF:ssä on {pages} sivua, mikä ylittää JBIG2-kooderin 120 sivun rajan.",
         ramOverrideAcceptRisk: " (laitteeni muisti voi loppua tai se voi kuumentua, sovellus saattaa kaatua, ja hyväksyn tämän riskin, anna minun vain painaa Pakkaa-painiketta)",
+        fileInfoPageCount: "Sivumäärä: {pages}",
+        fileInfoFileSize: "Tiedostokoko: {size}",
+        inputHint: "Tämä sovellus on suunniteltu PDF-tiedostoille, jotka sisältävät paperiasiakirjojen skannauksia ja jotka haluat muuntaa mustavalkoisiksi ja pienentää tiedostokokoa. Jos PDF sisältää kopioitavaa tekstiä (toimisto-ohjelmien viennit, e-kirjat, viedyt verkkosivut), se on todennäköisesti jo hyvin optimoitu eikä tämä sovellus tuota hyviä tuloksia. Vastaavasti, jos skannattu PDF on jo pakattu CCITT G4-, JBIG2- tai MRC-pakkauksella, uudelleenpakkaaminen aiheuttaa sukupolvihäviötä (laadun heikkenemistä uudelleenkoodauksesta) ilman merkittävää koon pienenemistä. Parhaan tuloksen saamiseksi pakkaa aina alkuperäinen optimoimaton skannaus.",
     },
 
     // Swedish
@@ -577,6 +610,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 är inaktiverat: den totala bilddatan ({mpix} megapixlar) överskrider JBIG2-kodarens gräns på 475 megapixlar.",
         jbig2DisabledPages: "JBIG2 är inaktiverat: denna PDF har {pages} sidor, vilket överskrider JBIG2-kodarens gräns på 120 sidor.",
         ramOverrideAcceptRisk: " (min enhet kan få slut på minne eller bli varm, applikationen kan krascha, och jag accepterar den risken, låt mig bara klicka på Komprimera-knappen)",
+        fileInfoPageCount: "Antal sidor: {pages}",
+        fileInfoFileSize: "Filstorlek: {size}",
+        inputHint: "Denna app är avsedd för PDF-filer som innehåller skannade pappersdokument som du vill konvertera till svartvitt och minska filstorleken. Om din PDF innehåller kopierbar text (t.ex. exporter från kontorsprogram, digitala böcker, exporterade webbsidor) är den troligen redan väloptimerad och denna app ger sannolikt inte bra resultat. På samma sätt, om din skannade PDF redan är komprimerad med CCITT G4, JBIG2 eller MRC, kommer omkomprimering här att orsaka generationsförlust (kvalitetsförsämring) utan betydande storleksminskning. För bästa resultat, komprimera alltid den ursprungliga ooptimerade skanningen.",
     },
 
     // Norwegian Bokmål
@@ -625,6 +661,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 er deaktivert: den totale bildedata ({mpix} megapiksler) overskrider JBIG2-koderens grense på 475 megapiksler.",
         jbig2DisabledPages: "JBIG2 er deaktivert: denne PDF-en har {pages} sider, som overskrider JBIG2-koderens grense på 120 sider.",
         ramOverrideAcceptRisk: " (enheten min kan gå tom for minne eller bli varm, applikasjonen kan krasje, og jeg aksepterer risikoen, bare la meg klikke på Komprimer-knappen)",
+        fileInfoPageCount: "Sideantall: {pages}",
+        fileInfoFileSize: "Filstørrelse: {size}",
+        inputHint: "Denne appen er laget for PDF-filer som inneholder skanninger av papirdokumenter du vil konvertere til svart-hvitt og gjøre mindre. Hvis PDF-en din inneholder kopierbar tekst (eksport fra kontorprogrammer, digitale bøker, eksporterte nettsider), er den sannsynligvis allerede godt optimalisert og denne appen vil sannsynligvis ikke gi gode resultater. Tilsvarende vil rekomprimering av en PDF som allerede er komprimert med CCITT G4, JBIG2 eller MRC forårsake generasjonstap (kvalitetsforringelse ved rekoding) uten vesentlig størrelsesreduksjon. For best resultat, komprimer alltid den originale, ikke-optimaliserte skanningen.",
     },
 
     // Norwegian Nynorsk
@@ -673,6 +712,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 er deaktivert: dei totale biletdata ({mpix} megapiksel) overstig JBIG2-kodarens grense på 475 megapiksel.",
         jbig2DisabledPages: "JBIG2 er deaktivert: denne PDF-en har {pages} sider, som overstig JBIG2-kodarens grense på 120 sider.",
         ramOverrideAcceptRisk: " (eininga mi kan gå tom for minne eller bli varm, applikasjonen kan krasje, og eg aksepterer risikoen, berre lat meg klikke på Komprimer-knappen)",
+        fileInfoPageCount: "Sidetal: {pages}",
+        fileInfoFileSize: "Filstorleik: {size}",
+        inputHint: "Denne appen er laga for PDF-filer som inneheld skanningar av papirdokument du vil konvertere til svart-kvitt og gjere mindre. Om PDF-en din inneheld kopierbar tekst (eksport frå kontorprogram, digitale bøker, eksporterte nettsider), er han truleg allereie godt optimalisert og denne appen vil truleg ikkje gje gode resultat. Tilsvarande vil rekomprimering av ein PDF som allereie er komprimert med CCITT G4, JBIG2 eller MRC føre til generasjonstap (kvalitetsforverring ved rekoding) utan vesentleg storleikreduksjon. For best resultat, komprimer alltid den originale, ikkje-optimaliserte skanninga.",
     },
 
     // Dutch
@@ -721,6 +763,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 is uitgeschakeld: de totale beeldgegevens ({mpix} megapixels) overschrijden de limiet van 475 megapixels van de JBIG2-encoder.",
         jbig2DisabledPages: "JBIG2 is uitgeschakeld: deze PDF heeft {pages} pagina's, wat de limiet van 120 pagina's overschrijdt.",
         ramOverrideAcceptRisk: " (mijn apparaat kan onvoldoende geheugen hebben of warm worden, de applicatie kan crashen, en ik accepteer dat risico, laat me gewoon op de knop Comprimeren klikken)",
+        fileInfoPageCount: "Aantal pagina's: {pages}",
+        fileInfoFileSize: "Bestandsgrootte: {size}",
+        inputHint: "Deze app is ontworpen voor PDF's met scans van papieren documenten die u wilt omzetten naar zwart-wit en kleiner wilt maken. Als uw PDF kopieerbare tekst bevat (exports uit kantoorapplicaties, digitale boeken, geëxporteerde webpagina's), is deze waarschijnlijk al goed geoptimaliseerd en zal deze app geen goede resultaten opleveren. Evenzo zal hercompressie van een al met CCITT G4, JBIG2 of MRC gecomprimeerde scan generatieverlies (kwaliteitsvermindering door hercodering) veroorzaken zonder noemenswaardige verkleining. Comprimeer voor het beste resultaat altijd de originele, niet-geoptimaliseerde scan.",
     },
 
     // French
@@ -769,6 +814,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 est désactivé : les données d'image totales ({mpix} mégapixels) dépassent la limite de 475 mégapixels de l'encodeur JBIG2.",
         jbig2DisabledPages: "JBIG2 est désactivé : ce PDF a {pages} pages, dépassant la limite de 120 pages de l'encodeur JBIG2.",
         ramOverrideAcceptRisk: " (mon appareil peut manquer de mémoire ou chauffer, l'application peut planter, et j'accepte ce risque, laissez-moi simplement cliquer sur le bouton Compresser)",
+        fileInfoPageCount: "Nombre de pages : {pages}",
+        fileInfoFileSize: "Taille du fichier : {size}",
+        inputHint: "Cette application est conçue pour les PDF contenant des numérisations de documents papier que vous souhaitez convertir en noir et blanc et réduire en taille. Si votre PDF contient du texte sélectionnable (exportations bureautiques, livres numériques, pages web exportées), il est probablement déjà bien optimisé et cette application ne donnera probablement pas de bons résultats. De même, si votre numérisation a déjà été compressée avec CCITT G4, JBIG2 ou MRC, la recompresser ici entraînera probablement une perte de génération (dégradation de qualité due au réencodage) sans réduction significative de la taille. Pour de meilleurs résultats, compressez toujours la numérisation originale non optimisée.",
     },
 
     // Simplified Chinese
@@ -817,6 +865,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2已禁用：总图像数据（{mpix}百万像素）超过了JBIG2编码器的4.75亿像素限制。降低DPI或减少页数以启用JBIG2。",
         jbig2DisabledPages: "JBIG2已禁用：此PDF有{pages}页，超过了JBIG2编码器的120页限制。",
         ramOverrideAcceptRisk: "（我的设备可能内存不足或发热，应用程序可能崩溃，我接受此风险，请让我点击压缩按钮）",
+        fileInfoPageCount: "页数：{pages}",
+        fileInfoFileSize: "文件大小：{size}",
+        inputHint: "本应用专为包含纸质文档扫描件的PDF设计，可将其转换为黑白并缩小文件大小。如果您的PDF包含可复制的文本（如办公软件导出、电子书、导出的网页），则可能已经过良好优化，本应用可能无法产生理想效果。同样，如果您的扫描PDF已经使用CCITT G4、JBIG2或MRC压缩，在此重新压缩将导致代际损失（重新编码造成的质量下降），且不会显著减小文件大小。为获得最佳效果，请始终压缩未经优化的原始扫描件。",
     },
 
     // Traditional Chinese
@@ -865,6 +916,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2已停用：總影像資料（{mpix}百萬像素）超過了JBIG2編碼器的4.75億像素限制。降低DPI或減少頁數以啟用JBIG2。",
         jbig2DisabledPages: "JBIG2已停用：此PDF有{pages}頁，超過了JBIG2編碼器的120頁限制。",
         ramOverrideAcceptRisk: "（我的裝置可能記憶體不足或發熱，應用程式可能當機，我接受此風險，請讓我點擊壓縮按鈕）",
+        fileInfoPageCount: "頁數：{pages}",
+        fileInfoFileSize: "檔案大小：{size}",
+        inputHint: "本應用程式專為包含紙本文件掃描檔的PDF設計，可將其轉換為黑白並縮小檔案大小。如果您的PDF包含可複製的文字（如辦公軟體匯出、電子書、匯出的網頁），則可能已經過良好最佳化，本應用程式可能無法產生理想效果。同樣，如果您的掃描PDF已經使用CCITT G4、JBIG2或MRC壓縮，在此重新壓縮將導致代際損失（重新編碼造成的品質下降），且不會顯著減小檔案大小。為獲得最佳效果，請務必壓縮未經最佳化的原始掃描檔。",
     },
 
     // Japanese
@@ -913,6 +967,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2は無効です：合計画像データ（{mpix}メガピクセル）がJBIG2エンコーダーの475メガピクセル制限を超えています。",
         jbig2DisabledPages: "JBIG2は無効です：このPDFは{pages}ページあり、JBIG2エンコーダーの120ページ制限を超えています。",
         ramOverrideAcceptRisk: "（デバイスのメモリが不足したり熱くなる可能性があり、アプリケーションがクラッシュする可能性がありますが、そのリスクを受け入れます。圧縮ボタンをクリックさせてください）",
+        fileInfoPageCount: "ページ数：{pages}",
+        fileInfoFileSize: "ファイルサイズ：{size}",
+        inputHint: "このアプリは、紙の文書をスキャンしたPDFを白黒に変換してファイルサイズを小さくするためのものです。PDFにコピー可能なテキスト（オフィスアプリからのエクスポート、電子書籍、エクスポートされたWebページなど）が含まれている場合、すでに最適化されており、このアプリでは良い結果が得られない可能性があります。同様に、スキャンしたPDFがすでにCCITT G4、JBIG2、またはMRC圧縮で圧縮されている場合、ここで再圧縮すると世代損失（再エンコードによる品質劣化）が発生し、サイズも大きく削減できません。最良の結果を得るには、常に最適化されていないオリジナルのスキャンを圧縮してください。",
     },
 
     // Korean
@@ -961,6 +1018,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 비활성화: 총 이미지 데이터({mpix} 메가픽셀)가 JBIG2 인코더의 475 메가픽셀 제한을 초과합니다.",
         jbig2DisabledPages: "JBIG2 비활성화: 이 PDF는 {pages} 페이지로, JBIG2 인코더의 120 페이지 제한을 초과합니다.",
         ramOverrideAcceptRisk: " (기기의 메모리가 부족하거나 뜨거워질 수 있고, 앱이 충돌할 수 있으며, 그 위험을 감수합니다. 압축 버튼을 클릭하게 해주세요)",
+        fileInfoPageCount: "페이지 수: {pages}",
+        fileInfoFileSize: "파일 크기: {size}",
+        inputHint: "이 앱은 종이 문서를 스캔한 PDF를 흑백으로 변환하고 파일 크기를 줄이기 위해 설계되었습니다. PDF에 복사 가능한 텍스트(오피스 앱 내보내기, 전자책, 웹 페이지 등)가 포함되어 있다면 이미 잘 최적화되어 있으므로 좋은 결과를 기대하기 어렵습니다. 마찬가지로 스캔한 PDF가 이미 CCITT G4, JBIG2, MRC 압축으로 처리된 경우 여기서 재압축하면 세대 손실(재인코딩에 의한 품질 저하)이 발생할 수 있습니다. 최상의 결과를 위해 항상 최적화되지 않은 원본 스캔을 압축하세요.",
     },
     // Arabic
     ar: {
@@ -1008,6 +1068,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 معطل: إجمالي بيانات الصورة ({mpix} ميغابكسل) يتجاوز حد 475 ميغابكسل لمُشفّر JBIG2.",
         jbig2DisabledPages: "JBIG2 معطل: يحتوي هذا الـ PDF على {pages} صفحات، متجاوزاً حد 120 صفحة لمُشفّر JBIG2.",
         ramOverrideAcceptRisk: " (قد تنفد ذاكرة جهازي أو يسخن، قد يتعطل التطبيق، وأنا أقبل هذا الخطر، فقط دعني أنقر على زر الضغط)",
+        fileInfoPageCount: "عدد الصفحات: {pages}",
+        fileInfoFileSize: "حجم الملف: {size}",
+        inputHint: "هذا التطبيق مصمم لملفات PDF التي تحتوي على مسح ضوئي لمستندات ورقية تريد تحويلها إلى أبيض وأسود وتقليل حجمها. إذا كان ملف PDF يحتوي على نص قابل للنسخ (مثل مستندات مكتبية أو كتب رقمية أو صفحات ويب مصدّرة)، فمن المرجح أنه محسّن بالفعل ولن يعطي هذا التطبيق نتائج جيدة. كذلك إذا كان المسح الضوئي مضغوطًا بالفعل بـ CCITT G4 أو JBIG2 أو MRC، فإن إعادة ضغطه هنا ستسبب فقدان الأجيال (تدهور الجودة). للحصول على أفضل النتائج، اضغط دائمًا المسح الأصلي غير المحسّن.",
     },
     // Hebrew
     he: {
@@ -1055,6 +1118,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 מושבת: סך נתוני התמונה ({mpix} מגה-פיקסל) חורג ממגבלת 475 מגה-פיקסל של מקודד JBIG2.",
         jbig2DisabledPages: "JBIG2 מושבת: ל-PDF זה יש {pages} עמודים, החורג ממגבלת 120 העמודים של מקודד JBIG2.",
         ramOverrideAcceptRisk: " (למכשיר שלי עלול להיגמר הזיכרון או להתחמם, האפליקציה עלולה לקרוס, ואני מקבל/ת את הסיכון הזה, רק תן/י לי ללחוץ על כפתור הדחיסה)",
+        fileInfoPageCount: "מספר עמודים: {pages}",
+        fileInfoFileSize: "גודל קובץ: {size}",
+        inputHint: "אפליקציה זו מיועדת לקבצי PDF המכילים סריקות של מסמכי נייר שברצונכם להמיר לשחור-לבן ולהקטין את גודל הקובץ. אם ה-PDF שלכם מכיל טקסט הניתן להעתקה (ייצוא מיישומי משרד, ספרים דיגיטליים, דפי אינטרנט מיוצאים), הוא כנראה כבר מותאם היטב ואפליקציה זו כנראה לא תיתן תוצאות טובות. באופן דומה, אם ה-PDF הסרוק שלכם כבר דחוס ב-CCITT G4, JBIG2 או MRC, דחיסה מחדש כאן תגרום לאובדן דורי (ירידה באיכות מקידוד מחדש) ללא הקטנה משמעותית בגודל. לתוצאות הטובות ביותר, דחסו תמיד את הסריקה המקורית הלא-מותאמת.",
     },
     // Polish
     pl: {
@@ -1102,6 +1168,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 jest wyłączony: całkowite dane obrazu ({mpix} megapikseli) przekraczają limit 475 megapikseli kodera JBIG2.",
         jbig2DisabledPages: "JBIG2 jest wyłączony: ten PDF ma {pages} stron, co przekracza limit 120 stron kodera JBIG2.",
         ramOverrideAcceptRisk: " (moje urządzenie może wyczerpać pamięć lub się nagrzać, aplikacja może się zawiesić, akceptuję to ryzyko, po prostu pozwólcie mi kliknąć przycisk Kompresuj)",
+        fileInfoPageCount: "Liczba stron: {pages}",
+        fileInfoFileSize: "Rozmiar pliku: {size}",
+        inputHint: "Ta aplikacja jest przeznaczona do plików PDF zawierających skany dokumentów papierowych, które chcesz przekonwertować na czarno-białe i zmniejszyć rozmiar pliku. Jeśli Twój PDF zawiera tekst do kopiowania (eksporty z aplikacji biurowych, e-booki, wyeksportowane strony internetowe), prawdopodobnie jest już dobrze zoptymalizowany i ta aplikacja raczej nie da dobrych rezultatów. Podobnie, jeśli zeskanowany PDF był już skompresowany za pomocą CCITT G4, JBIG2 lub MRC, ponowna kompresja spowoduje utratę generacyjną (degradację jakości) bez znaczącej redukcji rozmiaru. Aby uzyskać najlepsze rezultaty, zawsze kompresuj oryginalny, niezoptymalizowany skan.",
     },
     // Turkish
     tr: {
@@ -1149,6 +1218,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 devre dışı: toplam görüntü verisi ({mpix} megapiksel) JBIG2 kodlayıcının 475 megapiksel sınırını aşıyor.",
         jbig2DisabledPages: "JBIG2 devre dışı: bu PDF {pages} sayfaya sahip ve JBIG2 kodlayıcının 120 sayfa sınırını aşıyor.",
         ramOverrideAcceptRisk: " (cihazımın belleği tükenebilir veya ısınabilir, uygulama çökebilir ve bu riski kabul ediyorum, sadece Sıkıştır düğmesine tıklamamıza izin verin)",
+        fileInfoPageCount: "Sayfa sayısı: {pages}",
+        fileInfoFileSize: "Dosya boyutu: {size}",
+        inputHint: "Bu uygulama, siyah-beyaza dönüştürmek ve dosya boyutunu küçültmek istediğiniz kâğıt belge taramalarını içeren PDF'ler için tasarlanmıştır. PDF'niz kopyalanabilir metin içeriyorsa (ofis uygulamalarından dışa aktarımlar, dijital kitaplar, dışa aktarılmış web sayfaları), muhtemelen zaten iyi optimize edilmiştir ve bu uygulama iyi sonuç vermeyecektir. Benzer şekilde, taranmış PDF'niz zaten CCITT G4, JBIG2 veya MRC sıkıştırmasıyla sıkıştırılmışsa, burada yeniden sıkıştırmak nesil kaybına (yeniden kodlamadan kaynaklanan kalite düşüşü) neden olacaktır. En iyi sonuçlar için her zaman optimize edilmemiş orijinal taramayı sıkıştırın.",
     },
     // Italian
     it: {
@@ -1196,6 +1268,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 è disabilitato: i dati immagine totali ({mpix} megapixel) superano il limite di 475 megapixel del codificatore JBIG2.",
         jbig2DisabledPages: "JBIG2 è disabilitato: questo PDF ha {pages} pagine, superando il limite di 120 pagine del codificatore JBIG2.",
         ramOverrideAcceptRisk: " (il mio dispositivo potrebbe esaurire la memoria o surriscaldarsi, l'applicazione potrebbe bloccarsi, e accetto questo rischio, fammi semplicemente cliccare il pulsante Comprimi)",
+        fileInfoPageCount: "Numero di pagine: {pages}",
+        fileInfoFileSize: "Dimensione file: {size}",
+        inputHint: "Questa app è progettata per PDF contenenti scansioni di documenti cartacei che si desidera convertire in bianco e nero e ridurre le dimensioni. Se il PDF contiene testo copiabile (esportazioni da applicazioni d'ufficio, libri digitali, pagine web esportate), è probabilmente già ben ottimizzato e questa app probabilmente non darà buoni risultati. Analogamente, se il PDF scansionato è già stato compresso con CCITT G4, JBIG2 o MRC, la ricompressione causerà perdita generazionale (degradazione della qualità) senza una riduzione significativa delle dimensioni. Per i migliori risultati, comprimi sempre la scansione originale non ottimizzata.",
     },
     // Latvian
     lv: {
@@ -1243,6 +1318,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 ir atspējots: kopējie attēla dati ({mpix} megapikseļi) pārsniedz JBIG2 kodētāja 475 megapikseļu ierobežojumu.",
         jbig2DisabledPages: "JBIG2 ir atspējots: šim PDF ir {pages} lapas, kas pārsniedz JBIG2 kodētāja 120 lapu ierobežojumu.",
         ramOverrideAcceptRisk: " (manai ierīcei var pietrūkt atmiņas vai tā var sakarst, lietotne var avārēt, un es pieņemu šo risku, vienkārši ļaujiet man noklikšķināt pogu Saspiest)",
+        fileInfoPageCount: "Lappušu skaits: {pages}",
+        fileInfoFileSize: "Faila lielums: {size}",
+        inputHint: "Šī lietotne ir paredzēta PDF failiem ar papīra dokumentu skenējumiem, ko vēlaties pārvērst melnbaltā un samazināt faila izmēru. Ja jūsu PDF satur kopējamu tekstu (eksporti no biroja lietotnēm, digitālās grāmatas, eksportētas tīmekļa lapas), tas, iespējams, jau ir labi optimizēts un šī lietotne, visticamāk, nedos labus rezultātus. Tāpat, ja jūsu skenētais PDF jau ir saspiests ar CCITT G4, JBIG2 vai MRC, atkārtota saspiešana radīs paaudžu zudumu (kvalitātes pasliktināšanos pārkodēšanas dēļ) bez būtiska izmēra samazinājuma. Labāko rezultātu iegūšanai vienmēr saspiediet oriģinālo neoptimizēto skenējumu.",
     },
     // Lithuanian
     lt: {
@@ -1290,6 +1368,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 išjungtas: bendri vaizdo duomenys ({mpix} megapiksel) viršija JBIG2 koduotuvo 475 megapiksel ribą.",
         jbig2DisabledPages: "JBIG2 išjungtas: šis PDF turi {pages} puslapių, viršijant JBIG2 koduotuvo 120 puslapių ribą.",
         ramOverrideAcceptRisk: " (mano įrenginiui gali pritrūkti atminties arba jis gali įkaisti, programa gali sugesti, ir aš priimu šią riziką, tiesiog leiskite man spustelėti mygtuką Suspausti)",
+        fileInfoPageCount: "Puslapių skaičius: {pages}",
+        fileInfoFileSize: "Failo dydis: {size}",
+        inputHint: "Ši programa skirta PDF failams su popierinių dokumentų nuskaitymais, kuriuos norite konvertuoti į nespalvotus ir sumažinti failo dydį. Jei jūsų PDF yra kopijuojamas tekstas (eksportai iš biuro programų, elektroninės knygos, eksportuoti tinklalapiai), jis greičiausiai jau gerai optimizuotas ir ši programa greičiausiai neduos gerų rezultatų. Panašiai, jei nuskaitytas PDF jau suspaustas CCITT G4, JBIG2 arba MRC, pakartotinis suspaudimas sukels kartų praradimą (kokybės pablogėjimą dėl pakartotinio kodavimo) be reikšmingo dydžio sumažėjimo. Geriausiems rezultatams visada spauskite originalų neoptimizuotą nuskaitymą.",
     },
     // Romanian
     ro: {
@@ -1337,6 +1418,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 este dezactivat: datele totale ale imaginii ({mpix} megapixeli) depășesc limita de 475 megapixeli a codificatorului JBIG2.",
         jbig2DisabledPages: "JBIG2 este dezactivat: acest PDF are {pages} pagini, depășind limita de 120 pagini a codificatorului JBIG2.",
         ramOverrideAcceptRisk: " (dispozitivul meu poate rămâne fără memorie sau se poate încălzi, aplicația poate eșua, și accept acest risc, doar lăsați-mă să apăs butonul Comprimă)",
+        fileInfoPageCount: "Număr de pagini: {pages}",
+        fileInfoFileSize: "Dimensiune fișier: {size}",
+        inputHint: "Această aplicație este concepută pentru fișiere PDF care conțin scanări ale documentelor pe hârtie pe care doriți să le convertiți în alb-negru și să le reduceți dimensiunea. Dacă PDF-ul conține text copiabil (exporturi din aplicații de birou, cărți digitale, pagini web exportate), este probabil deja bine optimizat și această aplicație nu va produce rezultate bune. De asemenea, dacă PDF-ul scanat a fost deja comprimat cu CCITT G4, JBIG2 sau MRC, recomprimarea aici va cauza pierdere generațională (degradarea calității prin recodificare) fără o reducere semnificativă a dimensiunii. Pentru cele mai bune rezultate, comprimați întotdeauna scanarea originală neoptimizată.",
     },
     // Croatian
     hr: {
@@ -1384,6 +1468,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 je onemogućen: ukupni slikovni podaci ({mpix} megapiksela) premašuju ograničenje od 475 megapiksela JBIG2 kodera.",
         jbig2DisabledPages: "JBIG2 je onemogućen: ovaj PDF ima {pages} stranica, što premašuje ograničenje od 120 stranica JBIG2 kodera.",
         ramOverrideAcceptRisk: " (mom uređaju može ponestati memorije ili se može zagrijati, aplikacija se može srušiti, i prihvaćam taj rizik, samo me pustite da kliknem gumb Komprimiraj)",
+        fileInfoPageCount: "Broj stranica: {pages}",
+        fileInfoFileSize: "Veličina datoteke: {size}",
+        inputHint: "Ova aplikacija je namijenjena za PDF datoteke koje sadrže skenirane papirnate dokumente koje želite pretvoriti u crno-bijelo i smanjiti veličinu. Ako vaš PDF sadrži tekst koji se može kopirati (izvozi iz uredskih aplikacija, digitalne knjige, izvezene web stranice), vjerojatno je već dobro optimiziran i ova aplikacija vjerojatno neće dati dobre rezultate. Isto tako, ako je vaš skenirani PDF već komprimiran s CCITT G4, JBIG2 ili MRC, ponovna kompresija će uzrokovati generacijski gubitak (degradaciju kvalitete pri ponovnom kodiranju) bez značajnog smanjenja veličine. Za najbolje rezultate uvijek komprimirajte izvorni neoptimiziran sken.",
     },
     // Serbian Cyrillic (sr-Cyrl)
 'sr-Cyrl': {
@@ -1431,6 +1518,9 @@ const ADDITIONAL_TRANSLATIONS = {
     jbig2DisabledMpix: "JBIG2 је онемогућен: укупни подаци слике ({mpix} мегапиксела) премашују ограничење од 475 мегапиксела JBIG2 кодера.",
     jbig2DisabledPages: "JBIG2 је онемогућен: овај PDF има {pages} страница, што премашује ограничење од 120 страница JBIG2 кодера.",
     ramOverrideAcceptRisk: " (мом уређају може понестати меморије или се може загрејати, апликација се може срушити, и прихватам тај ризик, само ме пустите да кликнем дугме Компресуј)",
+    fileInfoPageCount: "Број страница: {pages}",
+    fileInfoFileSize: "Величина фајла: {size}",
+    inputHint: "Ова апликација је намењена за PDF фајлове који садрже скениране папирне документе које желите да претворите у црно-бело и смањите величину. Ако ваш PDF садржи текст који се може копирати (извози из канцеларијских апликација, дигиталне књиге, извезене веб странице), вероватно је већ добро оптимизован и ова апликација вероватно неће дати добре резултате. Слично, ако је ваш скенирани PDF већ компримован са CCITT G4, JBIG2 или MRC, поновна компресија ће узроковати генерацијски губитак (деградацију квалитета при поновном кодирању) без значајног смањења величине. За најбоље резултате увек компримујте оригинални неоптимизовани скен.",
 },
 
     // Serbian Latin (sr-Latn)
@@ -1479,6 +1569,9 @@ const ADDITIONAL_TRANSLATIONS = {
     jbig2DisabledMpix: "JBIG2 je onemogućen: ukupni podaci slike ({mpix} megapiksela) premašuju ograničenje od 475 megapiksela JBIG2 kodera.",
     jbig2DisabledPages: "JBIG2 je onemogućen: ovaj PDF ima {pages} stranica, što premašuje ograničenje od 120 stranica JBIG2 kodera.",
     ramOverrideAcceptRisk: " (mom uređaju može ponestati memorije ili se može zagrejati, aplikacija se može srušiti, i prihvatam taj rizik, samo me pustite da kliknem dugme Kompresuj)",
+    fileInfoPageCount: "Broj stranica: {pages}",
+    fileInfoFileSize: "Veličina fajla: {size}",
+    inputHint: "Ova aplikacija je namenjena za PDF fajlove koji sadrže skenirane papirne dokumente koje želite da pretvorite u crno-belo i smanjite veličinu. Ako vaš PDF sadrži tekst koji se može kopirati (izvozi iz kancelarijskih aplikacija, digitalne knjige, izvezene veb stranice), verovatno je već dobro optimizovan i ova aplikacija verovatno neće dati dobre rezultate. Slično, ako je vaš skenirani PDF već komprimovan sa CCITT G4, JBIG2 ili MRC, ponovna kompresija će uzrokovati generacijski gubitak (degradaciju kvaliteta pri ponovnom kodiranju) bez značajnog smanjenja veličine. Za najbolje rezultate uvek komprimujte originalni neoptimizovani sken.",
 
 },
     // Greek
@@ -1527,6 +1620,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "Το JBIG2 είναι απενεργοποιημένο: τα συνολικά δεδομένα εικόνας ({mpix} megapixel) υπερβαίνουν το όριο 475 megapixel του κωδικοποιητή JBIG2.",
         jbig2DisabledPages: "Το JBIG2 είναι απενεργοποιημένο: αυτό το PDF έχει {pages} σελίδες, υπερβαίνοντας το όριο 120 σελίδων του κωδικοποιητή JBIG2.",
         ramOverrideAcceptRisk: " (η συσκευή μου μπορεί να εξαντλήσει τη μνήμη ή να ζεσταθεί, η εφαρμογή μπορεί να καταρρεύσει, και αποδέχομαι αυτόν τον κίνδυνο, απλά αφήστε με να πατήσω το κουμπί Συμπίεση)",
+        fileInfoPageCount: "Αριθμός σελίδων: {pages}",
+        fileInfoFileSize: "Μέγεθος αρχείου: {size}",
+        inputHint: "Αυτή η εφαρμογή είναι σχεδιασμένη για PDF που περιέχουν σαρώσεις χάρτινων εγγράφων που θέλετε να μετατρέψετε σε ασπρόμαυρο και να μειώσετε το μέγεθος. Αν το PDF σας περιέχει κείμενο με δυνατότητα αντιγραφής (εξαγωγές από εφαρμογές γραφείου, ψηφιακά βιβλία, εξαγόμενες ιστοσελίδες), είναι πιθανώς ήδη καλά βελτιστοποιημένο και αυτή η εφαρμογή πιθανότατα δεν θα δώσει καλά αποτελέσματα. Ομοίως, αν το σαρωμένο PDF σας έχει ήδη συμπιεστεί με CCITT G4, JBIG2 ή MRC, η επανασυμπίεση θα προκαλέσει απώλεια γενεών (υποβάθμιση ποιότητας) χωρίς σημαντική μείωση μεγέθους. Για τα καλύτερα αποτελέσματα, συμπιέζετε πάντα την αρχική μη βελτιστοποιημένη σάρωση.",
     },
 
     // Bulgarian
@@ -1575,6 +1671,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 е деактивиран: общите данни за изображението ({mpix} мегапиксела) надвишават ограничението от 475 мегапиксела на JBIG2 кодера.",
         jbig2DisabledPages: "JBIG2 е деактивиран: този PDF има {pages} страници, което надвишава ограничението от 120 страници на JBIG2 кодера.",
         ramOverrideAcceptRisk: " (устройството ми може да изчерпи паметта или да се нагрее, приложението може да се срине, и аз приемам този риск, просто ме оставете да натисна бутона Компресиране)",
+        fileInfoPageCount: "Брой страници: {pages}",
+        fileInfoFileSize: "Размер на файла: {size}",
+        inputHint: "Това приложение е предназначено за PDF файлове, съдържащи сканирани хартиени документи, които искате да конвертирате в черно-бяло и да намалите размера им. Ако вашият PDF съдържа копируем текст (експорти от офис приложения, електронни книги, експортирани уеб страници), той вероятно вече е добре оптимизиран и това приложение няма да даде добри резултати. По същия начин, ако сканираният ви PDF вече е компресиран с CCITT G4, JBIG2 или MRC, повторното компресиране ще причини загуба на поколение (влошаване на качеството) без значително намаляване на размера. За най-добри резултати винаги компресирайте оригиналния неоптимизиран скан.",
     },
     // Danish
     da: {
@@ -1622,6 +1721,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 er deaktiveret: de samlede billeddata ({mpix} megapixel) overstiger JBIG2-koderens grænse på 475 megapixel.",
         jbig2DisabledPages: "JBIG2 er deaktiveret: denne PDF har {pages} sider, hvilket overstiger JBIG2-koderens grænse på 120 sider.",
         ramOverrideAcceptRisk: " (min enhed kan løbe tør for hukommelse eller blive varm, applikationen kan gå ned, og jeg accepterer den risiko, bare lad mig klikke på Komprimer-knappen)",
+        fileInfoPageCount: "Sideantal: {pages}",
+        fileInfoFileSize: "Filstørrelse: {size}",
+        inputHint: "Denne app er designet til PDF-filer med scanninger af papirdokumenter, som du vil konvertere til sort-hvid og gøre mindre. Hvis din PDF indeholder kopierbar tekst (eksporter fra kontorprogrammer, digitale bøger, eksporterede websider), er den sandsynligvis allerede godt optimeret, og denne app vil sandsynligvis ikke give gode resultater. Ligeledes vil genkomprimering af en PDF, der allerede er komprimeret med CCITT G4, JBIG2 eller MRC, medføre generationstab (kvalitetsforringelse ved genkodning) uden væsentlig størrelsesreduktion. For de bedste resultater skal du altid komprimere den originale, ikke-optimerede scanning.",
     },
     // Bosnian (Bosanski)
     bs: {
@@ -1670,6 +1772,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 je onemogućen: ukupni slikovni podaci ({mpix} megapiksela) premašuju ograničenje od 475 megapiksela JBIG2 kodera.",
         jbig2DisabledPages: "JBIG2 je onemogućen: ovaj PDF ima {pages} stranica, što premašuje ograničenje od 120 stranica JBIG2 kodera.",
         ramOverrideAcceptRisk: " (mom uređaju može ponestati memorije ili se može zagrijati, aplikacija se može srušiti, i prihvatam taj rizik, samo me pustite da kliknem dugme Komprimuj)",
+        fileInfoPageCount: "Broj stranica: {pages}",
+        fileInfoFileSize: "Veličina fajla: {size}",
+        inputHint: "Ova aplikacija je namijenjena za PDF fajlove koji sadrže skenirane papirne dokumente koje želite pretvoriti u crno-bijelo i smanjiti veličinu. Ako vaš PDF sadrži tekst koji se može kopirati (izvozi iz uredskih aplikacija, digitalne knjige, izvezene web stranice), vjerovatno je već dobro optimiziran i ova aplikacija vjerovatno neće dati dobre rezultate. Isto tako, ako je vaš skenirani PDF već komprimiran s CCITT G4, JBIG2 ili MRC, ponovna kompresija će uzrokovati generacijski gubitak (degradaciju kvaliteta pri ponovnom kodiranju) bez značajnog smanjenja veličine. Za najbolje rezultate uvijek komprimirajte originalni neoptimiziran sken.",
     },
     // Macedonian (Македонски)
     mk: {
@@ -1718,6 +1823,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 е оневозможен: вкупните податоци за сликата ({mpix} мегапиксели) го надминуваат ограничувањето од 475 мегапиксели на JBIG2 кодерот.",
         jbig2DisabledPages: "JBIG2 е оневозможен: овој PDF има {pages} страници, што го надминува ограничувањето од 120 страници на JBIG2 кодерот.",
         ramOverrideAcceptRisk: " (на мојот уред може да му снема меморија или да се загрее, апликацијата може да падне, и го прифаќам тој ризик, само дозволете ми да кликнам на копчето Компресирај)",
+        fileInfoPageCount: "Број на страници: {pages}",
+        fileInfoFileSize: "Големина на датотека: {size}",
+        inputHint: "Оваа апликација е наменета за PDF датотеки што содржат скенирани хартиени документи кои сакате да ги претворите во црно-бело и да ја намалите големината. Ако вашиот PDF содржи текст што може да се копира (извоз од канцелариски апликации, дигитални книги, извезени веб страници), веројатно веќе е добро оптимизиран и оваа апликација најверојатно нема да даде добри резултати. Слично, ако вашиот скениран PDF веќе е компримиран со CCITT G4, JBIG2 или MRC, повторната компресија ќе предизвика генерациски загуби (деградација на квалитетот) без значително намалување на големината. За најдобри резултати секогаш компримирајте го оригиналниот неоптимизиран скен.",
     },
     // Vietnamese (Tiếng Việt)
     vi: {
@@ -1765,6 +1873,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 đã bị tắt: tổng dữ liệu hình ảnh ({mpix} megapixel) vượt quá giới hạn 475 megapixel của bộ mã hóa JBIG2.",
         jbig2DisabledPages: "JBIG2 đã bị tắt: PDF này có {pages} trang, vượt quá giới hạn 120 trang của bộ mã hóa JBIG2.",
         ramOverrideAcceptRisk: " (thiết bị của tôi có thể hết bộ nhớ hoặc nóng lên, ứng dụng có thể bị lỗi, và tôi chấp nhận rủi ro đó, chỉ cần cho tôi nhấn nút Nén)",
+        fileInfoPageCount: "Số trang: {pages}",
+        fileInfoFileSize: "Kích thước tệp: {size}",
+        inputHint: "Ứng dụng này được thiết kế cho các tệp PDF chứa bản quét tài liệu giấy mà bạn muốn chuyển đổi sang đen trắng và giảm kích thước. Nếu PDF của bạn chứa văn bản có thể sao chép (xuất từ ứng dụng văn phòng, sách điện tử, trang web đã xuất), nó có thể đã được tối ưu hóa tốt và ứng dụng này có thể không cho kết quả tốt. Tương tự, nếu PDF quét của bạn đã được nén bằng CCITT G4, JBIG2 hoặc MRC, việc nén lại sẽ gây ra mất mát thế hệ (suy giảm chất lượng do mã hóa lại) mà không giảm đáng kể kích thước. Để có kết quả tốt nhất, hãy luôn nén bản quét gốc chưa được tối ưu hóa.",
     },
     // Thai (ไทย)
     th: {
@@ -1812,6 +1923,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 ถูกปิดใช้งาน: ข้อมูลภาพรวม ({mpix} เมกะพิกเซล) เกินขีดจำกัด 475 เมกะพิกเซลของตัวเข้ารหัส JBIG2",
         jbig2DisabledPages: "JBIG2 ถูกปิดใช้งาน: PDF นี้มี {pages} หน้า เกินขีดจำกัด 120 หน้าของตัวเข้ารหัส JBIG2",
         ramOverrideAcceptRisk: " (อุปกรณ์ของฉันอาจหน่วยความจำหมดหรือร้อนขึ้น แอปพลิเคชันอาจหยุดทำงาน และฉันยอมรับความเสี่ยงนั้น แค่ให้ฉันกดปุ่มบีบอัด)",
+        fileInfoPageCount: "จำนวนหน้า: {pages}",
+        fileInfoFileSize: "ขนาดไฟล์: {size}",
+        inputHint: "แอปนี้ออกแบบมาสำหรับไฟล์ PDF ที่มีการสแกนเอกสารกระดาษที่คุณต้องการแปลงเป็นขาวดำและลดขนาดไฟล์ หาก PDF ของคุณมีข้อความที่คัดลอกได้ (ส่งออกจากแอปสำนักงาน หนังสือดิจิทัล หน้าเว็บที่ส่งออก) อาจได้รับการปรับปรุงอย่างดีแล้วและแอปนี้อาจไม่ให้ผลลัพธ์ที่ดี เช่นเดียวกัน หาก PDF ที่สแกนแล้วถูกบีบอัดด้วย CCITT G4, JBIG2 หรือ MRC แล้ว การบีบอัดซ้ำจะทำให้เกิดการสูญเสียรุ่น (คุณภาพลดลงจากการเข้ารหัสซ้ำ) โดยไม่ลดขนาดอย่างมีนัยสำคัญ เพื่อผลลัพธ์ที่ดีที่สุด ให้บีบอัดการสแกนต้นฉบับที่ยังไม่ได้ปรับปรุงเสมอ",
     },
     // Indonesian
     id: {
@@ -1859,6 +1973,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 dinonaktifkan: total data gambar ({mpix} megapiksel) melebihi batas 475 megapiksel encoder JBIG2.",
         jbig2DisabledPages: "JBIG2 dinonaktifkan: PDF ini memiliki {pages} halaman, melebihi batas 120 halaman encoder JBIG2.",
         ramOverrideAcceptRisk: " (perangkat saya mungkin kehabisan memori atau menjadi panas, aplikasi mungkin crash, dan saya menerima risiko itu, biarkan saya mengklik tombol Kompres)",
+        fileInfoPageCount: "Jumlah halaman: {pages}",
+        fileInfoFileSize: "Ukuran file: {size}",
+        inputHint: "Aplikasi ini dirancang untuk file PDF yang berisi pindaian dokumen kertas yang ingin Anda ubah menjadi hitam-putih dan perkecil ukurannya. Jika PDF Anda berisi teks yang dapat disalin (ekspor dari aplikasi perkantoran, buku digital, halaman web yang diekspor), kemungkinan sudah dioptimalkan dengan baik dan aplikasi ini kemungkinan tidak akan memberikan hasil yang baik. Demikian pula, jika PDF pindaian Anda sudah dikompresi dengan CCITT G4, JBIG2, atau MRC, mengompresi ulang akan menyebabkan kehilangan generasi (penurunan kualitas akibat pengkodean ulang) tanpa pengurangan ukuran yang berarti. Untuk hasil terbaik, selalu kompres pindaian asli yang belum dioptimalkan.",
     },
     // Tagalog/Filipino
     tl: {
@@ -1905,6 +2022,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "Naka-disable ang JBIG2: ang kabuuang image data ({mpix} megapixels) ay lumampas sa 475 megapixel na limitasyon ng JBIG2 encoder.",
         jbig2DisabledPages: "Naka-disable ang JBIG2: ang PDF na ito ay may {pages} na pahina, na lumampas sa 120-page na limitasyon ng JBIG2 encoder.",
         ramOverrideAcceptRisk: " (ang aking device ay maaaring maubusan ng memory o uminit, ang application ay maaaring mag-crash, at tinatanggap ko ang panganib, hayaan mo akong i-click ang Compress button)",
+        fileInfoPageCount: "Bilang ng pahina: {pages}",
+        fileInfoFileSize: "Laki ng file: {size}",
+        inputHint: "Ang app na ito ay dinisenyo para sa mga PDF na naglalaman ng mga scan ng mga papel na dokumento na gusto mong i-convert sa black-and-white at bawasan ang laki. Kung ang iyong PDF ay may nakokopyang teksto (mga export mula sa office applications, digital books, exported web pages), malamang na-optimize na ito at hindi magbibigay ng magandang resulta ang app na ito. Gayundin, kung ang iyong na-scan na PDF ay naka-compress na sa CCITT G4, JBIG2, o MRC, ang muling pag-compress ay magdudulot ng generation loss. Para sa pinakamahusay na resulta, laging i-compress ang orihinal na hindi pa na-optimize na scan.",
     },
 
 
@@ -1955,6 +2075,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 غیر فعال ہے: کل تصویری ڈیٹا ({mpix} میگا پکسلز) JBIG2 انکوڈر کی 475 میگا پکسل حد سے تجاوز کرتا ہے۔",
         jbig2DisabledPages: "JBIG2 غیر فعال ہے: اس PDF میں {pages} صفحات ہیں، جو JBIG2 انکوڈر کی 120 صفحات کی حد سے تجاوز کرتے ہیں۔",
         ramOverrideAcceptRisk: " (میرے آلے کی میموری ختم ہو سکتی ہے یا گرم ہو سکتا ہے، ایپلیکیشن کریش ہو سکتی ہے، اور میں یہ خطرہ قبول کرتا/کرتی ہوں، بس مجھے کمپریس بٹن پر کلک کرنے دیں)",
+        fileInfoPageCount: "صفحات کی تعداد: {pages}",
+        fileInfoFileSize: "فائل کا سائز: {size}",
+        inputHint: "یہ ایپ کاغذی دستاویزات کی اسکینز پر مشتمل PDF فائلوں کے لیے ڈیزائن کی گئی ہے جنہیں آپ سیاہ و سفید میں تبدیل کرنا اور سائز چھوٹا کرنا چاہتے ہیں۔ اگر آپ کی PDF میں کاپی کرنے کے قابل متن ہے (آفس ایپلیکیشنز سے ایکسپورٹ، ڈیجیٹل کتابیں) تو یہ شاید پہلے سے بہتر بنائی گئی ہے۔ اگر اسکین شدہ PDF پہلے سے CCITT G4، JBIG2، یا MRC سے کمپریس ہے تو دوبارہ کمپریشن سے نسلی نقصان ہوگا۔ بہترین نتائج کے لیے ہمیشہ اصل غیر بہتر اسکین کو کمپریس کریں۔",
     },
     // Punjabi (ਪੰਜਾਬੀ)
     pa: {
@@ -2003,6 +2126,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 ਅਯੋਗ ਹੈ: ਕੁੱਲ ਚਿੱਤਰ ਡੇਟਾ ({mpix} ਮੈਗਾਪਿਕਸਲ) JBIG2 ਏਨਕੋਡਰ ਦੀ 475 ਮੈਗਾਪਿਕਸਲ ਸੀਮਾ ਤੋਂ ਵੱਧ ਹੈ।",
         jbig2DisabledPages: "JBIG2 ਅਯੋਗ ਹੈ: ਇਸ PDF ਵਿੱਚ {pages} ਪੰਨੇ ਹਨ, ਜੋ JBIG2 ਏਨਕੋਡਰ ਦੀ 120 ਪੰਨਿਆਂ ਦੀ ਸੀਮਾ ਤੋਂ ਵੱਧ ਹੈ।",
         ramOverrideAcceptRisk: " (ਮੇਰੇ ਉਪਕਰਣ ਦੀ ਮੈਮੋਰੀ ਖਤਮ ਹੋ ਸਕਦੀ ਹੈ ਜਾਂ ਗਰਮ ਹੋ ਸਕਦਾ ਹੈ, ਐਪਲੀਕੇਸ਼ਨ ਕ੍ਰੈਸ਼ ਹੋ ਸਕਦੀ ਹੈ, ਅਤੇ ਮੈਂ ਇਹ ਖ਼ਤਰਾ ਸਵੀਕਾਰ ਕਰਦਾ/ਕਰਦੀ ਹਾਂ, ਬੱਸ ਮੈਨੂੰ ਕੰਪ੍ਰੈਸ ਬਟਨ ਤੇ ਕਲਿੱਕ ਕਰਨ ਦਿਓ)",
+        fileInfoPageCount: "ਪੰਨਿਆਂ ਦੀ ਗਿਣਤੀ: {pages}",
+        fileInfoFileSize: "ਫ਼ਾਈਲ ਦਾ ਆਕਾਰ: {size}",
+        inputHint: "ਇਹ ਐਪ ਕਾਗਜ਼ੀ ਦਸਤਾਵੇਜ਼ਾਂ ਦੇ ਸਕੈਨ ਵਾਲੀਆਂ PDF ਫ਼ਾਈਲਾਂ ਲਈ ਬਣਾਈ ਗਈ ਹੈ। ਜੇ ਤੁਹਾਡੀ PDF ਵਿੱਚ ਕਾਪੀ ਕੀਤਾ ਜਾ ਸਕਣ ਵਾਲਾ ਟੈਕਸਟ ਹੈ, ਤਾਂ ਇਹ ਸ਼ਾਇਦ ਪਹਿਲਾਂ ਹੀ ਅਨੁਕੂਲਿਤ ਹੈ। CCITT G4, JBIG2 ਜਾਂ MRC ਨਾਲ ਪਹਿਲਾਂ ਤੋਂ ਕੰਪ੍ਰੈਸ PDF ਨੂੰ ਦੁਬਾਰਾ ਕੰਪ੍ਰੈਸ ਕਰਨ ਨਾਲ ਜਨਰੇਸ਼ਨ ਲੌਸ ਹੋਵੇਗਾ। ਸਭ ਤੋਂ ਵਧੀਆ ਨਤੀਜਿਆਂ ਲਈ ਹਮੇਸ਼ਾ ਅਸਲ ਅਣ-ਅਨੁਕੂਲਿਤ ਸਕੈਨ ਕੰਪ੍ਰੈਸ ਕਰੋ।",
     },
     // Gujarati (ગુજરાતી)
     gu: {
@@ -2051,6 +2177,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 નિષ્ક્રિય છે: કુલ છબી ડેટા ({mpix} મેગાપિક્સેલ) JBIG2 એનકોડરની 475 મેગાપિક્સેલ મર્યાદાથી વધુ છે.",
         jbig2DisabledPages: "JBIG2 નિષ્ક્રિય છે: આ PDF માં {pages} પૃષ્ઠો છે, જે JBIG2 એનકોડરની 120 પૃષ્ઠ મર્યાદાથી વધુ છે.",
         ramOverrideAcceptRisk: " (મારા ઉપકરણની મેમરી ખતમ થઈ શકે છે અથવા ગરમ થઈ શકે છે, એપ્લિકેશન ક્રેશ થઈ શકે છે, અને હું આ જોખમ સ્વીકારું છું, બસ મને કમ્પ્રેસ બટન ક્લિક કરવા દો)",
+        fileInfoPageCount: "પૃષ્ઠ સંખ્યા: {pages}",
+        fileInfoFileSize: "ફાઇલ કદ: {size}",
+        inputHint: "આ એપ કાગળના દસ્તાવેજોના સ્કેન ધરાવતી PDF ફાઇલો માટે બનાવવામાં આવી છે જેને તમે કાળા-સફેદમાં રૂપાંતરિત કરવા અને કદ ઘટાડવા માંગો છો. જો તમારી PDF માં નકલ કરી શકાય તેવું ટેક્સ્ટ હોય (ઓફિસ એપ્લિકેશન નિકાસ, ડિજિટલ પુસ્તકો), તો તે કદાચ પહેલેથી જ સારી રીતે ઑપ્ટિમાઇઝ થયેલ છે. CCITT G4, JBIG2 અથવા MRC સાથે પહેલેથી સંકુચિત PDF ને ફરીથી સંકુચિત કરવાથી જનરેશન લોસ થશે. શ્રેષ્ઠ પરિણામો માટે હંમેશાં મૂળ બિન-ઑપ્ટિમાઇઝ્ડ સ્કેન સંકુચિત કરો.",
     },
     // Malayalam (മലയാളം)
     ml: {
@@ -2099,6 +2228,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 പ്രവർത്തനരഹിതമാണ്: ആകെ ഇമേജ് ഡാറ്റ ({mpix} മെഗാപിക്സലുകൾ) JBIG2 എൻകോഡറിന്റെ 475 മെഗാപിക്സൽ പരിധി കവിയുന്നു.",
         jbig2DisabledPages: "JBIG2 പ്രവർത്തനരഹിതമാണ്: ഈ PDF-ൽ {pages} പേജുകൾ ഉണ്ട്, ഇത് JBIG2 എൻകോഡറിന്റെ 120 പേജ് പരിധി കവിയുന്നു.",
         ramOverrideAcceptRisk: " (എന്റെ ഉപകരണത്തിന്റെ മെമ്മറി തീരാം അല്ലെങ്കിൽ ചൂടാകാം, ആപ്ലിക്കേഷൻ ക്രാഷ് ആകാം, ഈ അപകടസാധ്യത ഞാൻ സ്വീകരിക്കുന്നു, കംപ്രസ് ബട്ടൺ ക്ലിക്ക് ചെയ്യാൻ അനുവദിക്കൂ)",
+        fileInfoPageCount: "പേജുകളുടെ എണ്ണം: {pages}",
+        fileInfoFileSize: "ഫയൽ വലുപ്പം: {size}",
+        inputHint: "പേപ്പർ ഡോക്യുമെന്റുകളുടെ സ്കാനുകൾ അടങ്ങിയ PDF ഫയലുകൾക്കായി ഈ ആപ്പ് രൂപകൽപ്പന ചെയ്തിരിക്കുന്നു. നിങ്ങളുടെ PDF-ൽ കോപ്പി ചെയ്യാവുന്ന ടെക്സ്റ്റ് ഉണ്ടെങ്കിൽ (ഓഫീസ് ആപ്ലിക്കേഷൻ എക്സ്പോർട്ടുകൾ, ഡിജിറ്റൽ പുസ്തകങ്ങൾ), അത് ഇതിനകം നന്നായി ഒപ്റ്റിമൈസ് ചെയ്തിരിക്കാം. CCITT G4, JBIG2, അല്ലെങ്കിൽ MRC ഉപയോഗിച്ച് ഇതിനകം കംപ്രസ്സ് ചെയ്ത PDF വീണ്ടും കംപ്രസ്സ് ചെയ്യുന്നത് ജനറേഷൻ ലോസിന് കാരണമാകും. മികച്ച ഫലങ്ങൾക്ക് എല്ലായ്പ്പോഴും യഥാർത്ഥ ഒപ്റ്റിമൈസ് ചെയ്യാത്ത സ്കാൻ കംപ്രസ്സ് ചെയ്യുക.",
     },
     // Kannada (ಕನ್ನಡ)
     kn: {
@@ -2147,6 +2279,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 ನಿಷ್ಕ್ರಿಯಗೊಂಡಿದೆ: ಒಟ್ಟು ಚಿತ್ರ ಡೇಟಾ ({mpix} ಮೆಗಾಪಿಕ್ಸೆಲ್‌ಗಳು) JBIG2 ಎನ್‌ಕೋಡರ್‌ನ 475 ಮೆಗಾಪಿಕ್ಸೆಲ್ ಮಿತಿಯನ್ನು ಮೀರಿದೆ.",
         jbig2DisabledPages: "JBIG2 ನಿಷ್ಕ್ರಿಯಗೊಂಡಿದೆ: ಈ PDF ನಲ್ಲಿ {pages} ಪುಟಗಳಿವೆ, ಇದು JBIG2 ಎನ್‌ಕೋಡರ್‌ನ 120 ಪುಟ ಮಿತಿಯನ್ನು ಮೀರಿದೆ.",
         ramOverrideAcceptRisk: " (ನನ್ನ ಸಾಧನದ ಮೆಮೊರಿ ಖಾಲಿಯಾಗಬಹುದು ಅಥವಾ ಬಿಸಿಯಾಗಬಹುದು, ಅಪ್ಲಿಕೇಶನ್ ಕ್ರ್ಯಾಶ್ ಆಗಬಹುದು, ಮತ್ತು ನಾನು ಈ ಅಪಾಯವನ್ನು ಸ್ವೀಕರಿಸುತ್ತೇನೆ, ಕುಗ್ಗಿಸಿ ಬಟನ್ ಕ್ಲಿಕ್ ಮಾಡಲು ಬಿಡಿ)",
+        fileInfoPageCount: "ಪುಟಗಳ ಸಂಖ್ಯೆ: {pages}",
+        fileInfoFileSize: "ಫೈಲ್ ಗಾತ್ರ: {size}",
+        inputHint: "ಈ ಅಪ್ಲಿಕೇಶನ್ ಕಾಗದ ದಾಖಲೆಗಳ ಸ್ಕ್ಯಾನ್‌ಗಳನ್ನು ಒಳಗೊಂಡ PDF ಫೈಲ್‌ಗಳಿಗಾಗಿ ವಿನ್ಯಾಸಗೊಳಿಸಲಾಗಿದೆ. ನಿಮ್ಮ PDF ನಕಲು ಮಾಡಬಹುದಾದ ಪಠ್ಯವನ್ನು ಹೊಂದಿದ್ದರೆ, ಅದು ಈಗಾಗಲೇ ಉತ್ತಮವಾಗಿ ಅತ್ಯುತ್ತಮಗೊಳಿಸಲಾಗಿದೆ. CCITT G4, JBIG2 ಅಥವಾ MRC ಯೊಂದಿಗೆ ಈಗಾಗಲೇ ಸಂಕುಚಿತವಾದ PDF ಅನ್ನು ಮರುಸಂಕುಚಿಸುವುದು ತಲೆಮಾರಿನ ನಷ್ಟಕ್ಕೆ ಕಾರಣವಾಗುತ್ತದೆ. ಅತ್ಯುತ್ತಮ ಫಲಿತಾಂಶಗಳಿಗಾಗಿ ಯಾವಾಗಲೂ ಮೂಲ ಅತ್ಯುತ್ತಮಗೊಳಿಸದ ಸ್ಕ್ಯಾನ್ ಅನ್ನು ಸಂಕುಚಿಸಿ.",
     },
     // Odia (ଓଡ଼ିଆ)
     or: {
@@ -2195,6 +2330,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 ନିଷ୍କ୍ରିୟ: ମୋଟ ଚିତ୍ର ତଥ୍ୟ ({mpix} ମେଗାପିକ୍ସେଲ୍) JBIG2 ଏନକୋଡରର 475 ମେଗାପିକ୍ସେଲ୍ ସୀମା ଅତିକ୍ରମ କରେ।",
         jbig2DisabledPages: "JBIG2 ନିଷ୍କ୍ରିୟ: ଏହି PDF ରେ {pages} ପୃଷ୍ଠା ଅଛି, ଯାହା JBIG2 ଏନକୋଡରର 120 ପୃଷ୍ଠା ସୀମା ଅତିକ୍ରମ କରେ।",
         ramOverrideAcceptRisk: " (ମୋ ଉପକରଣର ମେମୋରୀ ଶେଷ ହୋଇପାରେ କିମ୍ବା ଗରମ ହୋଇପାରେ, ଆପ୍ଲିକେସନ୍ କ୍ରାସ୍ ହୋଇପାରେ, ଏବଂ ମୁଁ ଏହି ବିପଦ ଗ୍ରହଣ କରେ, ବସ୍ ମୋତେ କମ୍ପ୍ରେସ୍ ବଟନ୍ କ୍ଲିକ୍ କରିବାକୁ ଦିଅନ୍ତୁ)",
+        fileInfoPageCount: "ପୃଷ୍ଠା ସଂଖ୍ୟା: {pages}",
+        fileInfoFileSize: "ଫାଇଲ ଆକାର: {size}",
+        inputHint: "ଏହି ଆପ୍ କାଗଜ ଡକ୍ୟୁମେଣ୍ଟ୍ ସ୍କାନ୍ ଥିବା PDF ଫାଇଲ୍ ପାଇଁ ଡିଜାଇନ୍ କରାଯାଇଛି। CCITT G4, JBIG2 କିମ୍ବା MRC ରେ ପୂର୍ବରୁ କମ୍ପ୍ରେସ୍ ହୋଇଥିବା PDF କୁ ପୁନର୍ବାର କମ୍ପ୍ରେସ୍ କଲେ ଜେନେରେସନ୍ ଲସ୍ ହେବ। ସର୍ବୋତ୍ତମ ଫଳାଫଳ ପାଇଁ ସର୍ବଦା ମୂଳ ଅପ୍ଟିମାଇଜ୍ ନହୋଇଥିବା ସ୍କାନ୍ କମ୍ପ୍ରେସ୍ କରନ୍ତୁ।",
     },
     // Sinhala (සිංහල)
     si: {
@@ -2243,6 +2381,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 අක්‍රියයි: මුළු රූප දත්ත ({mpix} මෙගාපික්සල) JBIG2 සංකේතකයේ 475 මෙගාපික්සල සීමාව ඉක්මවයි.",
         jbig2DisabledPages: "JBIG2 අක්‍රියයි: මෙම PDF හි පිටු {pages} ක් ඇත, එය JBIG2 සංකේතකයේ පිටු 120 සීමාව ඉක්මවයි.",
         ramOverrideAcceptRisk: " (මගේ උපාංගයේ මතකය අවසන් විය හැක හෝ උණුසුම් විය හැක, යෙදුම බිඳ වැටිය හැක, මම එම අවදානම පිළිගනිමි, මට සම්පීඩන බොත්තම ක්ලික් කිරීමට ඉඩ දෙන්න)",
+        fileInfoPageCount: "පිටු ගණන: {pages}",
+        fileInfoFileSize: "ගොනු ප්‍රමාණය: {size}",
+        inputHint: "මෙම යෙදුම කඩදාසි ලේඛන ස්කෑන් අඩංගු PDF ගොනු සඳහා නිර්මාණය කර ඇත. CCITT G4, JBIG2 හෝ MRC සමඟ දැනටමත් සම්පීඩිත PDF නැවත සම්පීඩනය කිරීම පරම්පරා හානියට හේතු වේ. හොඳම ප්‍රතිඵල සඳහා සැමවිටම මූල ප්‍රශස්ත නොකළ ස්කෑන් සම්පීඩනය කරන්න.",
     },
     // Javanese
     jv: {
@@ -2291,6 +2432,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 dipateni: total data gambar ({mpix} megapiksel) ngluwihi watesan 475 megapiksel encoder JBIG2.",
         jbig2DisabledPages: "JBIG2 dipateni: PDF iki duwe {pages} kaca, ngluwihi watesan 120 kaca encoder JBIG2.",
         ramOverrideAcceptRisk: " (piranti kula bisa kehabisan memori utawa dadi panas, aplikasi bisa macet, lan kula nampi risiko kasebut, cukup ijinke kula ngeklik tombol Kompres)",
+        fileInfoPageCount: "Cacahing kaca: {pages}",
+        fileInfoFileSize: "Ukuran berkas: {size}",
+        inputHint: "Aplikasi iki dirancang kanggo berkas PDF sing ngemot pindai dokumen kertas. Yen PDF pindai wis dikompres nganggo CCITT G4, JBIG2, utawa MRC, ngompres maneh bakal nyebabake mundhut generasi. Kanggo asil paling apik, tansah kompres pindai asli sing durung dioptimalake.",
     },
     // Mongolian (Монгол)
     mn: {
@@ -2338,6 +2482,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 идэвхгүй: нийт зургийн өгөгдөл ({mpix} мегапиксель) JBIG2 кодлогчийн 475 мегапикселийн хязгаарыг давсан.",
         jbig2DisabledPages: "JBIG2 идэвхгүй: энэ PDF {pages} хуудастай бөгөөд JBIG2 кодлогчийн 120 хуудасны хязгаарыг давсан.",
         ramOverrideAcceptRisk: " (миний төхөөрөмжийн санах ой дуусаж эсвэл халж болно, програм гацаж болно, би энэ эрсдлийг хүлээн зөвшөөрч байна, надад Шахах товчийг дарахыг зөвшөөрнө үү)",
+        fileInfoPageCount: "Хуудасны тоо: {pages}",
+        fileInfoFileSize: "Файлын хэмжээ: {size}",
+        inputHint: "Энэ аппликейшн цаасан баримт бичгийн скан хийсэн PDF файлуудыг хар цагаан болгож, файлын хэмжээг багасгахад зориулагдсан. Хэрэв PDF файлд хуулж болох текст байгаа бол (оффисын програмаас экспортолсон, цахим ном), энэ аппликейшн сайн үр дүн өгөхгүй. Скан хийсэн PDF аль хэдийн CCITT G4, JBIG2 эсвэл MRC-ээр шахагдсан бол дахин шахалт нь үеийн алдагдал (чанарын доройтол) үүсгэнэ. Хамгийн сайн үр дүнд хүрэхийн тулд анхны оптимизаци хийгдээгүй сканыг шахаарай.",
     },
     // Traditional Mongolian Script (ᠮᠣᠩᠭᠣᠯ ᠪᠢᠴᠢᠭ᠌)
     "mn-Mong": {
@@ -2385,6 +2532,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 ᠢᠳᠡᠪᠬᠢᠭᠦᠢ: ᠨᠡᠢᠲᠡ ᠵᠢᠷᠤᠭ ᠤᠨ ᠥᠭᠡᠭᠳᠡᠯ ({mpix} ᠮᠧᠭᠠᠫᠢᠻᠰᠧᠯ) JBIG2 ᠻᠣᠳᠯᠣᠭᠴᠢ ᠶ᠋ᠢᠨ 475 ᠮᠧᠭᠠᠫᠢᠻᠰᠧᠯ ᠤᠨ ᠬᠢᠵᠠᠭᠠᠷ ᠢ ᠳᠠᠪᠠᠭᠰᠠᠨ᠃",
         jbig2DisabledPages: "JBIG2 ᠢᠳᠡᠪᠬᠢᠭᠦᠢ: ᠡᠨᠡ PDF {pages} ᠬᠠᠭᠤᠳᠠᠰᠤ ᠲᠠᠢ᠂ JBIG2 ᠻᠣᠳᠯᠣᠭᠴᠢ ᠶ᠋ᠢᠨ 120 ᠬᠠᠭᠤᠳᠠᠰᠤ ᠶ᠋ᠢᠨ ᠬᠢᠵᠠᠭᠠᠷ ᠢ ᠳᠠᠪᠠᠭᠰᠠᠨ᠃",
         ramOverrideAcceptRisk: " (ᠮᠢᠨᠦ ᠲᠥᠬᠥᠭᠡᠷᠦᠮᠵᠢ ᠶ᠋ᠢᠨ ᠰᠠᠨᠠᠬᠤ ᠣᠢ ᠳᠠᠭᠤᠰᠴᠤ ᠪᠣᠯᠤᠨ᠎ᠠ᠂ ᠪᠢ ᠡᠨᠡ ᠡᠷᠰᠡᠳᠡᠯ ᠢ ᠬᠦᠯᠢᠶᠡᠨ ᠵᠥᠪᠱᠥᠭᠡᠷᠡᠵᠦ ᠪᠠᠢᠨ᠎ᠠ)",
+        fileInfoPageCount: "ᠬᠠᠭᠤᠳᠠᠰᠤ ᠶ᠋ᠢᠨ ᠲᠣᠭ᠎ᠠ: {pages}",
+        fileInfoFileSize: "ᠹᠠᠢᠯ ᠤᠨ ᠬᠡᠮᠵᠢᠶ᠎ᠡ: {size}",
+        inputHint: "ᠡᠨᠡ ᠫᠷᠣᠭᠷᠠᠮ ᠨᠢ ᠴᠠᠭᠠᠰᠤᠨ ᠪᠢᠴᠢᠭ ᠪᠠᠷᠢᠮᠲᠠ ᠶ᠋ᠢᠨ ᠰᠺᠠᠨ ᠬᠢᠭᠰᠡᠨ PDF ᠹᠠᠢᠯ ᠢ ᠬᠠᠷ᠎ᠠ ᠴᠠᠭᠠᠨ ᠪᠣᠯᠭᠠᠵᠤ᠂ ᠹᠠᠢᠯ ᠤᠨ ᠬᠡᠮᠵᠢᠶ᠎ᠡ ᠶ᠋ᠢ ᠪᠠᠭᠠᠰᠬᠠᠬᠤ ᠳ᠋ᠤ ᠵᠣᠷᠢᠭᠤᠯᠤᠭᠳᠠᠭᠰᠠᠨ᠃ ᠬᠡᠷᠪᠡ PDF ᠳ᠋ᠦ ᠬᠠᠭᠤᠯᠵᠤ ᠪᠣᠯᠬᠤ ᠲᠧᠺᠰᠲ ᠪᠠᠢᠪᠠᠯ᠂ ᠲᠡᠷᠡ ᠨᠢ ᠠᠯᠢ ᠬᠡᠳᠦᠢᠨ ᠰᠠᠢᠨ ᠲᠣᠬᠢᠷᠠᠭᠤᠯᠤᠭᠳᠠᠭᠰᠠᠨ ᠪᠠᠢᠵᠤ ᠮᠠᠭᠠᠳ᠃ CCITT G4᠂ JBIG2 ᠡᠰᠡᠪᠡᠯ MRC ᠪᠡᠷ ᠠᠯᠢ ᠬᠡᠳᠦᠢᠨ ᠱᠠᠬᠠᠭᠳᠠᠭᠰᠠᠨ PDF ᠢ ᠳᠠᠬᠢᠨ ᠱᠠᠬᠠᠬᠤ ᠨᠢ ᠦᠶ᠎ᠡ ᠶ᠋ᠢᠨ ᠠᠯᠳᠠᠭᠳᠠᠯ ᠡᠭᠦᠰᠭᠡᠨ᠎ᠡ᠃ ᠬᠠᠮᠤᠭ ᠤᠨ ᠰᠠᠢᠨ ᠦᠷ᠎ᠡ ᠳ᠋ᠦᠩ ᠳ᠋ᠦ ᠬᠦᠷᠡᠬᠦ ᠶ᠋ᠢᠨ ᠲᠤᠯᠠ ᠠᠩᠬᠠᠨ ᠤ ᠰᠺᠠᠨ ᠢ ᠱᠠᠬᠠᠭᠠᠷᠠᠢ᠃",
     },
     // Azerbaijani (Azərbaycan)
     az: {
@@ -2433,6 +2583,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 deaktivdir: ümumi şəkil məlumatı ({mpix} meqapiksel) JBIG2 kodlayıcının 475 meqapiksel həddini aşır.",
         jbig2DisabledPages: "JBIG2 deaktivdir: bu PDF-də {pages} səhifə var, JBIG2 kodlayıcının 120 səhifə həddini aşır.",
         ramOverrideAcceptRisk: " (cihazımın yaddaşı tükənə bilər və ya qızına bilər, tətbiq çökə bilər, və mən bu riski qəbul edirəm, sadəcə mənə Sıxışdır düyməsini basmağa icazə verin)",
+        fileInfoPageCount: "Səhifə sayı: {pages}",
+        fileInfoFileSize: "Fayl ölçüsü: {size}",
+        inputHint: "Bu tətbiq kağız sənədlərin skan edilmiş PDF faylları üçün nəzərdə tutulub ki, onları ağ-qara rəngə çevirəsiniz və fayl ölçüsünü kiçildəsiniz. PDF-inizdə kopyalana bilən mətn varsa (ofis tətbiqlərindən ixrac, rəqəmsal kitablar, ixrac edilmiş veb səhifələr), ehtimal ki, artıq yaxşı optimallaşdırılıb və bu tətbiq yaxşı nəticə verməyəcək. Eyni şəkildə, skan edilmiş PDF artıq CCITT G4, JBIG2 və ya MRC ilə sıxılıbsa, yenidən sıxışdırma nəsil itkisinə (keyfiyyətin aşağı düşməsinə) səbəb olacaq. Ən yaxşı nəticələr üçün həmişə orijinal optimallaşdırılmamış skanı sıxışdırın.",
     },
     // Uzbek (O'zbek)
     uz: {
@@ -2480,6 +2633,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 o'chirilgan: umumiy tasvir ma'lumotlari ({mpix} megapiksel) JBIG2 kodlovchisining 475 megapiksel chegarasidan oshib ketdi.",
         jbig2DisabledPages: "JBIG2 o'chirilgan: bu PDF-da {pages} sahifa bor, bu JBIG2 kodlovchisining 120 sahifa chegarasidan oshib ketdi.",
         ramOverrideAcceptRisk: " (qurilmamning xotirasi tugashi yoki qizib ketishi mumkin, ilova ishdan chiqishi mumkin, va men bu xavfni qabul qilaman, faqat menga Siqish tugmasini bosishga ruxsat bering)",
+        fileInfoPageCount: "Sahifalar soni: {pages}",
+        fileInfoFileSize: "Fayl hajmi: {size}",
+        inputHint: "Bu ilova qog\'oz hujjatlarning skanerlangan PDF fayllarini oq-qora rangga aylantirish va fayl hajmini kichraytirish uchun mo\'ljallangan. Agar PDF-ingizda nusxa ko\'chirish mumkin bo\'lgan matn bo\'lsa (ofis ilovalaridan eksport, raqamli kitoblar), u ehtimol allaqachon yaxshi optimallashtirilgan va bu ilova yaxshi natija bermaydi. Xuddi shunday, skanerlangan PDF allaqachon CCITT G4, JBIG2 yoki MRC bilan siqilgan bo\'lsa, qayta siqish avlod yo\'qotilishiga (sifat yomonlashuviga) olib keladi. Eng yaxshi natijalar uchun har doim asl optimallashtirilmagan skanni siqing.",
     },
 
     // Kazakh (Қазақ)
@@ -2529,6 +2685,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 өшірілген: жалпы кескін деректері ({mpix} мегапиксел) JBIG2 кодтағышының 475 мегапиксел шегінен асып кетті.",
         jbig2DisabledPages: "JBIG2 өшірілген: бұл PDF-те {pages} бет бар, JBIG2 кодтағышының 120 бет шегінен асып кетті.",
         ramOverrideAcceptRisk: " (құрылғымның жады таусылуы немесе қызып кетуі мүмкін, қолданба бұзылуы мүмкін, мен бұл тәуекелді қабылдаймын, маған Сығу батырмасын басуға рұқсат етіңіз)",
+        fileInfoPageCount: "Бет саны: {pages}",
+        fileInfoFileSize: "Файл өлшемі: {size}",
+        inputHint: "Бұл қолданба қағаз құжаттардың сканерленген PDF файлдарын ақ-қара түрге түрлендіру және файл өлшемін кішірейту үшін жасалған. Егер PDF-іңізде көшіруге болатын мәтін болса (кеңсе бағдарламаларынан экспорт, цифрлық кітаптар), ол бұрыннан жақсы оңтайландырылған болуы мүмкін. Сканерленген PDF бұрыннан CCITT G4, JBIG2 немесе MRC арқылы сығылған болса, қайта сығу буын шығынына (сапаның нашарлауына) әкеледі. Ең жақсы нәтижелер үшін әрқашан бастапқы оңтайландырылмаған сканды сығыңыз.",
     },
     // Georgian (ქართული)
     ka: {
@@ -2578,6 +2737,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 გამორთულია: სურათის მონაცემების ჯამი ({mpix} მეგაპიქსელი) აღემატება JBIG2 კოდირების 475 მეგაპიქსელის ლიმიტს.",
         jbig2DisabledPages: "JBIG2 გამორთულია: ამ PDF-ს აქვს {pages} გვერდი, რაც აღემატება JBIG2 კოდირების 120 გვერდის ლიმიტს.",
         ramOverrideAcceptRisk: " (ჩემს მოწყობილობას შეიძლება მეხსიერება ამოიწუროს ან გახურდეს, აპლიკაცია შეიძლება ჩამოიშალოს, და მე ვიღებ ამ რისკს, უბრალოდ მიშვით შეკუმშვის ღილაკზე დაჭერა)",
+        fileInfoPageCount: "გვერდების რაოდენობა: {pages}",
+        fileInfoFileSize: "ფაილის ზომა: {size}",
+        inputHint: "ეს აპლიკაცია განკუთვნილია PDF ფაილებისთვის, რომლებიც შეიცავს ქაღალდის დოკუმენტების სკანირებულ ასლებს, რომლებსაც გსურთ შავ-თეთრში გადაიყვანოთ და ფაილის ზომა შეამციროთ. თუ თქვენს PDF-ს შეიცავს კოპირებადი ტექსტი (საოფისე პროგრამებიდან ექსპორტი, ციფრული წიგნები), ის სავარაუდოდ უკვე კარგად არის ოპტიმიზირებული. თუ სკანირებული PDF უკვე შეკუმშულია CCITT G4, JBIG2 ან MRC-ით, ხელახალი შეკუმშვა გამოიწვევს თაობის დანაკარგს (ხარისხის გაუარესება). საუკეთესო შედეგისთვის ყოველთვის შეკუმშეთ ორიგინალი არაოპტიმიზირებული სკანი.",
     },
     // Armenian (Հայերեն)
     hy: {
@@ -2607,8 +2769,6 @@ const ADDITIONAL_TRANSLATIONS = {
         license: "Լիցենզավորված է Apache 2.0-ով",
         about: "Այս նախագծի մասին",
         lowQualityWarning: "Զգուշացում՝ Ցածր DPI-ն կարող է հանգեցնել վատ որակի։ Տեքստը կարդալը կարող է դժվար լինել։",
-        lowQualityWarning: "Նախազգուշացում. Ցածր DPI-ն կարող է հանգեցնել վատ որակի:",
-
         resultSaveButton: "Պահպանել արդյունքի PDF-ը",
         resultRecommendIgnore: "Այս կոնկրետ PDF-ի համար մենք խորհուրդ ենք տալիս օգտագործել ձեր բնօրինակ PDF-ը և անտեսել այս հավելվածը:",
         resultDidntCompressWell: " PDF-ը լավ չսեղմվեց:",
@@ -2622,11 +2782,14 @@ const ADDITIONAL_TRANSLATIONS = {
         preserveRotationLabel: "Փորձեք պահպանել էջի պտտումը",
         metadataSection: "Մետատվյալներ",
         includeTimestampLabel: "Ներառել Ստեղծման և Փոփոխման ժամանակի դրոշմներ",
-        ramWarningHigh: "Note: The combination of page count and DPI resolution for this file results in high estimated resource usage ({ram}). Processing may be slow and produce large output files.",
-        ramWarningCritical: "Warning: The combination of page count and DPI resolution for this file results in very high estimated resource usage ({ram}). Your device may become hot, run slowly, or run out of memory.",
-        jbig2DisabledMpix: "JBIG2 is disabled: the total image data ({mpix} megapixels, from page size × DPI × {pages} pages) exceeds the 475 megapixel limit of the JBIG2 encoder.",
-        jbig2DisabledPages: "JBIG2 is disabled: this PDF has {pages} pages, exceeding the 120-page limit of the JBIG2 encoder.",
-        ramOverrideAcceptRisk: " (my device can run out of memory or run hot, the application might crash, and I accept that risk, just let me click the Compress button)",
+        ramWarningHigh: "Նկատողություն՝ էջերի քանակի և DPI լուծաչափի համադրությունը հանգեցնում է ռեսուրսների օգտագործման բարձր գնահատման ({ram})։ Մշակումը կարող է դանդաղ լինել։",
+        ramWarningCritical: "Զգուշացում՝ էջերի քանակի և DPI լուծաչափի համադրությունը հանգեցնում է ռեսուրսների օգտագործման շատ բարձր գնահատման ({ram})։ Ձեր սարքը կարող է տաքանալ։",
+        jbig2DisabledMpix: "JBIG2-ը անջատծ է՝ պատկերի ընդհանուր տվյալները ({mpix} մեգապիքսել) գերազանցում են JBIG2 կոդավորողի 475 մեգապիքսել սահմանը։",
+        jbig2DisabledPages: "JBIG2-ը անջատծ է՝ այս PDF-ը ունի {pages} էջ։ JBIG2 կոդավորողի 120 էջի սահմանը գերազանցված է։",
+        ramOverrideAcceptRisk: " (իմ սարքի հիշողությունը կարող է սպառվել կամ տաքանալ։ Հավելվածը կարող է խափվել։ Ես ընդունում եմ այս ռիսկը։ Վերջապես թույլ տվեք սեղմել սեղմակը)",
+        fileInfoPageCount: "Էջերի քանակ՝ {pages}",
+        fileInfoFileSize: "Ֆայլի չափ՝ {size}",
+        inputHint: "Այս հավելվածը նախատեսված է թղթե փաստաթղթերի սկանավորված PDF ֆայլերի համար՝ սև-սպիտակ փոխակերպելու և ֆայլի չափը փոքրացնելու համար։ Եթե ձեր PDF-ը պարունակում է պատճենահանվող տեքստ (օրինակ՝ գրասենյակային ծրագրերից արտահանված՝ թվային գրքեր՝ վեբ էջեր), այն հավանաբար արդեն լավ օպտիմիզացված է։ Նմանապես՝ եթե սկանավորված PDF-ը արդեն սեղմված է CCITT G4, JBIG2 կամ MRC սեղմմամբ՝ վերասեղմումը կհանգեցնի սերնդի կորստի (որակի վատթարացում)։ Լավագույն արդյունքի համար միշտ սեղմեք բնօրինակ չօպտիմիզացված սկանը։",
     },
     // Belarusian (Беларуская)
     be: {
@@ -2675,6 +2838,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 адключаны: агульныя дадзеныя выявы ({mpix} мегапікселяў) перавышаюць абмежаванне 475 мегапікселяў кадэра JBIG2.",
         jbig2DisabledPages: "JBIG2 адключаны: гэты PDF мае {pages} старонак, што перавышае абмежаванне 120 старонак кадэра JBIG2.",
         ramOverrideAcceptRisk: " (маёй прыладзе можа не хапіць памяці або яна можа нагрэцца, праграма можа аварыйна завяршыцца, і я прымаю гэты рызыка, проста дазвольце мне націснуць кнопку Сціснуць)",
+        fileInfoPageCount: "Колькасць старонак: {pages}",
+        fileInfoFileSize: "Памер файла: {size}",
+        inputHint: "Гэта праграма прызначана для PDF-файлаў са сканамі папяровых дакументаў, якія вы хочаце пераўтварыць у чорна-белыя і паменшыць памер файла. Калі ваш PDF змяшчае тэкст, які можна капіяваць (экспарт з офісных праграм, электронныя кнігі, экспартаваныя вэб-старонкі), ён, верагодна, ужо добра аптымізаваны і гэта праграма наўрад ці дасць добрыя вынікі. Аналагічна, калі ваш сканаваны PDF ужо сціснуты з дапамогай CCITT G4, JBIG2 або MRC, паўторнае сціскванне прывядзе да страты пакаленняў (пагаршэння якасці) без істотнага памяншэння памеру. Для лепшых вынікаў заўсёды сціскайце арыгінальны неаптымізаваны скан.",
     },
     // Amharic (አማርኛ)
     am: {
@@ -2724,6 +2890,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 ተሰናክሏል: ጠቅላላ የምስል ውሂብ ({mpix} ሜጋፒክስል) የJBIG2 ኢንኮደር 475 ሜጋፒክስል ገደብ አልፏል።",
         jbig2DisabledPages: "JBIG2 ተሰናክሏል: ይህ PDF {pages} ገጾች አሉት፣ የJBIG2 ኢንኮደር 120 ገጾች ገደብ አልፏል።",
         ramOverrideAcceptRisk: " (የመሳሪያዬ ማህደረ ትውስታ ሊያልቅ ወይም ሊሞቅ ይችላል፣ መተግበሪያው ሊበላሽ ይችላል፣ እና ይህን አደጋ እቀበላለሁ፣ የመጭመቂያ ቁልፍን ጠቅ ልታደርገኝ ብቻ ፍቀድልኝ)",
+        fileInfoPageCount: "የገጽ ብዛት: {pages}",
+        fileInfoFileSize: "የፋይል መጠን: {size}",
+        inputHint: "ይህ መተግበሪያ ወደ ጥቁርና ነጭ መቀየር እና የፋይል መጠን ለመቀነስ የሚፈልጓቸው የወረቀት ሰነዶች ስካን ያላቸው PDF ፋይሎች ላይ ለመስራት ተዘጋጅቷል። PDF-ዎ ሊገለበጥ የሚችል ጽሑፍ ካለው (ከቢሮ አፕሊኬሽኖች ወጪ፣ ዲጂታል መጻሕፍት) ምናልባት አስቀድሞ በደንብ የተመቻቸ ነው። ስካን የተደረገ PDF ቀድሞ በ CCITT G4፣ JBIG2 ወይም MRC ከተጨመቀ እንደገና መጨመቅ የትውልድ ብክነት ያስከትላል። ለተሻለ ውጤት ሁልጊዜ ያልተመቻቸውን ዋናውን ስካን ያጨምቁ።",
     },
     // Catalan
     ca: {
@@ -2773,6 +2942,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 està desactivat: les dades d'imatge totals ({mpix} megapíxels) superen el límit de 475 megapíxels del codificador JBIG2.",
         jbig2DisabledPages: "JBIG2 està desactivat: aquest PDF té {pages} pàgines, superant el límit de 120 pàgines del codificador JBIG2.",
         ramOverrideAcceptRisk: " (el meu dispositiu pot quedar-se sense memòria o escalfar-se, l'aplicació pot fallar, i accepto aquest risc, només deixeu-me fer clic al botó Comprimeix)",
+        fileInfoPageCount: "Nombre de pàgines: {pages}",
+        fileInfoFileSize: "Mida del fitxer: {size}",
+        inputHint: "Aquesta aplicació està dissenyada per a PDFs amb escanejos de documents en paper que voleu convertir a blanc i negre i reduir-ne la mida. Si el vostre PDF conté text copiable (exportacions d\'aplicacions d\'oficina, llibres digitals, pàgines web exportades), probablement ja està ben optimitzat i aquesta aplicació no donarà bons resultats. De la mateixa manera, si el PDF escanejat ja ha estat comprimit amb CCITT G4, JBIG2 o MRC, recomprimir-lo causarà pèrdua generacional (degradació de qualitat per recodificació) sense reducció significativa de mida. Per obtenir els millors resultats, comprimiu sempre l\'escaneig original sense optimitzar.",
     },
     // Basque (Euskara)
     eu: {
@@ -2822,6 +2994,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 desgaituta dago: irudi-datu totalak ({mpix} megapixel) JBIG2 kodetzailearen 475 megapixel muga gainditzen dute.",
         jbig2DisabledPages: "JBIG2 desgaituta dago: PDF honek {pages} orrialde ditu, JBIG2 kodetzailearen 120 orrialde muga gaindituz.",
         ramOverrideAcceptRisk: " (nire gailuak memoria agortu dezake edo berotu daiteke, aplikazioak kraskatu egin dezake, eta arrisku hori onartzen dut, utzi iezadazu Konprimitu botoia sakatzen)",
+        fileInfoPageCount: "Orrialde kopurua: {pages}",
+        fileInfoFileSize: "Fitxategiaren tamaina: {size}",
+        inputHint: "Aplikazio hau paperezko dokumentuen eskaneatzeak dituzten PDF fitxategientzat diseinatuta dago, zuri-beltzean bihurtu eta tamaina murriztu nahi dituzunean. Zure PDFak kopiatu daitekeen testua badu (bulegoko aplikazioetatik esportatuak, liburu digitalak, esportatutako web orriak), seguruenik dagoeneko ondo optimizatuta dago eta aplikazio honek ez du emaitza onik emango. Era berean, eskaneaturiko PDF dagoeneko CCITT G4, JBIG2 edo MRC-rekin konprimituta badago, berriz konprimitzeak belaunaldi-galera eragingo du (kalitatearen degradazioa). Emaitza onenak lortzeko, beti konprimitu jatorrizko optimizatu gabeko eskaneatzea.",
     },
     // Kyrgyz (Кыргызча)
     ky: {
@@ -2870,6 +3045,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 өчүрүлгөн: жалпы сүрөт маалыматтары ({mpix} мегапиксел) JBIG2 коддоочунун 475 мегапиксел чегинен ашып кетти.",
         jbig2DisabledPages: "JBIG2 өчүрүлгөн: бул PDF-те {pages} барак бар, JBIG2 коддоочунун 120 барак чегинен ашып кетти.",
         ramOverrideAcceptRisk: " (түзмөгүмдүн эс тутуму түгөнүшү же ысып кетиши мүмкүн, тиркеме бузулушу мүмкүн, мен бул тобокелдикти кабыл алам, мага Кысуу баскычын басууга уруксат бериңиз)",
+        fileInfoPageCount: "Барактардын саны: {pages}",
+        fileInfoFileSize: "Файлдын өлчөмү: {size}",
+        inputHint: "Бул колдонмо кагаз документтердин сканерленген PDF файлдарын ак-кара түскө которуу үчүн иштелип чыккан. CCITT G4, JBIG2 же MRC менен мурунтан кысылган PDF-ди кайра кысуу муундук жоготууга алып келет. Эң жакшы натыйжалар үчүн дайыма баштапкы оптималдаштырылбаган сканды кысыңыз.",
     },
     // Tajik (Тоҷикӣ)
     tg: {
@@ -2918,6 +3096,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 хомӯш аст: маълумоти умумии тасвир ({mpix} мегапиксел) аз ҳадди 475 мегапикселии рамзгузори JBIG2 зиёд аст.",
         jbig2DisabledPages: "JBIG2 хомӯш аст: ин PDF {pages} саҳифа дорад, ки аз ҳадди 120 саҳифаи рамзгузори JBIG2 зиёд аст.",
         ramOverrideAcceptRisk: " (хотираи дастгоҳи ман тамом шуда метавонад ё гарм шуда метавонад, барнома метавонад хароб шавад ва ман ин хатарро қабул мекунам, танҳо бигзоред ман тугмаи Фишурдаро пахш кунам)",
+        fileInfoPageCount: "Шумораи саҳифаҳо: {pages}",
+        fileInfoFileSize: "Андозаи файл: {size}",
+        inputHint: "Ин барнома барои файлҳои PDF бо сканҳои ҳуҷҷатҳои коғазӣ пешбинӣ шудааст. Агар PDF аллакай бо CCITT G4, JBIG2 ё MRC фишурда шуда бошад, аз нав фишурдан боиси талафоти насл мешавад. Барои натиҷаҳои беҳтарин ҳамеша скани аслии оптимизатсиянашударо фишурда кунед.",
     },
     // Turkmen (Türkmen)
     tk: {
@@ -2966,6 +3147,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 öçürilen: umumy surat maglumatlary ({mpix} megapiksel) JBIG2 kodlaýjynyň 475 megapiksel çäginden geçýär.",
         jbig2DisabledPages: "JBIG2 öçürilen: bu PDF-de {pages} sahypa bar, JBIG2 kodlaýjynyň 120 sahypa çäginden geçýär.",
         ramOverrideAcceptRisk: " (enjamymyň ýady gutaryp ýa-da gyzgyn bolup biler, programma döwülip biler, we men bu howpy kabul edýärin, maňa diňe Gysma düwmesini basmaga rugsat beriň)",
+        fileInfoPageCount: "Sahypa sany: {pages}",
+        fileInfoFileSize: "Faýlyň ölçegi: {size}",
+        inputHint: "Bu programma kagyz resminamalaryň skanirlenen PDF faýllary üçin niýetlenendir. CCITT G4, JBIG2 ýa-da MRC bilen eýýäm gysylan PDF-i täzeden gysmak nesil ýitgisine sebäp bolar. Iň gowy netijeler üçin hemişe asyl optimizirlenmedik skany gysyň.",
     },
     // Tatar (Татар)
     tt: {
@@ -3015,6 +3199,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 сүндерелгән: гомуми рәсем мәгълүматлары ({mpix} мегапиксел) JBIG2 кодлаучының 475 мегапиксель чигенә аша.",
         jbig2DisabledPages: "JBIG2 сүндерелгән: бу PDF-та {pages} бит бар, JBIG2 кодлаучының 120 бит чигенә аша.",
         ramOverrideAcceptRisk: " (минем җиһазның хәтере бетәргә яки кызырга мөмкин, кушымта ватылырга мөмкин, мин бу куркынычны кабул итәм, миңа Кысу төймәсен басарга рөхсәт итегез)",
+        fileInfoPageCount: "Битләр саны: {pages}",
+        fileInfoFileSize: "Файл күләме: {size}",
+        inputHint: "Бу кушымта кәгазь документларның сканерланган PDF файллары өчен эшләнгән. CCITT G4, JBIG2 яки MRC белән инде кысылган PDF-ны яңадан кысу буын югалтуга китерәчәк. Иң яхшы нәтиҗәләр өчен һәрвакыт башлангыч оптимальләштерелмәгән сканны кысыгыз.",
     },
     // Yiddish (ייִדיש)
     yi: {
@@ -3064,6 +3251,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 איז אויסגעשאלטן: די גאנצע בילד דאטן ({mpix} מעגאפיקסעלס) איבערשרייטן דעם 475 מעגאפיקסעל גרענעץ פון JBIG2 ענקאדער.",
         jbig2DisabledPages: "JBIG2 איז אויסגעשאלטן: דער PDF האט {pages} בלעטער, וואס איבערשרייטן דעם 120 בלאט גרענעץ פון JBIG2 ענקאדער.",
         ramOverrideAcceptRisk: " (מיין מכשיר קען בלייבן אן זכרון אדער ווערן הייס, די אפליקאציע קען קראשן, און איך אקצעפטיר דעם ריזיקא, לאזט מיר נאר דריקן דעם קאמפרעסירן קנעפל)",
+        fileInfoPageCount: "זייטן צאָל: {pages}",
+        fileInfoFileSize: "טעקע גרייס: {size}",
+        inputHint: "דאָס אַפּ איז דיזיינד פֿאַר PDF טעקעס מיט סקאַנס פֿון פּאַפּיר דאָקומענטן. אויב דער סקאַנירטער PDF איז שוין קאָמפּרעסט מיט CCITT G4, JBIG2 אָדער MRC, וועט ווידער קאָמפּרעסן פֿאַרשאַפֿן דור־פֿאַרלוסט. פֿאַר בעסטע רעזולטאַטן, קאָמפּרעסט אַלעמאָל דעם אָריגינעלן ניט־אָפּטימיזירטן סקאַן.",
     },
     // Tibetan (བོད་ཡིག)
     bo: {
@@ -3112,6 +3302,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 སྒོ་བརྒྱབ། བསྡོམས་རི་མོའི་གཞི་གྲངས ({mpix} མེ་ག་པིཀ་སེལ) JBIG2 ཨིན་ཁོ་ཌར་གྱི 475 མཐའ་ཚད་ལས་འདས།",
         jbig2DisabledPages: "JBIG2 སྒོ་བརྒྱབ། PDF འདིར་ཤོག་གྲངས {pages} ཡོད་པས JBIG2 ཨིན་ཁོ་ཌར་གྱི 120 མཐའ་ཚད་ལས་འདས།",
         ramOverrideAcceptRisk: " (ངའི་སྒྲིག་ཆས་ཀྱི་བརྗེད་ཤོར་ཐོགས་པ་ཟད་སྲིད། ངས་ཉེན་ཁ་འདི་ལེན་གྱི་ཡོད།)",
+        fileInfoPageCount: "ཤོག་གྲངས: {pages}",
+        fileInfoFileSize: "ཡིག་ཆའི་ཆེ་ཆུང: {size}",
+        inputHint: "འཕྲུལ་ཆས་འདི་ནི་ཤོག་བུའི་ཡིག་ཆའི་PDF ཡིག་ཆ་ནག་དཀར་ལ་བསྒྱུར་ཏེ་ཡིག་ཆའི་ཆེ་ཆུང་ཆུང་དུ་བཏང་བར་བཀོད་པ་ཡིན།",
     },
     // Russian
     ru: {
@@ -3158,6 +3351,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 отключён: общий объём данных изображений ({mpix} мегапикселей) превышает ограничение 475 мегапикселей кодера JBIG2.",
         jbig2DisabledPages: "JBIG2 отключён: в этом PDF {pages} страниц, что превышает ограничение 120 страниц кодера JBIG2.",
         ramOverrideAcceptRisk: " (память моего устройства может закончиться или оно может нагреться, приложение может аварийно завершиться, и я принимаю этот риск, просто позвольте мне нажать кнопку Сжать)",
+        fileInfoPageCount: "Количество страниц: {pages}",
+        fileInfoFileSize: "Размер файла: {size}",
+        inputHint: "Это приложение предназначено для PDF-файлов, содержащих сканы бумажных документов, которые вы хотите преобразовать в чёрно-белые и уменьшить размер файла. Если ваш PDF содержит копируемый текст (экспорт из офисных приложений, электронные книги, экспортированные веб-страницы), он, вероятно, уже хорошо оптимизирован и это приложение вряд ли даст хорошие результаты. Аналогично, если ваш сканированный PDF уже сжат с помощью CCITT G4, JBIG2 или MRC, повторное сжатие приведёт к потере поколений (ухудшение качества при перекодировании) без существенного уменьшения размера. Для лучших результатов всегда сжимайте оригинальный неоптимизированный скан.",
     },
     // Persian/Farsi
     fa: {
@@ -3205,6 +3401,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 غیرفعال است: کل داده‌های تصویر ({mpix} مگاپیکسل) از محدودیت 475 مگاپیکسل رمزگذار JBIG2 فراتر می‌رود.",
         jbig2DisabledPages: "JBIG2 غیرفعال است: این PDF دارای {pages} صفحه است که از محدودیت 120 صفحه رمزگذار JBIG2 فراتر می‌رود.",
         ramOverrideAcceptRisk: " (حافظه دستگاه من ممکن است تمام شود یا داغ شود، برنامه ممکن است از کار بیفتد، و من این خطر را می‌پذیرم، فقط بگذارید دکمه فشرده‌سازی را بزنم)",
+        fileInfoPageCount: "تعداد صفحات: {pages}",
+        fileInfoFileSize: "اندازه فایل: {size}",
+        inputHint: "این برنامه برای فایل‌های PDF حاوی اسکن اسناد کاغذی طراحی شده که می‌خواهید به سیاه و سفید تبدیل کنید و حجم فایل را کاهش دهید. اگر PDF شما حاوی متن قابل کپی است (خروجی از برنامه‌های اداری، کتاب‌های دیجیتال، صفحات وب صادر شده)، احتمالاً از قبل بهینه شده و این برنامه نتایج خوبی نخواهد داد. همچنین اگر PDF اسکن شده از قبل با CCITT G4، JBIG2 یا MRC فشرده شده باشد، فشرده‌سازی مجدد باعث افت نسلی (کاهش کیفیت) بدون کاهش قابل توجه حجم خواهد شد. برای بهترین نتایج، همیشه اسکن اصلی بهینه‌نشده را فشرده کنید.",
     },
     // Afrikaans
     af: {
@@ -3252,6 +3451,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 is gedeaktiveer: die totale beelddata ({mpix} megapixels) oorskry die 475 megapixel-limiet van die JBIG2-enkodeerder.",
         jbig2DisabledPages: "JBIG2 is gedeaktiveer: hierdie PDF het {pages} bladsye, wat die 120-bladsy-limiet oorskry.",
         ramOverrideAcceptRisk: " (my toestel kan sonder geheue raak of warm word, die toepassing kan ineenstort, en ek aanvaar daardie risiko, laat my net die Komprimeer-knoppie klik)",
+        fileInfoPageCount: "Aantal bladsye: {pages}",
+        fileInfoFileSize: "Lêergrootte: {size}",
+        inputHint: "Hierdie toep is ontwerp vir PDF-lêers met skanderings van papierdokumente wat jy na swart-en-wit wil omskakel en die lêergrootte wil verklein. As jou PDF kopieerbare teks bevat (uitvoere uit kantoorprogramme, digitale boeke, uitgevoerde webbladsye), is dit waarskynlik reeds goed geoptimaliseer en sal hierdie toep nie goeie resultate lewer nie. Net so sal herkompressie van \'n PDF wat reeds met CCITT G4, JBIG2 of MRC gekompresseer is, generasieverlies (kwaliteitsverswakking) veroorsaak sonder beduidende groottevermindering. Vir die beste resultate, kompresseer altyd die oorspronklike ongeoptimaliseerde skandering.",
     },
     // Galician
     gl: {
@@ -3299,6 +3501,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 está desactivado: os datos de imaxe totais ({mpix} megapíxeles) superan o límite de 475 megapíxeles do codificador JBIG2.",
         jbig2DisabledPages: "JBIG2 está desactivado: este PDF ten {pages} páxinas, superando o límite de 120 páxinas do codificador JBIG2.",
         ramOverrideAcceptRisk: " (o meu dispositivo pode quedarse sen memoria ou quentarse, a aplicación pode fallar, e acepto ese risco, só déixame facer clic no botón Comprimir)",
+        fileInfoPageCount: "Número de páxinas: {pages}",
+        fileInfoFileSize: "Tamaño do ficheiro: {size}",
+        inputHint: "Esta aplicación está deseñada para PDFs con dixitalizacións de documentos en papel que quere converter a branco e negro e reducir o tamaño. Se o PDF xa foi comprimido con CCITT G4, JBIG2 ou MRC, recomprimilo causará perda xeracional sen redución significativa do tamaño. Para mellores resultados, comprima sempre a dixitalización orixinal sen optimizar.",
     },
     // Icelandic
     is: {
@@ -3346,6 +3551,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 er óvirkt: heildarmyndagögn ({mpix} megapixlar) fara yfir 475 megapixla mörk JBIG2 kóðarans.",
         jbig2DisabledPages: "JBIG2 er óvirkt: þetta PDF hefur {pages} blaðsíður, sem fer yfir 120 blaðsíðna mörk JBIG2 kóðarans.",
         ramOverrideAcceptRisk: " (minnið í tækinu mínu getur klárast eða það getur hitnað, forritið getur hrunið, og ég samþykki þá áhættu, leyfðu mér bara að smella á Þjappa hnappinn)",
+        fileInfoPageCount: "Blaðsíðufjöldi: {pages}",
+        fileInfoFileSize: "Skráarstærð: {size}",
+        inputHint: "Þetta forrit er hannað fyrir PDF skjöl sem innihalda skönnuð pappírsskjöl sem þú vilt breyta í svarthvítt og minnka skráarstærð. Endurþjöppun á PDF sem þegar er þjappað með CCITT G4, JBIG2 eða MRC veldur kynslóðartapi án verulegrar stærðarminnkunar. Fyrir bestu niðurstöður, þjappaðu alltaf upprunalega óhagrætta skönnunina.",
     },
     // Malay
     ms: {
@@ -3394,6 +3602,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 dinyahaktifkan: jumlah data imej ({mpix} megapiksel) melebihi had 475 megapiksel pengekod JBIG2.",
         jbig2DisabledPages: "JBIG2 dinyahaktifkan: PDF ini mempunyai {pages} halaman, melebihi had 120 halaman pengekod JBIG2.",
         ramOverrideAcceptRisk: " (peranti saya mungkin kehabisan memori atau menjadi panas, aplikasi mungkin ranap, dan saya menerima risiko itu, biarkan saya klik butang Mampat)",
+        fileInfoPageCount: "Bilangan halaman: {pages}",
+        fileInfoFileSize: "Saiz fail: {size}",
+        inputHint: "Aplikasi ini direka untuk fail PDF yang mengandungi imbasan dokumen kertas yang anda ingin tukar kepada hitam putih dan kurangkan saiz. Jika PDF anda mengandungi teks yang boleh disalin (eksport dari aplikasi pejabat, buku digital, halaman web yang dieksport), ia mungkin sudah dioptimumkan dengan baik dan aplikasi ini mungkin tidak memberikan keputusan yang baik. Begitu juga, jika PDF imbasan anda sudah dimampatkan dengan CCITT G4, JBIG2, atau MRC, memampatkan semula akan menyebabkan kehilangan generasi (kemerosotan kualiti) tanpa pengurangan saiz yang bermakna. Untuk keputusan terbaik, sentiasa mampatkan imbasan asal yang belum dioptimumkan.",
     },
     // Swahili
     sw: {
@@ -3442,6 +3653,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 imezimwa: jumla ya data ya picha ({mpix} megapixels) imezidi kikomo cha 475 megapixels cha msimbo wa JBIG2.",
         jbig2DisabledPages: "JBIG2 imezimwa: PDF hii ina kurasa {pages}, ikizidi kikomo cha kurasa 120 cha msimbo wa JBIG2.",
         ramOverrideAcceptRisk: " (kifaa changu kinaweza kukosa kumbukumbu au kupasha moto, programu inaweza kuanguka, na ninakubali hatari hiyo, niruhusu tu kubonyeza kitufe cha Bana)",
+        fileInfoPageCount: "Idadi ya kurasa: {pages}",
+        fileInfoFileSize: "Ukubwa wa faili: {size}",
+        inputHint: "Programu hii imeundwa kwa ajili ya faili za PDF zenye picha zilizoskani za hati za karatasi ambazo unataka kuzibadilisha kuwa nyeusi na nyeupe na kupunguza ukubwa wa faili. Ikiwa PDF yako ina maandishi yanayoweza kunakiliwa (usafirishaji kutoka programu za ofisi, vitabu vya kidijitali, kurasa za wavuti zilizosafirishwa), labda tayari imeboreshwa vizuri na programu hii haitatoa matokeo mazuri. Vivyo hivyo, ikiwa PDF yako iliyoskani tayari imeshinikizwa kwa CCITT G4, JBIG2, au MRC, kushinikiza tena kutasababisha upotezaji wa kizazi (uharibifu wa ubora) bila kupunguza ukubwa kwa kiasi kikubwa. Kwa matokeo bora, daima shinikiza skani asili isiyoboreshwa.",
     },
     // Assamese
     "as": {
@@ -3490,6 +3704,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 নিষ্ক্ৰিয়: মুঠ ছবি তথ্য ({mpix} মেগাপিক্সেল) JBIG2 এনকডাৰৰ 475 মেগাপিক্সেল সীমা অতিক্ৰম কৰিছে।",
         jbig2DisabledPages: "JBIG2 নিষ্ক্ৰিয়: এই PDF-ত {pages} পৃষ্ঠা আছে, যি JBIG2 এনকডাৰৰ 120 পৃষ্ঠাৰ সীমা অতিক্ৰম কৰিছে।",
         ramOverrideAcceptRisk: " (মোৰ ডিভাইচৰ মেমৰি শেষ হব পাৰে বা গৰম হব পাৰে, এপ্লিকেচন ক্ৰেচ হব পাৰে, আৰু মই এই বিপদ গ্ৰহণ কৰো, মোক কম্প্ৰেচ বুটামটো ক্লিক কৰিবলৈ দিয়ক)",
+        fileInfoPageCount: "পৃষ্ঠা সংখ্যা: {pages}",
+        fileInfoFileSize: "ফাইলৰ আকাৰ: {size}",
+        inputHint: "এই এপটো কাগজৰ নথিপত্ৰৰ স্কেন থকা PDF ফাইলৰ বাবে ডিজাইন কৰা হৈছে। CCITT G4, JBIG2 বা MRC-ৰে ইতিমধ্যে কম্প্ৰেছ কৰা PDF পুনৰ কম্প্ৰেছ কৰিলে জেনেৰেচন লছ হ'ব। সৰ্বোত্তম ফলাফলৰ বাবে সদায় মূল অপ্টিমাইজ নোহোৱা স্কেন কম্প্ৰেছ কৰক।",
     },
     // Khmer
     km: {
@@ -3538,6 +3755,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 ត្រូវបានបិទ: ទិន្នន័យរូបភាពសរុប ({mpix} មេហ្គាភិចសែល) លើសពីដែនកំណត់ 475 មេហ្គាភិចសែល។",
         jbig2DisabledPages: "JBIG2 ត្រូវបានបិទ: PDF នេះមាន {pages} ទំព័រ ដែលលើសពីដែនកំណត់ 120 ទំព័រ។",
         ramOverrideAcceptRisk: " (ឧបករណ៍របស់ខ្ញុំអាចអស់មេម៉ូរី ឬក្ដៅ កម្មវិធីអាចគាំង ហើយខ្ញុំទទួលយកហានិភ័យនោះ គ្រាន់តែអនុញ្ញាតឱ្យខ្ញុំចុចប៊ូតុងបង្ហាប់)",
+        fileInfoPageCount: "ចំនួនទំព័រ: {pages}",
+        fileInfoFileSize: "ទំហំឯកសារ: {size}",
+        inputHint: "កម្មវិធីនេះត្រូវបានរចនាសម្រាប់ឯកសារ PDF ដែលមានរូបភាពស្កេនឯកសារក្រដាស។ ប្រសិនបើ PDF ស្កេនត្រូវបានបង្ហាប់រួចហើយដោយ CCITT G4, JBIG2 ឬ MRC ការបង្ហាប់ឡើងវិញនឹងបណ្តាលឱ្យបាត់បង់ជំនាន់។ សម្រាប់លទ្ធផលល្អបំផុត សូមបង្ហាប់ស្កេនដើមដែលមិនទាន់ធ្វើឱ្យប្រសើរ។",
     },
     // Lao
     lo: {
@@ -3586,6 +3806,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 ຖືກປິດ: ຂໍ້ມູນຮູບພາບລວມ ({mpix} ເມກາພິກເຊລ) ເກີນຂີດຈຳກັດ 475 ເມກາພິກເຊລ.",
         jbig2DisabledPages: "JBIG2 ຖືກປິດ: PDF ນີ້ມີ {pages} ໜ້າ, ເກີນຂີດຈຳກັດ 120 ໜ້າ.",
         ramOverrideAcceptRisk: " (ອຸປະກອນຂອງຂ້ອຍອາດໝົດຄວາມຈຳ ຫຼື ຮ້ອນ, ແອັບພລິເຄຊັນອາດລົ້ມເຫຼວ, ແລະ ຂ້ອຍຍອມຮັບຄວາມສ່ຽງນັ້ນ, ພຽງແຕ່ໃຫ້ຂ້ອຍກົດປຸ່ມບີບອັດ)",
+        fileInfoPageCount: "ຈຳນວນໜ້າ: {pages}",
+        fileInfoFileSize: "ຂະໜາດໄຟລ໌: {size}",
+        inputHint: "ແອັບນີ້ຖືກອອກແບບສຳລັບໄຟລ໌ PDF ທີ່ມີການສະແກນເອກະສານກະດາດ. ຖ້າ PDF ທີ່ສະແກນຖືກບີບອັດແລ້ວດ້ວຍ CCITT G4, JBIG2 ຫຼື MRC, ການບີບອັດຄືນຈະເຮັດໃຫ້ເກີດການສູນເສຍລຸ້ນ. ສຳລັບຜົນລັບທີ່ດີທີ່ສຸດ, ໃຫ້ບີບອັດສະແກນຕົ້ນສະບັບທີ່ຍັງບໍ່ໄດ້ປັບປຸງ.",
     },
     // Burmese
     my: {
@@ -3634,6 +3857,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 ပိတ်ထားသည်: စုစုပေါင်း ပုံဒေတာ ({mpix} megapixels) သည် JBIG2 encoder ၏ 475 megapixel ကန့်သတ်ချက်ထက်ကျော်လွန်သည်။",
         jbig2DisabledPages: "JBIG2 ပိတ်ထားသည်: ဤ PDF တွင် {pages} စာမျက်နှာရှိပြီး JBIG2 encoder ၏ 120 စာမျက်နှာ ကန့်သတ်ချက်ထက်ကျော်လွန်သည်။",
         ramOverrideAcceptRisk: " (ကျွန်ုပ်၏စက်ပစ္စည်းမှတ်ဉာဏ်ကုန်နိုင်သည် သို့မဟုတ် ပူနိုင်သည်၊ application ပျက်နိုင်သည်၊ ထိုအန္တရာယ်ကို လက်ခံပါသည်၊ Compress ခလုတ်ကို နှိပ်ခွင့်ပြုပါ)",
+        fileInfoPageCount: "စာမျက်နှာ အရေအတွက်: {pages}",
+        fileInfoFileSize: "ဖိုင်အရွယ်အစား: {size}",
+        inputHint: "ဤအက်ပ်သည် စာရွက်စာတမ်းများ စကင်ဖတ်ထားသော PDF ဖိုင်များအတွက် ဒီဇိုင်းထုတ်ထားသည်။ CCITT G4, JBIG2 သို့မဟုတ် MRC ဖြင့် ချုံ့ပြီးသား PDF ကို ပြန်ချုံ့ပါက မျိုးဆက်ဆုံးရှုံးမှု ဖြစ်ပေါ်လိမ့်မည်။ အကောင်းဆုံးရလဒ်များအတွက် မူရင်း ပိုမိုကောင်းမွန်အောင်မပြုလုပ်ရသေးသော စကင်ကို အမြဲချုံ့ပါ။",
     },
     // Nepali
     ne: {
@@ -3682,6 +3908,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 असक्षम छ: कुल छवि डेटा ({mpix} मेगापिक्सेल) JBIG2 एन्कोडरको 475 मेगापिक्सेल सीमा भन्दा बढी छ।",
         jbig2DisabledPages: "JBIG2 असक्षम छ: यो PDF मा {pages} पृष्ठ छ, JBIG2 एन्कोडरको 120 पृष्ठ सीमा भन्दा बढी छ।",
         ramOverrideAcceptRisk: " (मेरो उपकरणको मेमोरी सकिन सक्छ वा तातो हुन सक्छ, एप्लिकेसन क्र्यास हुन सक्छ, र म यो जोखिम स्वीकार गर्छु, मलाई कम्प्रेस बटन क्लिक गर्न दिनुहोस्)",
+        fileInfoPageCount: "पृष्ठ संख्या: {pages}",
+        fileInfoFileSize: "फाइल आकार: {size}",
+        inputHint: "यो एप कागजी कागजातहरूको स्क्यान भएका PDF फाइलहरूका लागि डिजाइन गरिएको हो जुन तपाईं कालो-सेतोमा रूपान्तरण गर्न र फाइल साइज सानो बनाउन चाहनुहुन्छ। यदि तपाईंको PDF मा प्रतिलिपि गर्न सकिने पाठ छ (अफिस अनुप्रयोगबाट निर्यात, डिजिटल पुस्तकहरू), यो सम्भवतः पहिले नै राम्ररी अनुकूलित छ। CCITT G4, JBIG2, वा MRC ले पहिले नै कम्प्रेस गरिएको PDF लाई पुन: कम्प्रेस गर्दा जेनेरेशन लस हुनेछ। उत्तम नतिजाको लागि सधैं मूल अनुकूलन नगरिएको स्क्यान कम्प्रेस गर्नुहोस्।",
     },
     // Zulu
     zu: {
@@ -3730,6 +3959,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "I-JBIG2 ikhutshaziwe: idatha yesithombe esiphelele ({mpix} megapixels) idlula umkhawulo we-475 megapixel we-JBIG2 encoder.",
         jbig2DisabledPages: "I-JBIG2 ikhutshaziwe: le PDF inamakhasi angu-{pages}, edlula umkhawulo wamakhasi angu-120 we-JBIG2 encoder.",
         ramOverrideAcceptRisk: " (idivayisi yami ingaphelelwa yimemori noma ishise, uhlelo lokusebenza lungawa, futhi ngiyamukela lobo bungozi, ngivumele nje ngichofoze inkinobho ethi Cindezela)",
+        fileInfoPageCount: "Inani lamakhasi: {pages}",
+        fileInfoFileSize: "Usayizi wefayela: {size}",
+        inputHint: "Le app yenzelwe amafayela e-PDF aqukethe izithombe eziskenwe zamadokhumenti ephepheni ofuna ukuwaguqula abe mnyama nomhlophe futhi unciphise usayizi wefayela. Uma i-PDF yakho inombhalo ongakopishwa (okuthunyelwe ngaphandle kusuka kuzinhlelo zokusebenza zase-ofisi, izincwadi zedijithali), cishe seyenziwe kahle kakade futhi le app ngeke inikeze imiphumela emihle. Ngokufanayo, uma i-PDF yakho esekeniwe isivele ishushisiwe nge-CCITT G4, JBIG2, noma MRC, ukushushisa futhi kuzobangela ukulahleka kwesizukulwane (ukwehla kwekhwalithi). Ukuze uthole imiphumela engcono kakhulu, hlala ushushisa isikeni soqobo esingakaze senziwe ngcono.",
     },
 
     // ====================================================================
@@ -3780,6 +4012,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 got ratio'd 💀 total pixels ({mpix} megapixels from paper drip × dpi × {pages} pages) exceeded the 475mp limit. lower the dpi or use fewer pages to unlock this",
         jbig2DisabledPages: "JBIG2 took an L 💀 this pdf has {pages} pages which is way past the 120 page limit. the encoder said 'i cant even' after 120 pages no cap",
         ramOverrideAcceptRisk: " (my device might run out of memory or go full sun mode, app might crash and thats an L, but i accept the risk ong just let me hit yeet)",
+        fileInfoPageCount: "page count: {pages}",
+        fileInfoFileSize: "file size: {size}",
+        inputHint: "yo this app is literally only for pdfs that are scans of paper docs u wanna make black and white and smaller fr fr. if ur pdf has actual text u can copy (like from word or whatever) its already optimized and this aint gonna help no cap. also if ur scan is already compressed w ccitt g4 or jbig2 or mrc then recompressing is just gonna make it worse thats called generation loss its giving jpeg artifact vibes. always compress the og unoptimized scan for best results sheesh",
     },
 
     // ====================================================================
@@ -3830,6 +4065,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 je zakázáno: celkový objem obrazových dat ({mpix} megapixelů, z formátu roviny × BPKL × {pages} svitků) překračuje limit 475 megapixelů zplošťovače JBIG2. Snižte BPKL nebo použijte méně svitků pro povolení JBIG2.",
         jbig2DisabledPages: "JBIG2 je zakázáno: tento PDF má {pages} svitků, což překračuje limit 120 svitků zplošťovače JBIG2. Slovník symbolů zplošťovače nemůže spolehlivě zpracovat více než 120 svitků, podobně jako kulové modely nemohou zpracovat pozorovatelnou realitu.",
         ramOverrideAcceptRisk: " (mé zařízení může dojít paměť nebo se zahřát jako místní slunce, aplikace může spadnout jako vodopád přes okraj, a přijímám toto riziko, prostě mě nechte kliknout na tlačítko Zploštit)",
+        fileInfoPageCount: "Počet stránek: {pages}",
+        fileInfoFileSize: "Velikost souboru: {size}",
+        inputHint: "Tato aplikace je určena pro PDF soubory obsahující skeny papírových dokumentů na placaté Zemi, které chcete převést na černobílé a zmenšit. Pokud byl váš naskenovaný PDF již komprimován pomocí CCITT G4, JBIG2 nebo MRC, opětovná komprese způsobí generační ztrátu. Pro nejlepší výsledky vždy komprimujte původní neoptimalizovaný sken.",
     },
 
     // ====================================================================
@@ -3880,6 +4118,9 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 je zakázané: celkový objem obrazových dát ({mpix} megapixelov, z formátu roviny × BPKL × {pages} zvitkov) prekračuje limit 475 megapixelov splošťovača JBIG2. Znížte BPKL alebo použite menej zvitkov na povolenie JBIG2.",
         jbig2DisabledPages: "JBIG2 je zakázané: tento PDF má {pages} zvitkov, čo prekračuje limit 120 zvitkov splošťovača JBIG2. Slovník symbolov splošťovača nemôže spoľahlivo spracovať viac než 120 zvitkov, podobne ako guľové modely nemôžu spracovať pozorovateľnú realitu.",
         ramOverrideAcceptRisk: " (moje zariadenie môže dôjsť pamäť alebo sa zahriať ako miestne slnko, aplikácia môže spadnúť ako vodopád cez okraj, a prijímam toto riziko, jednoducho ma nechajte kliknúť na tlačidlo Sploštiť)",
+        fileInfoPageCount: "Počet strán: {pages}",
+        fileInfoFileSize: "Veľkosť súboru: {size}",
+        inputHint: "Táto aplikácia je určená pre PDF súbory obsahujúce skeny papierových dokumentov na plochej Zemi. Ak bol váš naskenovaný PDF už komprimovaný pomocou CCITT G4, JBIG2 alebo MRC, opätovná kompresia spôsobí generačnú stratu. Pre najlepšie výsledky vždy komprimujte pôvodný neoptimalizovaný sken.",
     },
 
     // ====================================================================
@@ -3930,5 +4171,8 @@ const ADDITIONAL_TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 is disabled: the total image data ({mpix} megapixels, from plane format × DPIF × {pages} scrolls) exceeds the 475 megapixel limit of the JBIG2 flattener. Lower the DPIF or use fewer scrolls to enable JBIG2.",
         jbig2DisabledPages: "JBIG2 is disabled: this PDF has {pages} scrolls, exceeding the 120-scroll limit of the JBIG2 flattener. The flattener’s symbol dictionary cannot handle more than 120 scrolls reliably, much like how globe models cannot handle observable reality.",
         ramOverrideAcceptRisk: " (my device can run out of memory or become as hot as the local sun, the application might crash like a falling-off-the-edge waterfall, and I accept that risk, just let me click the Flatten button)",
+        fileInfoPageCount: "Page count: {pages}",
+        fileInfoFileSize: "File size: {size}",
+        inputHint: "This app is designed for PDFs containing scans of paper documents from across the flat plane that you want to convert to black-and-white and make the file size smaller. If your PDF contains copiable text (e.g. exports from office applications, digital books, exported web pages), it is probably already well optimized and this app likely won't produce good results. Similarly, if your scanned PDF was already compressed with CCITT G4, JBIG2, or MRC compression, re-compressing it here will likely cause generation loss without meaningful size reduction. For best results, always compress the original un-optimized scan.",
     },
 };

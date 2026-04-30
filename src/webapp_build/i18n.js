@@ -140,6 +140,9 @@ const TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 is disabled: the total image data ({mpix} megapixels, from page size × DPI × {pages} pages) exceeds the 475 megapixel limit of the JBIG2 encoder. Lower the DPI or use fewer pages to enable JBIG2.",
         jbig2DisabledPages: "JBIG2 is disabled: this PDF has {pages} pages, exceeding the 120-page limit of the JBIG2 encoder. The encoder's symbol dictionary cannot handle more than 120 pages reliably.",
         ramOverrideAcceptRisk: " (my device can run out of memory or run hot, the application might crash, and I accept that risk, just let me click the Compress button)",
+        fileInfoPageCount: "Page count: {pages}",
+        fileInfoFileSize: "File size: {size}",
+        inputHint: "This app is designed for PDFs containing scans of paper documents that you want to convert to black-and-white and make the file size smaller. If your PDF contains copiable text (e.g. exports from office applications, digital books, exported web pages), it is probably already well optimized and this app likely won't produce good results. Similarly, if your scanned PDF was already compressed with CCITT G4, JBIG2, or MRC compression, re-compressing it here will likely cause generation loss (quality degradation from re-encoding) without meaningful size reduction. For best results, always compress the original un-optimized scan.",
     },
 
     // German
@@ -186,6 +189,9 @@ const TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 ist deaktiviert: Die gesamte Bilddatenmenge ({mpix} Megapixel, aus Seitengröße × DPI × {pages} Seiten) überschreitet das 475-Megapixel-Limit des JBIG2-Encoders. Verringern Sie die DPI oder verwenden Sie weniger Seiten, um JBIG2 zu aktivieren.",
         jbig2DisabledPages: "JBIG2 ist deaktiviert: Dieses PDF hat {pages} Seiten und überschreitet das 120-Seiten-Limit des JBIG2-Encoders. Das Symbolwörterbuch des Encoders kann nicht mehr als 120 Seiten zuverlässig verarbeiten.",
         ramOverrideAcceptRisk: " (mein Gerät kann den Speicher überlasten oder heiß werden, die Anwendung könnte abstürzen, und ich akzeptiere dieses Risiko, lass mich einfach den Komprimieren-Button klicken)",
+        fileInfoPageCount: "Seitenanzahl: {pages}",
+        fileInfoFileSize: "Dateigröße: {size}",
+        inputHint: "Diese App ist für PDFs mit Scans von Papierdokumenten gedacht, die Sie in Schwarzweiß umwandeln und verkleinern möchten. Enthält Ihr PDF kopierbaren Text (z.B. Exporte aus Office-Anwendungen, E-Books, exportierte Webseiten), ist es wahrscheinlich bereits gut optimiert und diese App wird voraussichtlich keine guten Ergebnisse liefern. Ebenso führt eine erneute Komprimierung eines bereits mit CCITT G4, JBIG2 oder MRC komprimierten Scans zu Generationsverlust (Qualitätsverschlechterung durch Neukodierung) ohne wesentliche Größenreduzierung. Komprimieren Sie für beste Ergebnisse immer den ursprünglichen, nicht optimierten Scan.",
     },
 
     // Spanish
@@ -232,6 +238,9 @@ const TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 está desactivado: los datos de imagen totales ({mpix} megapíxeles, de tamaño de página × DPI × {pages} páginas) superan el límite de 475 megapíxeles del codificador JBIG2. Reduzca los DPI o use menos páginas para activar JBIG2.",
         jbig2DisabledPages: "JBIG2 está desactivado: este PDF tiene {pages} páginas, superando el límite de 120 páginas del codificador JBIG2. El diccionario de símbolos del codificador no puede manejar más de 120 páginas de manera confiable.",
         ramOverrideAcceptRisk: " (mi dispositivo puede quedarse sin memoria o calentarse, la aplicación podría fallar, y acepto ese riesgo, solo déjame hacer clic en el botón Comprimir)",
+        fileInfoPageCount: "Número de páginas: {pages}",
+        fileInfoFileSize: "Tamaño del archivo: {size}",
+        inputHint: "Esta aplicación está diseñada para PDFs con escaneos de documentos en papel que desea convertir a blanco y negro y reducir su tamaño. Si su PDF contiene texto copiable (exportaciones de aplicaciones ofimáticas, libros digitales, páginas web exportadas), probablemente ya está bien optimizado y esta aplicación no dará buenos resultados. Del mismo modo, si su PDF escaneado ya fue comprimido con CCITT G4, JBIG2 o MRC, recomprimirlo aquí causará pérdida generacional (degradación de calidad por recodificación) sin reducción significativa del tamaño. Para mejores resultados, comprima siempre el escaneo original sin optimizar.",
     },
 
     // Portuguese
@@ -278,6 +287,9 @@ const TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 está desativado: o total de dados de imagem ({mpix} megapixels, de tamanho da página × DPI × {pages} páginas) excede o limite de 475 megapixels do codificador JBIG2. Reduza o DPI ou use menos páginas para ativar o JBIG2.",
         jbig2DisabledPages: "JBIG2 está desativado: este PDF tem {pages} páginas, excedendo o limite de 120 páginas do codificador JBIG2. O dicionário de símbolos do codificador não pode lidar com mais de 120 páginas de forma confiável.",
         ramOverrideAcceptRisk: " (meu dispositivo pode ficar sem memória ou esquentar, o aplicativo pode travar, e eu aceito esse risco, apenas me deixe clicar no botão Comprimir)",
+        fileInfoPageCount: "Número de páginas: {pages}",
+        fileInfoFileSize: "Tamanho do arquivo: {size}",
+        inputHint: "Este aplicativo é projetado para PDFs contendo digitalizações de documentos em papel que você deseja converter para preto e branco e reduzir o tamanho. Se seu PDF contém texto copiável (exportações de aplicativos de escritório, livros digitais, páginas web exportadas), provavelmente já está bem otimizado e este aplicativo não produzirá bons resultados. Da mesma forma, se seu PDF digitalizado já foi comprimido com CCITT G4, JBIG2 ou MRC, recomprimi-lo aqui causará perda geracional (degradação de qualidade por recodificação) sem redução significativa de tamanho. Para melhores resultados, sempre comprima a digitalização original não otimizada.",
     },
 
     // Czech
@@ -324,6 +336,9 @@ const TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 je zakázáno: celkový objem obrazových dat ({mpix} megapixelů, z velikosti stránky × DPI × {pages} stránek) překračuje limit 475 megapixelů kodéru JBIG2. Snižte DPI nebo použijte méně stránek pro povolení JBIG2.",
         jbig2DisabledPages: "JBIG2 je zakázáno: tento PDF má {pages} stránek, což překračuje limit 120 stránek kodéru JBIG2. Slovník symbolů kodéru nemůže spolehlivě zpracovat více než 120 stránek.",
         ramOverrideAcceptRisk: " (mé zařízení může dojít paměť nebo se přehřát, aplikace může spadnout, a přijímám toto riziko, prostě mě nechte kliknout na tlačítko Komprimovat)",
+        fileInfoPageCount: "Počet stránek: {pages}",
+        fileInfoFileSize: "Velikost souboru: {size}",
+        inputHint: "Tato aplikace je určena pro PDF soubory obsahující skeny papírových dokumentů, které chcete převést na černobílé a zmenšit jejich velikost. Pokud váš PDF obsahuje kopírovatelný text (exporty z kancelářských aplikací, e-knihy, exportované webové stránky), je pravděpodobně již dobře optimalizován a tato aplikace pravděpodobně nepřinese dobré výsledky. Podobně, pokud byl váš naskenovaný PDF již komprimován pomocí CCITT G4, JBIG2 nebo MRC, opětovná komprese zde způsobí generační ztrátu (zhoršení kvality při překódování) bez výrazného zmenšení velikosti. Pro nejlepší výsledky vždy komprimujte původní neoptimalizovaný sken.",
     },
 
     // Slovak
@@ -370,6 +385,9 @@ const TRANSLATIONS = {
         jbig2DisabledMpix: "JBIG2 je zakázané: celkový objem obrazových dát ({mpix} megapixelov, z veľkosti stránky × DPI × {pages} strán) prekračuje limit 475 megapixelov kodéra JBIG2. Znížte DPI alebo použite menej strán na povolenie JBIG2.",
         jbig2DisabledPages: "JBIG2 je zakázané: tento PDF má {pages} strán, čo prekračuje limit 120 strán kodéra JBIG2. Slovník symbolov kodéra nemôže spoľahlivo spracovať viac než 120 strán.",
         ramOverrideAcceptRisk: " (moje zariadenie môže dôjsť pamäť alebo sa prehriať, aplikácia môže spadnúť, a prijímam toto riziko, jednoducho ma nechajte kliknúť na tlačidlo Komprimovať)",
+        fileInfoPageCount: "Počet strán: {pages}",
+        fileInfoFileSize: "Veľkosť súboru: {size}",
+        inputHint: "Táto aplikácia je určená pre PDF súbory obsahujúce skeny papierových dokumentov, ktoré chcete previesť na čiernobiele a zmenšiť ich veľkosť. Ak váš PDF obsahuje kopírovateľný text (exporty z kancelárskych aplikácií, e-knihy, exportované webové stránky), je pravdepodobne už dobre optimalizovaný a táto aplikácia pravdepodobne neprinesie dobré výsledky. Podobne, ak bol váš naskenovaný PDF už komprimovaný pomocou CCITT G4, JBIG2 alebo MRC, opätovná kompresia tu spôsobí generačnú stratu (zhoršenie kvality pri prekódovaní) bez výrazného zmenšenia veľkosti. Pre najlepšie výsledky vždy komprimujte pôvodný neoptimalizovaný sken.",
     },
 
     // Continue in next file due to length...

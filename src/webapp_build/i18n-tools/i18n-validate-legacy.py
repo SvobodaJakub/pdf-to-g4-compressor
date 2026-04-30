@@ -44,6 +44,7 @@ REQUIRED_FIELDS = [
     'preserveRotationLabel', 'metadataSection', 'includeTimestampLabel',
     'ramWarningHigh', 'ramWarningCritical',
     'jbig2DisabledMpix', 'jbig2DisabledPages', 'ramOverrideAcceptRisk',
+    'fileInfoPageCount', 'fileInfoFileSize', 'inputHint',
 ]
 
 # Deprecated fields that should NOT exist

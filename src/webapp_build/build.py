@@ -285,6 +285,18 @@ def main():
     jbig2_wasm = read_binary('wasm/jbig2.wasm')
     jbig2_wasm_b64 = to_base64(jbig2_wasm)
     jbig2_js = read_file('wasm/jbig2.js')
+    import json as _json2
+    # Patch the Module detection for re-evaluation via new Function():
+    # Original: var Module=typeof Module!="undefined"?Module:{}
+    # This fails in new Function() because var hoisting makes typeof === "undefined".
+    # Replace with explicit window.Module reference.
+    jbig2_js_reinit = jbig2_js.replace(
+        'var Module=typeof Module!="undefined"?Module:{}',
+        'var Module=window.Module||{}'
+    )
+    if jbig2_js_reinit == jbig2_js:
+        print("  WARNING: Could not patch Module detection in jbig2.js — reinit may fail")
+    jbig2_js_json = _json2.dumps(jbig2_js_reinit)
     jbig2_wrapper = read_file('jbig2-wrapper.js')
     jbig2pdf_js = read_file('jbig2pdf.js')
 
@@ -472,41 +484,53 @@ const SOURCE_TARBALL_BASE64 = '{source_tarball_b64}';
 
 // JBIG2 WASM Module
 (function() {{
-    // Base64-encoded WASM binary
+    // Base64-encoded WASM binary — decoded once, kept for re-init
     const jbig2WasmBase64 = '{jbig2_wasm_b64}';
-
-    // Decode base64 to binary
     const wasmBinary = atob(jbig2WasmBase64);
     const wasmBytes = new Uint8Array(wasmBinary.length);
     for (let i = 0; i < wasmBinary.length; i++) {{
         wasmBytes[i] = wasmBinary.charCodeAt(i);
     }}
+    window._jbig2WasmBytes = wasmBytes;
+    console.log('[JBIG2] WASM binary prepared:', wasmBytes.length, 'bytes');
+}})();
 
-    // Create Module object that jbig2.js will use
+// Save patched Emscripten loader source for re-initialization
+window._jbig2LoaderSource = {jbig2_js_json};
+
+// Create initial Module object for first-time loading
+window.Module = {{
+    wasmBinary: window._jbig2WasmBytes,
+    noInitialRun: true,
+    print: function(text) {{ console.log('[JBIG2]', text); }},
+    printErr: function(text) {{ console.error('[JBIG2]', text); }},
+    onRuntimeInitialized: function() {{
+        console.log('[JBIG2] Runtime initialized');
+        window.JBIG2Ready = true;
+    }},
+    onAbort: function(what) {{ console.error('[JBIG2] Aborted:', what); }}
+}};
+window.JBIG2Ready = false;
+
+// First-time init: run inline in global scope (var Module hoisting works here)
+{jbig2_js}
+
+// Re-initialization function: destroys old WASM instance and creates fresh one
+function initJBIG2Module() {{
+    window.JBIG2Ready = false;
     window.Module = {{
-        wasmBinary: wasmBytes,
+        wasmBinary: window._jbig2WasmBytes,
         noInitialRun: true,
-        print: function(text) {{
-            console.log('[JBIG2]', text);
-        }},
-        printErr: function(text) {{
-            console.error('[JBIG2]', text);
-        }},
+        print: function(text) {{ console.log('[JBIG2]', text); }},
+        printErr: function(text) {{ console.error('[JBIG2]', text); }},
         onRuntimeInitialized: function() {{
             console.log('[JBIG2] Runtime initialized');
             window.JBIG2Ready = true;
         }},
-        onAbort: function(what) {{
-            console.error('[JBIG2] Aborted:', what);
-        }}
+        onAbort: function(what) {{ console.error('[JBIG2] Aborted:', what); }}
     }};
-
-    window.JBIG2Ready = false;
-    console.log('[JBIG2] WASM binary prepared:', wasmBytes.length, 'bytes');
-}})();
-
-// JBIG2.js - Emscripten-generated loader
-{jbig2_js}
+    (new Function(window._jbig2LoaderSource))();
+}}
 
 // JBIG2 Wrapper - High-level API
 {jbig2_wrapper}
@@ -564,41 +588,75 @@ if (typeof window.PRISTINE_HTML === 'undefined') {{
 //
 // EMPTY (initial):
 //   selectedFile=null, progressBoxState=null
-//   Button: disabled ("Choose PDF File")
+//   Compress button: disabled ("Choose PDF File")
 //
 // FILE_LOADED:
 //   selectedFile set, totalPageCount known, progressBoxState=null|'cancelled'
-//   Button: enabled (unless fileError, pageRangeError, DPI invalid, or RAM limit)
+//   Compress button: enabled (unless fileError, pageRangeError, DPI invalid,
+//     or RAM limit exceeded without override)
+//   AI box: showAutoSetterOrRefresh() decides what to show:
+//     - If 144 DPI @ G4 exceeds RAM_LIMIT → neither AI button nor refresh shown
+//       (AI can't do anything useful; if 72 DPI also exceeds, Advanced Tricks
+//       are shown collapsed so user can access the RAM override checkbox)
+//     - If form at defaults → fabulous AI button (with unicorns)
+//     - If form not at defaults → plain refresh icon (resets form to defaults)
+//     - Both disappear on any form interaction
 //   Transition: handleFileSelected(file) runs the file-open flow:
 //     cleanupPreviousResult → clearFileError → detectFileType → countPages
 //     → autoAdjustDPI → updateCompressButton
+//     Then caller (file input / drop handler) calls showAutoSetterOrRefresh()
 //
-// CONVERTING:
+// CONVERTING (manual or AI auto-setter):
 //   conversionInProgress=true, controls disabled
-//   Button: clickable (for cancellation only)
-//   Transition: convertBtn.click → setFormControlsEnabled(false) → convertPDF/convertZIP
+//   body.converting (manual) or body.ai-running (AI) class set
+//   Pre-conversion: deepCleanMemory() frees all prior results, zeros canvases,
+//     reinitializes JBIG2 WASM module (fresh heap) to give Chrome max GC headroom
+//   Manual: Compress button clickable for cancellation
+//   AI: hides form controls; AI button clickable for cancellation;
+//     shows progress bar + ETA; tries DPI/codec/dither combos, stops at first
+//     good-enough result (<60% ratio) or keeps smallest; respects RAM_LIMIT
+//     per trial; skips JBIG2 if infeasible (>475 Mpix or >120 pages)
 //
 // RESULT:
 //   progressBoxState='result', window.resultPDF set
 //   Shows: size comparison, save button, Advanced Tricks
-//   validateFormMatchesResult enables/disables save button
+//   If AI + file got smaller: fabulous save button + win banner above it
+//   validateFormMatchesResult enables/disables save button based on whether
+//     current form settings match the settings used for the result
 //
 // CANCELLED:
 //   progressBoxState='cancelled'
 //   Shows: Advanced Tricks (collapsed)
-//   User cancelled mid-conversion
+//   User cancelled mid-conversion or AI auto-setter cancelled by clicking AI btn
+//   AI cancellation: reloads file, resets form, shows AI/refresh box again
 //
 // ERROR_RECOVERY:
 //   Unexpected conversion error → recoverFromError()
-//   Saves user settings, replays handleFileSelected with same file,
-//   restores dither/pageSize/rotation settings → back to FILE_LOADED
+//   Saves user settings from resultSettings (DOM may be destroyed by spinner),
+//   replays handleFileSelected with same file, restores dither/pageSize/rotation
+//   settings → back to FILE_LOADED
 //
 // Key functions:
-//   updateCompressButton() — single source of truth for button, file info,
-//     JBIG2 feasibility, RAM override, DPI warning
+//   deepCleanMemory() — aggressive pre-conversion cleanup: nulls result data,
+//     zeros canvases, reinitializes JBIG2 WASM module with fresh heap
+//   updateCompressButton() — single source of truth for Compress button state,
+//     file info, JBIG2 feasibility, RAM override checkbox, DPI warning
 //   handleFileSelected(file) — file-open flow (used by input, drop, recovery)
 //   setFormControlsEnabled(enabled) — enable/disable all form controls
+//   showAutoSetterOrRefresh() — decides AI button vs refresh icon vs nothing
+//   isFormAtDefaults() — checks dither mode, page size, page range
 //   defaultResultSettings() — canonical default for resultSettings object
+//   initJBIG2Module() — destroys and recreates WASM instance with clean heap
+//
+// Memory budget:
+//   RAM_LIMIT = 500 MB — gates Compress button, DPI auto-adjust, AI trials
+//   estimateRAMBytes(pages, dpi, pageSize, jbig2, fileSize):
+//     base = fileSize*2 + 150MB (fileSize*2 covers input + output headroom)
+//     renderPeak = w*h*16 (canvas RGBA + imageData + processImage + headroom)
+//     G4: base + renderPeak + pages*200KB
+//     JBIG2: base + renderPeak + bilevelPerPage*pages*2.5 + pages*800KB
+//   fileSizeOver: inputFileSize > 175MB (fast early-out, redundant with formula)
+//   findMaxSafeDPI: binary search for highest DPI fitting in RAM_LIMIT
 // ============================================================================
 
 // Global variables for state management
@@ -637,6 +695,7 @@ var cancellationRequested = false;
 
 // AI Auto-Setter
 var autoSetterRunning = false;
+var autoSetterJustFinished = false;
 
 // Track which box is currently shown so language changes can re-render it
 var progressBoxState = null;  // null, 'result', or 'cancelled'
@@ -760,6 +819,8 @@ function resetAppState() {{
     pageRangeError = false;
     if (fileInfoDiv) fileInfoDiv.textContent = '';
     if (uploadArea) uploadArea.classList.remove('file-error');
+    var hintBoxReset = document.getElementById('inputHintBox');
+    if (hintBoxReset) hintBoxReset.classList.remove('show');
     if (pageRangeInput) {{ pageRangeInput.style.borderColor = ''; pageRangeInput.style.background = ''; }}
 
     // Reset ZIP mode
@@ -917,6 +978,7 @@ document.addEventListener('DOMContentLoaded', function() {{
             var oldAi = document.getElementById('aiAutoSetter');
             if (oldAi) {{ var wasShown = oldAi.classList.contains('show'); oldAi.remove(); if (wasShown && selectedFile && !fileError) showAutoSetterOrRefresh(); }}
         }}
+        updateInputHint();
     }});
 
     // Handle Mongolian script switch
@@ -973,6 +1035,7 @@ document.addEventListener('DOMContentLoaded', function() {{
             var oldAi = document.getElementById('aiAutoSetter');
             if (oldAi) {{ var wasShown = oldAi.classList.contains('show'); oldAi.remove(); if (wasShown && selectedFile && !fileError) showAutoSetterOrRefresh(); }}
         }}
+        updateInputHint();
     }});
 
     // selectedFile is now a global variable (declared above)
@@ -1033,7 +1096,13 @@ document.addEventListener('DOMContentLoaded', function() {{
         'legal-portrait': {{ w: 8.5, h: 14 }}
     }};
 
-    const RAM_LIMIT = 500 * 1048576;
+    // Memory tier 1 (low) devices get a reduced limit to avoid OOM crashes
+    var RAM_LIMIT = 500 * 1048576;
+    if (typeof AndroidFileHandler !== 'undefined' && typeof AndroidFileHandler.getMemoryTier === 'function') {{
+        var tier = AndroidFileHandler.getMemoryTier();
+        if (tier === 1) RAM_LIMIT = 350 * 1048576;
+        console.log('Memory tier:', tier, '→ RAM_LIMIT:', RAM_LIMIT / 1048576, 'MB');
+    }}
     const JBIG2_MAX_MPIX = 475;
 
     function estimateRAMBytes(numPages, dpi, pageSize, useJBIG2, fileSizeBytes) {{
@@ -1115,7 +1184,7 @@ document.addEventListener('DOMContentLoaded', function() {{
             if (failures > 0) throw new Error('Unreadable PDFs in ZIP');
             return total;
         }} else {{
-            const pdf = await loadPDFWithTimeout(new Uint8Array(arrayBuffer), 10000);
+            const pdf = await loadPDFWithTimeout(arrayBuffer, 10000);
             const count = pdf.numPages;
             maxPagesPerPDF = count;
             pdf.destroy();
@@ -1148,7 +1217,7 @@ document.addEventListener('DOMContentLoaded', function() {{
 
         // ── Resource state ──────────────────────────────────────────────
         const dpiValid      = !dpiCustomRadio.checked || (!isNaN(dpi) && dpi >= 72 && dpi <= 1200);
-        const fileSizeOver  = inputFileSize > RAM_LIMIT;
+        const fileSizeOver  = inputFileSize > 175 * 1048576;
         const pagesOver     = known && n > 500;
         const ramEst        = estimateRAMBytes(n || 0, dpi, pageSize, useJBIG2, inputFileSize);
         const ramOver       = known && ramEst > RAM_LIMIT;
@@ -1176,13 +1245,14 @@ document.addEventListener('DOMContentLoaded', function() {{
         if (fileInfoDiv) {{
             let lines = [];
             if (known) {{
-                const p = String(n);
-                lines.push((heavyDoc || needsOverride) ? '⚠️ ' + p + ' ⚠️' : p);
+                const pLabel = (currentT.fileInfoPageCount || 'Page count: {{pages}}').replace('{{pages}}', String(n));
+                lines.push((heavyDoc || needsOverride) ? '⚠️ ' + pLabel + ' ⚠️' : pLabel);
             }} else {{
                 lines.push('...');
             }}
             const sz = formatFileSize(inputFileSize);
-            lines.push(fileSizeOver ? '⚠️ ' + sz + ' ⚠️' : sz);
+            const szLabel = (currentT.fileInfoFileSize || 'File size: {{size}}').replace('{{size}}', sz);
+            lines.push(fileSizeOver ? '⚠️ ' + szLabel + ' ⚠️' : szLabel);
             fileInfoDiv.innerHTML = lines.join('<br>');
         }}
 
@@ -1288,6 +1358,32 @@ document.addEventListener('DOMContentLoaded', function() {{
         if ((!ditherEnabled && dpi < 200) || (ditherEnabled && dpi < 240)) {{
             dpiWarning.classList.add('show', 'low-quality');
             dpiWarning.textContent = currentT.lowQualityWarning || 'Warning: Low DPI may result in poor quality output.';
+        }}
+    }}
+
+    function updateInputHint(forceRatio) {{
+        var hintBox = document.getElementById('inputHintBox');
+        if (!hintBox) return;
+        var currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
+        var show = false;
+
+        if (forceRatio !== undefined && forceRatio >= 0.9) {{
+            show = true;
+        }} else if (selectedFile && totalPageCount !== null && totalPageCount > 0) {{
+            var bytesPerPage = inputFileSize / totalPageCount;
+            if (totalPageCount > 50 || inputFileSize > 100 * 1048576 || bytesPerPage < 150 * 1024) {{
+                show = true;
+            }}
+            if (isZipMode && maxPagesPerPDF !== null) {{
+                if (maxPagesPerPDF > 50) show = true;
+            }}
+        }}
+
+        if (show) {{
+            hintBox.textContent = currentT.inputHint || 'This app is designed for PDFs containing scans of paper documents that you want to convert to black-and-white and make the file size smaller. If your PDF contains copiable text (e.g. exports from office applications, digital books, exported web pages), it is probably already well optimized and this app likely won\\'t produce good results. Similarly, if your scanned PDF was already compressed with CCITT G4, JBIG2, or MRC compression, re-compressing it here will likely cause generation loss (quality degradation from re-encoding) without meaningful size reduction. For best results, always compress the original un-optimized scan.';
+            hintBox.classList.add('show');
+        }} else {{
+            hintBox.classList.remove('show');
         }}
     }}
 
@@ -1423,6 +1519,45 @@ document.addEventListener('DOMContentLoaded', function() {{
             previewCanvas.width = 0;
             previewCanvas.height = 0;
         }}
+    }}
+
+    // Aggressive pre-conversion memory cleanup.
+    // Frees all large data, zeros canvases, wipes WASM FS, and hints GC.
+    // Called before every Compress action so Chrome has maximum headroom.
+    function deepCleanMemory() {{
+        // 1. Free result data
+        window.resultPDF = null;
+        window.resultFilename = null;
+        window.originalSize = null;
+        window.resultSize = null;
+        window.ditherMode = null;
+        resultUsedJBIG2 = false;
+
+        // 2. Zero out canvas backing stores
+        var previewCanvas = document.getElementById('previewCanvas');
+        if (previewCanvas) {{
+            previewCanvas.width = 0;
+            previewCanvas.height = 0;
+        }}
+
+        // 3. Destroy and reinitialize JBIG2 WASM module (frees all heap memory)
+        if (typeof initJBIG2Module === 'function') {{
+            try {{
+                initJBIG2Module();
+            }} catch (e) {{
+                console.warn('JBIG2 reinit failed:', e);
+            }}
+        }}
+
+        // 5. Clear the progress div (frees Advanced Tricks DOM tree)
+        if (progressDiv) {{
+            progressDiv.style.display = 'none';
+            progressDiv.innerHTML = '';
+        }}
+        progressBoxState = null;
+
+        // 6. Hint garbage collection (no-op in most browsers but harmless)
+        if (window.gc) try {{ window.gc(); }} catch (e) {{}}
     }}
 
     async function recoverFromError() {{
@@ -1564,6 +1699,8 @@ document.addEventListener('DOMContentLoaded', function() {{
         if (aiBtnHide) aiBtnHide.classList.remove('show');
         var aiRefHide = document.getElementById('aiRefresh');
         if (aiRefHide) aiRefHide.classList.remove('show');
+        var hintBox = document.getElementById('inputHintBox');
+        if (hintBox) hintBox.classList.remove('show');
         selectedFile = file;
         cleanupPreviousResult();
         clearFileError();
@@ -1586,6 +1723,7 @@ document.addEventListener('DOMContentLoaded', function() {{
         }}
         autoAdjustDPI();
         updateCompressButton();
+        updateInputHint();
     }}
 
     // Allow re-selecting the same file (clear value so change event fires)
@@ -1691,8 +1829,11 @@ document.addEventListener('DOMContentLoaded', function() {{
         let errorRecoveryNeeded = false;
         document.body.classList.add('converting');
 
+        // Free all prior results, canvases, WASM state before allocating new ones
+        deepCleanMemory();
+
         try {{
-            // Reset progress box to show processing state (in case result box was displayed)
+            // Reset progress box to show processing state
             progressDiv.classList.remove('cancelled');
             progressDiv.innerHTML = '<span class="spinner"></span><span id="progressText" data-i18n="processing">Processing...</span>';
             progressDiv.style.background = '#e3f2fd';
@@ -1776,13 +1917,12 @@ document.addEventListener('DOMContentLoaded', function() {{
     async function convertPDF(file, ditherConfig, targetDPI, pageSize, useJBIG2, jbig2Threshold, preserveRotation, metadataOpts) {{
         progressText.textContent = 'Reading PDF file...';
 
-        // Read file as ArrayBuffer
-        const arrayBuffer = await file.arrayBuffer();
-        const pdfData = new Uint8Array(arrayBuffer);
-        const originalSize = pdfData.length;
+        // Read file as ArrayBuffer (passed directly to PDF.js, no Uint8Array copy needed)
+        const pdfData = await file.arrayBuffer();
+        const originalSize = pdfData.byteLength;
 
         progressText.textContent = 'Loading PDF with PDF.js...';
-        console.log('Loading PDF, size:', pdfData.length, 'bytes');
+        console.log('Loading PDF, size:', originalSize, 'bytes');
 
         let finalPDF;
 
@@ -1833,6 +1973,11 @@ document.addEventListener('DOMContentLoaded', function() {{
                 pages: jbig2Pages,
                 metadataOptions: metadataOpts
             }});
+            // Free intermediate JBIG2 data before FlateDecode allocation
+            jbig2Result.sym = null;
+            jbig2Result.pages = null;
+            jbig2Pages.length = 0;
+            pages.length = 0;
 
             finalPDF = await compressPDF(jbig2PDF, pako, (current, total) => {{
                 progressText.textContent = `FlateDecode compression: stream ${{current}} / ${{total}}...`;
@@ -1848,6 +1993,8 @@ document.addEventListener('DOMContentLoaded', function() {{
             progressText.textContent = `Generating CCITT-compressed PDF (${{pages.length}} pages)...`;
             await new Promise(r => setTimeout(r, 0));
             const compressedPDF = createPDF(pages, metadataOpts);
+            // Free page data before FlateDecode allocation
+            pages.length = 0;
 
             finalPDF = await compressPDF(compressedPDF, pako, (current, total) => {{
                 progressText.textContent = `FlateDecode compression: stream ${{current}} / ${{total}}...`;
@@ -2239,8 +2386,8 @@ document.addEventListener('DOMContentLoaded', function() {{
         progressDiv.innerHTML = resultHTML;
         progressDiv.style.display = 'block';
 
-        // Insert fabulous win banner above save button when file got smaller
-        if (ratio < 1.0) {{
+        // Insert fabulous win banner above save button (only after AI auto-setter)
+        if (ratio < 1.0 && autoSetterJustFinished) {{
             var winSizeLine = isRTL ? '<span dir="ltr">' + formatSize(originalSize) + ' → ' + formatSize(resultSize) + '</span>'
                                     : formatSize(originalSize) + ' → ' + formatSize(resultSize);
             var winHTML = '';
@@ -2262,21 +2409,30 @@ document.addEventListener('DOMContentLoaded', function() {{
 
         // Attach save button handler
         var saveBtn = document.getElementById('saveResultBtn');
-        saveBtn.addEventListener('click', function() {{
-            if (this.classList.contains('disabled')) return;
-            downloadFile(window.resultPDF, window.resultFilename);
-        }});
+        function doSave(btn) {{
+            if (btn.classList.contains('disabled') || btn.classList.contains('saving')) return;
+            btn.classList.add('saving');
+            setTimeout(function() {{
+                downloadFile(window.resultPDF, window.resultFilename);
+                // Browser path: download triggers instantly, re-enable after short delay
+                // Android path: WebView may be killed (button gone), or SAF dialog shown;
+                // re-enable after timeout as fallback in case WebView survives
+                setTimeout(function() {{
+                    btn.classList.remove('saving');
+                }}, typeof AndroidFileHandler !== 'undefined' ? 20000 : 2000);
+            }}, 50);
+        }}
+        saveBtn.addEventListener('click', function() {{ doSave(this); }});
         saveBtn.addEventListener('keydown', function(e) {{
             if (e.key === 'Enter' || e.key === ' ') {{
                 e.preventDefault();
-                if (!this.classList.contains('disabled')) {{
-                    downloadFile(window.resultPDF, window.resultFilename);
-                }}
+                doSave(e.target);
             }}
         }});
 
         attachAdvancedTricksListeners(true);
         validateFormMatchesResult();
+        updateInputHint(ratio);
     }}
 
     // Validate that current form settings match the compressed result
@@ -2466,8 +2622,10 @@ document.addEventListener('DOMContentLoaded', function() {{
 
             console.log(`Page ${{pageNum}} rendered: ${{Math.floor(scaledViewport.width)}}x${{Math.floor(scaledViewport.height)}} centered on ${{A4_WIDTH_PX}}x${{A4_HEIGHT_PX}} canvas`);
 
-            // Get image data from canvas
+            // Get image data from canvas then free the canvas backing store
             const imageData = context.getImageData(0, 0, previewCanvas.width, previewCanvas.height);
+            previewCanvas.width = 0;
+            previewCanvas.height = 0;
 
             // Determine if this page should be dithered
             let shouldDither = false;
@@ -2480,8 +2638,9 @@ document.addEventListener('DOMContentLoaded', function() {{
 
             progressText.textContent = zipProgressPrefix + `Processing page ${{pageNum}} (${{shouldDither ? 'dithered' : 'sharp'}})...`;
 
-            // Process through image pipeline
+            // Process through image pipeline (frees RGBA canvas data immediately)
             const processed = processImage(imageData, {{ dither: shouldDither }});
+            imageData.data.fill(0); // help GC reclaim the large RGBA buffer
 
             const bytesPerRow = Math.ceil(processed.width / 8);
             console.log(`Page ${{pageNum}} bilevel: ${{processed.width}}x${{processed.height}}, bytesPerRow: ${{bytesPerRow}}`);
@@ -2491,6 +2650,7 @@ document.addEventListener('DOMContentLoaded', function() {{
                 progressText.textContent = zipProgressPrefix + `Prepared page ${{pageNum}} for JBIG2 encoding...`;
 
                 jbig2Encoder.addPage(processed.width, processed.height, processed.data);
+                processed.data = null;
 
                 pages.push({{
                     width: processed.width,
@@ -2553,28 +2713,42 @@ document.addEventListener('DOMContentLoaded', function() {{
         // Detect MIME type from filename
         var mimeType = filename.toLowerCase().endsWith('.zip') ? 'application/zip' : 'application/pdf';
 
+        // Free WASM and temporary data before the save operation
+        // (save can require significant memory for base64 conversion)
+        if (typeof initJBIG2Module === 'function') {{
+            try {{ initJBIG2Module(); }} catch (e) {{}}
+        }}
+        var pc = document.getElementById('previewCanvas');
+        if (pc) {{ pc.width = 0; pc.height = 0; }}
+
         // Check if running in Android WebView with file handler
         if (typeof AndroidFileHandler !== 'undefined') {{
-            // Convert data to base64
-            let base64Data;
-            if (data instanceof Uint8Array) {{
-                // Convert Uint8Array to base64
-                let binary = '';
-                for (let i = 0; i < data.length; i++) {{
-                    binary += String.fromCharCode(data[i]);
+            // Stream chunks to Java temp file — never hold full base64 in JS
+            var bytes = (data instanceof Uint8Array) ? data : new Uint8Array(0);
+            AndroidFileHandler.beginSave(filename, mimeType);
+
+            var CHUNK = 768 * 1024;
+            for (var off = 0; off < bytes.length; off += CHUNK) {{
+                var end = Math.min(off + CHUNK, bytes.length);
+                var slice = bytes.subarray(off, end);
+                var bin = '';
+                for (var j = 0; j < slice.length; j++) {{
+                    bin += String.fromCharCode(slice[j]);
                 }}
-                base64Data = btoa(binary);
-            }} else {{
-                base64Data = btoa(data);
+                AndroidFileHandler.writeChunk(btoa(bin));
             }}
 
-            // Use Android file handler
-            AndroidFileHandler.saveFile(filename, base64Data, mimeType);
+            // Free the result PDF from JS memory before Java shows the save dialog
+            window.resultPDF = null;
+            data = null;
+            bytes = null;
+
+            AndroidFileHandler.endSave();
         }} else {{
-            // Standard browser download
-            const blob = new Blob([data], {{ type: mimeType }});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
+            // Standard browser download — Blob takes the typed array directly
+            var blob = new Blob([data], {{ type: mimeType }});
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
             a.href = url;
             a.download = filename;
             document.body.appendChild(a);
@@ -2857,6 +3031,7 @@ document.addEventListener('DOMContentLoaded', function() {{
                     var oldAi = document.getElementById('aiAutoSetter');
                     if (oldAi) {{ var wasShown = oldAi.classList.contains('show'); oldAi.remove(); if (wasShown && selectedFile && !fileError) showAutoSetterOrRefresh(); }}
                 }}
+                updateInputHint();
 
                 // Close all modals
                 const aboutModal = document.getElementById('aboutModal');
@@ -3070,7 +3245,7 @@ document.addEventListener('DOMContentLoaded', function() {{
             if (pdfEntries.length === 0) return 'a4-portrait';
             pdfData = pdfEntries[0].data;
         }} else {{
-            pdfData = new Uint8Array(arrayBuffer);
+            pdfData = arrayBuffer;
         }}
         var pdf = await loadPDFWithTimeout(pdfData, 10000);
         var page = await pdf.getPage(1);
@@ -3131,49 +3306,49 @@ document.addEventListener('DOMContentLoaded', function() {{
     function hideAIBoxes() {{
         stopRainbowTimers();
         var ai = document.getElementById('aiAutoSetter');
-        if (ai) {{ ai.classList.remove('show'); ai.classList.remove('ai-puking', 'ai-pooping'); }}
+        if (ai) {{ ai.classList.remove('show'); ai.classList.remove('ai-lucky-rainbow', 'ai-happy-rainbow'); }}
         var ref = document.getElementById('aiRefresh');
         if (ref) ref.classList.remove('show');
     }}
 
-    var pukeTimerId = null;
-    var pooTimerId = null;
+    var luckyTimerId = null;
+    var happyTimerId = null;
 
-    function schedulePuke() {{
-        if (pukeTimerId) clearTimeout(pukeTimerId);
-        pukeTimerId = setTimeout(function() {{
-            pukeTimerId = null;
+    function scheduleLuckyRainbow() {{
+        if (luckyTimerId) clearTimeout(luckyTimerId);
+        luckyTimerId = setTimeout(function() {{
+            luckyTimerId = null;
             var btn = document.getElementById('aiAutoSetter');
             if (!btn || !btn.classList.contains('show') || btn.classList.contains('running')) return;
-            btn.classList.remove('ai-puking');
+            btn.classList.remove('ai-lucky-rainbow');
             void btn.offsetWidth;
-            btn.classList.add('ai-puking');
+            btn.classList.add('ai-lucky-rainbow');
             setTimeout(function() {{
-                btn.classList.remove('ai-puking');
-                schedulePuke();
+                btn.classList.remove('ai-lucky-rainbow');
+                scheduleLuckyRainbow();
             }}, 2800);
         }}, Math.random() * 300000);
     }}
 
-    function schedulePoo() {{
-        if (pooTimerId) clearTimeout(pooTimerId);
-        pooTimerId = setTimeout(function() {{
-            pooTimerId = null;
+    function scheduleHappyRainbow() {{
+        if (happyTimerId) clearTimeout(happyTimerId);
+        happyTimerId = setTimeout(function() {{
+            happyTimerId = null;
             var btn = document.getElementById('aiAutoSetter');
             if (!btn || !btn.classList.contains('show') || btn.classList.contains('running')) return;
-            btn.classList.remove('ai-pooping');
+            btn.classList.remove('ai-happy-rainbow');
             void btn.offsetWidth;
-            btn.classList.add('ai-pooping');
+            btn.classList.add('ai-happy-rainbow');
             setTimeout(function() {{
-                btn.classList.remove('ai-pooping');
-                schedulePoo();
+                btn.classList.remove('ai-happy-rainbow');
+                scheduleHappyRainbow();
             }}, 2800);
         }}, Math.random() * 60000);
     }}
 
     function stopRainbowTimers() {{
-        if (pukeTimerId) {{ clearTimeout(pukeTimerId); pukeTimerId = null; }}
-        if (pooTimerId) {{ clearTimeout(pooTimerId); pooTimerId = null; }}
+        if (luckyTimerId) {{ clearTimeout(luckyTimerId); luckyTimerId = null; }}
+        if (happyTimerId) {{ clearTimeout(happyTimerId); happyTimerId = null; }}
     }}
 
     function createAutoSetterButton() {{
@@ -3225,9 +3400,9 @@ document.addEventListener('DOMContentLoaded', function() {{
 
         var unicornSvg = '<svg class="ai-unicorn-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">' + unicornBody + '</svg>';
 
-        // Rainbow arcs: bezier curves from mouth (puke) and rear (poo)
+        // Rainbow arcs: bezier curves for random rainbows
         var rbColors = ['#8833ff','#0066ff','#00cc00','#ffff00','#ff8800','#ff0000'];
-        var mouthCurves = [
+        var luckyCurves = [
             'M 2,0 C 35,0 38,20 38,48',
             'M 2,0 C 30,0 33,18 33,44',
             'M 2,0 C 25,0 28,16 28,40',
@@ -3235,7 +3410,7 @@ document.addEventListener('DOMContentLoaded', function() {{
             'M 2,0 C 15,0 18,12 18,32',
             'M 2,0 C 10,0 13,10 13,28'
         ];
-        var tailCurves = [
+        var happyCurves = [
             'M 33,0 C 0,0 -3,15 -3,43',
             'M 33,0 C 3,0 0,14 0,39',
             'M 33,0 C 6,0 3,13 3,35',
@@ -3243,17 +3418,17 @@ document.addEventListener('DOMContentLoaded', function() {{
             'M 33,0 C 12,0 9,11 9,27',
             'M 33,0 C 15,0 12,10 12,23'
         ];
-        var pukeSvg = '<svg class="ai-rainbow-puke" viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg">';
-        var pooSvg = '<svg class="ai-rainbow-poo" viewBox="0 0 35 45" xmlns="http://www.w3.org/2000/svg">';
+        var luckySvg = '<svg class="ai-rainbow-lucky" viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg">';
+        var happySvg = '<svg class="ai-rainbow-happy" viewBox="0 0 35 45" xmlns="http://www.w3.org/2000/svg">';
         for (var ri = 0; ri < 6; ri++) {{
-            pukeSvg += '<path d="' + mouthCurves[ri] + '" stroke="' + rbColors[ri] + '" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-dasharray="80" stroke-dashoffset="80" style="animation-delay:' + (ri * 0.07) + 's"/>';
-            pooSvg += '<path d="' + tailCurves[ri] + '" stroke="' + rbColors[ri] + '" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-dasharray="80" stroke-dashoffset="80" style="animation-delay:' + (ri * 0.07) + 's"/>';
+            luckySvg += '<path d="' + luckyCurves[ri] + '" stroke="' + rbColors[ri] + '" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-dasharray="80" stroke-dashoffset="80" style="animation-delay:' + (ri * 0.07) + 's"/>';
+            happySvg += '<path d="' + happyCurves[ri] + '" stroke="' + rbColors[ri] + '" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-dasharray="80" stroke-dashoffset="80" style="animation-delay:' + (ri * 0.07) + 's"/>';
         }}
-        pukeSvg += '</svg>';
-        pooSvg += '</svg>';
+        luckySvg += '</svg>';
+        happySvg += '</svg>';
 
-        var unicornL = '<div class="ai-unicorn-wrap">' + unicornSvg + pukeSvg + pooSvg + '</div>';
-        var unicornR = '<div class="ai-unicorn-wrap" style="transform:scaleX(-1)">' + unicornSvg + pukeSvg + pooSvg + '</div>';
+        var unicornL = '<div class="ai-unicorn-wrap">' + unicornSvg + luckySvg + happySvg + '</div>';
+        var unicornR = '<div class="ai-unicorn-wrap" style="transform:scaleX(-1)">' + unicornSvg + luckySvg + happySvg + '</div>';
 
         var currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
         var compressLabel = currentT.compressButton || 'Compress';
@@ -3280,7 +3455,7 @@ document.addEventListener('DOMContentLoaded', function() {{
             }}
             if (!btn.classList.contains('show')) return;
             stopRainbowTimers();
-            btn.classList.remove('ai-puking', 'ai-pooping');
+            btn.classList.remove('ai-lucky-rainbow', 'ai-happy-rainbow');
             runAutoSetter();
         }});
         btn.addEventListener('keydown', function(e) {{
@@ -3290,7 +3465,7 @@ document.addEventListener('DOMContentLoaded', function() {{
                     cancellationRequested = true;
                 }} else if (btn.classList.contains('show')) {{
                     stopRainbowTimers();
-                    btn.classList.remove('ai-puking', 'ai-pooping');
+                    btn.classList.remove('ai-lucky-rainbow', 'ai-happy-rainbow');
                     runAutoSetter();
                 }}
             }}
@@ -3336,7 +3511,7 @@ document.addEventListener('DOMContentLoaded', function() {{
         if (autoSetterRunning) return;
         if (!selectedFile || fileError) return;
         var btn = createAutoSetterButton();
-        btn.classList.remove('running', 'ai-puking', 'ai-pooping');
+        btn.classList.remove('running', 'ai-lucky-rainbow', 'ai-happy-rainbow');
         btn.classList.add('show');
         var prog = document.getElementById('aiProgress');
         if (prog) {{ prog.style.transition = 'none'; prog.style.transform = 'scaleX(0)'; void prog.offsetWidth; prog.style.transition = ''; }}
@@ -3344,8 +3519,8 @@ document.addEventListener('DOMContentLoaded', function() {{
         if (status) status.textContent = '';
         var lbl = btn.querySelector('.ai-label');
         if (lbl) lbl.textContent = (TRANSLATIONS[currentLang] || TRANSLATIONS.en).compressButton || 'Compress';
-        schedulePuke();
-        schedulePoo();
+        scheduleLuckyRainbow();
+        scheduleHappyRainbow();
     }}
 
     function showRefreshButton() {{
@@ -3359,6 +3534,21 @@ document.addEventListener('DOMContentLoaded', function() {{
         if (autoSetterRunning) return;
         if (!selectedFile || fileError) return;
         hideAIBoxes();
+
+        // Don't show AI/refresh if even 144 DPI exceeds the RAM limit —
+        // the AI auto-setter can't do anything useful
+        var ps = getCurrentPageSize();
+        if (totalPageCount && estimateRAMBytes(totalPageCount, 144, ps, false, inputFileSize) > RAM_LIMIT) {{
+            // If even 72 DPI exceeds the limit, show Advanced Tricks so
+            // the user can access the RAM override checkbox
+            if (estimateRAMBytes(totalPageCount, 72, ps, false, inputFileSize) > RAM_LIMIT) {{
+                if (!document.getElementById('advancedTricksContent')) {{
+                    showCancelledBox();
+                }}
+            }}
+            return;
+        }}
+
         if (isFormAtDefaults()) {{
             showAutoSetterButton();
         }} else {{
@@ -3408,6 +3598,9 @@ document.addEventListener('DOMContentLoaded', function() {{
 
         document.body.classList.add('ai-running');
         setFormControlsEnabled(false);
+
+        // Free all prior results before starting trials
+        deepCleanMemory();
 
         progressDiv.classList.remove('cancelled');
         progressDiv.innerHTML = '<span class="spinner"></span><span id="progressText">Detecting page format...</span>';
@@ -3600,9 +3793,9 @@ document.addEventListener('DOMContentLoaded', function() {{
             if (standardDPIs[di] <= maxSafeDPI) dpiLevels.push(standardDPIs[di]);
         }}
         // If max safe DPI is below 216, add it and a lower step
-        if (maxSafeDPI < 216 && maxSafeDPI >= 72) {{
+        if (maxSafeDPI < 216 && maxSafeDPI >= 144) {{
             dpiLevels.push(maxSafeDPI);
-            var lowerDPI = Math.max(Math.round(maxSafeDPI * 0.75), 72);
+            var lowerDPI = Math.max(Math.round(maxSafeDPI * 0.75), 144);
             if (lowerDPI < maxSafeDPI) dpiLevels.push(lowerDPI);
         }}
 
@@ -3707,14 +3900,28 @@ document.addEventListener('DOMContentLoaded', function() {{
                 refreshAIStatus();
 
                 if (ratio < 0.6) break;
+
+                // Free current trial's PDF if it wasn't the best (don't hold two large PDFs)
+                if (window.resultPDF !== bestResultData.resultPDF) {{
+                    window.resultPDF = null;
+                }}
             }} catch (e) {{
                 observer.disconnect();
                 if (e.message === 'CONVERSION_CANCELLED') break;
                 console.warn('Auto-setter trial failed:', e);
+                window.resultPDF = null;
                 continue;
             }}
 
             conversionInProgress = false;
+
+            // Clean intermediate state between trials (canvases, WASM FS)
+            var prevCanvas = document.getElementById('previewCanvas');
+            if (prevCanvas) {{ prevCanvas.width = 0; prevCanvas.height = 0; }}
+            if (window.Module && window.Module.FS) {{
+                try {{ var FS = window.Module.FS; var entries = FS.readdir('/jbig2_work'); for (var ci = 0; ci < entries.length; ci++) {{ if (entries[ci] !== '.' && entries[ci] !== '..') try {{ FS.unlink('/jbig2_work/' + entries[ci]); }} catch(e2){{}} }} }} catch(e){{}}
+                try {{ window.Module.FS.rmdir('/jbig2_work'); }} catch(e) {{}}
+            }}
         }}
 
         observer.disconnect();
@@ -3780,7 +3987,9 @@ document.addEventListener('DOMContentLoaded', function() {{
         setFormControlsEnabled(true);
 
         if (bestResultData) {{
+            autoSetterJustFinished = true;
             showResultBox();
+            autoSetterJustFinished = false;
             if (bestResultData.resultSize < bestResultData.originalSize) {{
                 makeSaveFabulous();
                 var saveEl = document.getElementById('saveResultBtn');

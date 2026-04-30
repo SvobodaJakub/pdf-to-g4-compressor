@@ -27,7 +27,8 @@ const REQUIRED_FIELDS = [
     'advancedTricks', 'useJBIG2Label', 'jbig2Warning',
     'preserveRotationLabel', 'metadataSection', 'includeTimestampLabel',
     'ramWarningHigh', 'ramWarningCritical',
-    'jbig2DisabledMpix', 'jbig2DisabledPages', 'ramOverrideAcceptRisk'
+    'jbig2DisabledMpix', 'jbig2DisabledPages', 'ramOverrideAcceptRisk',
+    'fileInfoPageCount', 'fileInfoFileSize', 'inputHint'
 ];
 
 // Deprecated fields
@@ -39,6 +40,8 @@ const PLACEHOLDER_REQUIREMENTS = {
     'ramWarningCritical': ['{ram}'],
     'jbig2DisabledMpix': ['{mpix}'],
     'jbig2DisabledPages': ['{pages}'],
+    'fileInfoPageCount': ['{pages}'],
+    'fileInfoFileSize': ['{size}'],
 };
 
 function extractTranslationsFromFile(filepath) {

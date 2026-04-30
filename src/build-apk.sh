@@ -19,8 +19,8 @@ KEYSTORE_DIR="$PROJECT_ROOT/android-private"
 # Increment these for each Google Play release:
 #   versionCode: Integer, must increase with each release (1, 2, 3, ...)
 #   versionName: User-visible version string (e.g., "1.0", "1.1.0", "2.0")
-VERSION_CODE=17
-VERSION_NAME="1.2.7"
+VERSION_CODE=18
+VERSION_NAME="1.2.8"
 
 echo "Script directory: $SCRIPT_DIR"
 echo "Source directory: $SRC_DIR"
@@ -140,11 +140,15 @@ MANIFEST_EOF
 cat > "app/src/main/java/com/svobodajakub/pdfg4compressor/MainActivity.java" << 'JAVA_EOF'
 package com.svobodajakub.pdfg4compressor;
 
+import android.app.ActivityManager;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.DocumentsContract;
 import android.util.Base64;
+import android.util.Log;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -152,19 +156,31 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.RenderProcessGoneDetail;
+import android.graphics.Color;
+import android.graphics.PorterDuff;
+import android.view.Gravity;
+import android.view.View;
 import android.view.WindowManager;
+import android.widget.FrameLayout;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 import androidx.activity.ComponentActivity;
 import androidx.activity.OnBackPressedCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MainActivity extends ComponentActivity {
+    private static final String TAG = "MemProbe";
     private WebView webView;
     private ValueCallback<Uri[]> filePathCallback;
 
@@ -174,13 +190,144 @@ public class MainActivity extends ComponentActivity {
     private String pendingFilename;
     private byte[] pendingFileData;
     private String pendingMimeType;
+    private File pendingTempFile;
+    private boolean webViewKilledForSave = false;
 
     // Track modal state
     private volatile boolean modalIsOpen = false;
 
+    // Memory probe — persistent state
+    // probe_state: "none" → "testing_1400" → "testing_800" → "done"
+    // If app is killed during a test, on restart we see the in-progress state
+    // and record that test as failed (the OS killed us = we can't handle that much).
+    private static final String PREFS_NAME = "mem_probe";
+    private static final String PREF_TIER = "tier";
+    private static final String PREF_STATE = "probe_state";
+    private int memoryTier = 0;
+
+    // Probing runtime state
+    private boolean probing = false;
+    private boolean probeRendererDied = false;
+    private boolean probeJavaFailed = false;
+    private boolean probeTrimMemoryFired = false;
+    private byte[][] sacrificialData = null;
+    private android.os.Handler probeHandler;
+    private int probeId = 0;
+    private boolean probeTimerStarted = false;
+
+    private static String makeProbeHtml(int megabytes) {
+        return "<!DOCTYPE html><html><head><meta charset='utf-8'>" +
+            "<meta name='viewport' content='width=device-width,initial-scale=1.0'>" +
+            "<style>body{margin:0;background:#fff}#v{color:#fff;font-size:1px}</style></head>" +
+            "<body><span id='v'></span><script>" +
+            "if(typeof ProbeSignal!=='undefined')ProbeSignal.ready();" +
+            "var d=[];" +
+            "for(var m=0;m<" + megabytes + ";m++){" +
+            "var a=new Uint32Array(262144);" +
+            "for(var i=0;i<262144;i++)a[i]=(Math.random()*4294967296)^(Math.random()*4294967296);" +
+            "d.push(a)}" +
+            "var el=document.getElementById('v');" +
+            "function rd(){" +
+            "var v=0;" +
+            "for(var c=0;c<d.length;c++)for(var i=0;i<262144;i+=512)v=(v+d[c][i])|0;" +
+            "el.textContent=(v&1)?'.':',';" +
+            "setTimeout(rd,500)}" +
+            "rd()" +
+            "</script></body></html>";
+    }
+
+    @Override
+    public void onTrimMemory(int level) {
+        super.onTrimMemory(level);
+        if (probing && level >= TRIM_MEMORY_RUNNING_CRITICAL) {
+            Log.w(TAG, "onTrimMemory CRITICAL during probe, aborting");
+            probeTrimMemoryFired = true;
+            freeSacrificialMemory();
+            if (webView != null) {
+                webView.destroy();
+                webView = null;
+            }
+        }
+    }
+
+    private volatile Thread sacrificialThread = null;
+    private volatile boolean sacrificialStop = false;
+
+    private void freeSacrificialMemory() {
+        sacrificialStop = true;
+        sacrificialData = null;
+        Thread t = sacrificialThread;
+        if (t != null) {
+            t.interrupt();
+            try { t.join(2000); } catch (InterruptedException ignored) {}
+            sacrificialThread = null;
+        }
+    }
+
+    private static final int PHASE2_DURATION_MS = 16000;
+
+    private void allocateSacrificialMemory() {
+        try {
+            ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+            int mc = am.getMemoryClass();
+            int mb = (int)(Math.min(mc, 256) * 0.8);
+            if (mb < 1) mb = 1;
+            int sleepPerMB = PHASE2_DURATION_MS / mb;
+            probeJavaFailed = false;
+            Log.i(TAG, "Allocating sacrificial " + mb + " MB over " + PHASE2_DURATION_MS + "ms (" + sleepPerMB + "ms/MB)");
+            sacrificialData = new byte[mb][];
+            java.util.Random rng = new java.util.Random();
+            for (int i = 0; i < mb; i++) {
+                if (sacrificialStop || Thread.interrupted() || probeTrimMemoryFired) {
+                    Log.w(TAG, "Allocation stopped at " + i + "/" + mb + " MB");
+                    probeJavaFailed = true;
+                    sacrificialData = null;
+                    return;
+                }
+                sacrificialData[i] = new byte[1048576];
+                rng.nextBytes(sacrificialData[i]);
+                try { Thread.sleep(sleepPerMB); } catch (InterruptedException e) {
+                    Log.w(TAG, "Allocation interrupted at " + i + "/" + mb + " MB");
+                    probeJavaFailed = true;
+                    sacrificialData = null;
+                    return;
+                }
+            }
+            Log.i(TAG, "Sacrificial allocation succeeded: " + mb + " MB");
+        } catch (Throwable e) {
+            Log.w(TAG, "Sacrificial allocation failed: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            probeJavaFailed = true;
+            sacrificialData = null;
+        }
+    }
+
+    private String getProbeState() {
+        return getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getString(PREF_STATE, "none");
+    }
+
+    private void setProbeState(String state) {
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .edit().putString(PREF_STATE, state).commit(); // commit, not apply — must persist before crash
+    }
+
+    private void cleanupTempFiles() {
+        File cacheDir = getCacheDir();
+        if (cacheDir != null) {
+            File[] temps = cacheDir.listFiles((dir, name) -> name.startsWith("pdf_save_"));
+            if (temps != null) {
+                for (File f : temps) f.delete();
+            }
+        }
+        pendingTempFile = null;
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Clean leftover temp files from previous runs
+        cleanupTempFiles();
 
         // Keep screen on during PDF processing
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -212,7 +359,17 @@ public class MainActivity extends ComponentActivity {
                         try {
                             OutputStream outputStream = getContentResolver().openOutputStream(uri);
                             if (outputStream != null) {
-                                outputStream.write(pendingFileData);
+                                if (pendingTempFile != null && pendingTempFile.exists()) {
+                                    FileInputStream fis = new FileInputStream(pendingTempFile);
+                                    byte[] buf = new byte[65536];
+                                    int n;
+                                    while ((n = fis.read(buf)) != -1) {
+                                        outputStream.write(buf, 0, n);
+                                    }
+                                    fis.close();
+                                } else if (pendingFileData != null) {
+                                    outputStream.write(pendingFileData);
+                                }
                                 outputStream.close();
                                 Toast.makeText(this, "File saved: " + pendingFilename,
                                     Toast.LENGTH_SHORT).show();
@@ -224,90 +381,29 @@ public class MainActivity extends ComponentActivity {
                             pendingFileData = null;
                             pendingFilename = null;
                             pendingMimeType = null;
+                            cleanupTempFiles();
+                            if (webViewKilledForSave) {
+                                webViewKilledForSave = false;
+                                showSaveResultAnimation(true);
+                            }
                         }
+                    }
+                } else {
+                    cleanupTempFiles();
+                    if (webViewKilledForSave) {
+                        webViewKilledForSave = false;
+                        showSaveResultAnimation(false);
                     }
                 }
             }
         );
 
-        // Create WebView
-        webView = new WebView(this);
-        setContentView(webView);
-
-        // Configure WebView
-        WebSettings settings = webView.getSettings();
-        settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
-        settings.setAllowFileAccess(true);
-        settings.setAllowContentAccess(true);
-        settings.setDatabaseEnabled(true);
-        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
-
-        // Enable zoom controls (useful for PDF preview)
-        settings.setBuiltInZoomControls(true);
-        settings.setDisplayZoomControls(false);
-
-        // Custom WebViewClient to handle external links
-        webView.setWebViewClient(new WebViewClient() {
-            @Override
-            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                String url = request.getUrl().toString();
-
-                // Open external URLs (http/https) in system browser
-                if (url.startsWith("http://") || url.startsWith("https://")) {
-                    try {
-                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        startActivity(intent);
-                    } catch (Exception e) {
-                        Toast.makeText(MainActivity.this, "Cannot open browser", Toast.LENGTH_SHORT).show();
-                    }
-                    return true;
-                }
-
-                // Allow file:// URLs to load in WebView
-                return false;
-            }
-        });
-
-        // Custom WebChromeClient to handle file picker
-        webView.setWebChromeClient(new WebChromeClient() {
-            @Override
-            public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback,
-                                            FileChooserParams fileChooserParams) {
-                // Store callback for later use
-                MainActivity.this.filePathCallback = filePathCallback;
-
-                // Create file chooser intent (accept PDF and ZIP files)
-                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                intent.setType("*/*");
-                String[] mimeTypes = {"application/pdf", "application/zip"};
-                intent.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes);
-                intent.addCategory(Intent.CATEGORY_OPENABLE);
-
-                try {
-                    fileChooserLauncher.launch(Intent.createChooser(intent, "Select file"));
-                } catch (Exception e) {
-                    filePathCallback.onReceiveValue(null);
-                    MainActivity.this.filePathCallback = null;
-                    Toast.makeText(MainActivity.this, "Cannot open file picker", Toast.LENGTH_SHORT).show();
-                    return false;
-                }
-
-                return true;
-            }
-        });
-
-        // Add JavaScript interface for file saving and modal state tracking
-        webView.addJavascriptInterface(new FileHandler(), "AndroidFileHandler");
-        webView.addJavascriptInterface(new ModalStateHandler(), "AndroidModalState");
-
         // Handle back button to close modals first
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                if (modalIsOpen) {
-                    // Close the modal via JavaScript (using classList, not style.display)
+                if (probing) return; // ignore back during probe
+                if (modalIsOpen && webView != null) {
                     webView.evaluateJavascript(
                         "(function() {" +
                             "var aboutModal = document.getElementById('aboutModal');" +
@@ -326,49 +422,163 @@ public class MainActivity extends ComponentActivity {
                         null
                     );
                     modalIsOpen = false;
-                    // Stay in app, don't exit
-                } else if (webView.canGoBack()) {
-                    // Navigate back in WebView history
+                } else if (webView != null && webView.canGoBack()) {
                     webView.goBack();
                 } else {
-                    // Exit app
                     setEnabled(false);
                     getOnBackPressedDispatcher().onBackPressed();
                 }
             }
         });
 
-        // Load HTML from assets
-        webView.loadUrl("file:///android_asset/index.html");
+        // Check probe state machine
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        String probeState = prefs.getString(PREF_STATE, "none");
+        memoryTier = prefs.getInt(PREF_TIER, 0);
+
+        Log.i(TAG, "onCreate: probeState=" + probeState + " memoryTier=" + memoryTier);
+        if ("done".equals(probeState) && memoryTier > 0) {
+            Log.i(TAG, "Already probed, loading app");
+            loadMainApp();
+        } else {
+            Log.i(TAG, "Starting memory probe");
+            startMemoryProbe();
+        }
     }
 
-    // JavaScript interface for file operations
+    private void setupWebView() {
+        webView = new WebView(this);
+        setContentView(webView);
+
+        WebSettings settings = webView.getSettings();
+        settings.setJavaScriptEnabled(true);
+        settings.setDomStorageEnabled(true);
+        settings.setAllowFileAccess(true);
+        settings.setAllowContentAccess(true);
+        settings.setDatabaseEnabled(true);
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        settings.setBuiltInZoomControls(true);
+        settings.setDisplayZoomControls(false);
+
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                String url = request.getUrl().toString();
+                if (url.startsWith("http://") || url.startsWith("https://")) {
+                    try {
+                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(intent);
+                    } catch (Exception e) {
+                        Toast.makeText(MainActivity.this, "Cannot open browser", Toast.LENGTH_SHORT).show();
+                    }
+                    return true;
+                }
+                return false;
+            }
+
+            @Override
+            public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+                if (view == webView) {
+                    view.destroy();
+                    webView = null;
+                    setupWebView();
+                    modalIsOpen = false;
+                    webView.loadUrl("file:///android_asset/index.html");
+                }
+                return true;
+            }
+        });
+
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onShowFileChooser(WebView wv, ValueCallback<Uri[]> cb,
+                                            FileChooserParams params) {
+                filePathCallback = cb;
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType("*/*");
+                intent.putExtra(Intent.EXTRA_MIME_TYPES,
+                    new String[]{"application/pdf", "application/zip"});
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                try {
+                    fileChooserLauncher.launch(Intent.createChooser(intent, "Select file"));
+                } catch (Exception e) {
+                    cb.onReceiveValue(null);
+                    filePathCallback = null;
+                }
+                return true;
+            }
+        });
+
+        webView.addJavascriptInterface(new FileHandler(), "AndroidFileHandler");
+        webView.addJavascriptInterface(new ModalStateHandler(), "AndroidModalState");
+    }
+
+    // JavaScript interface for file operations — streaming to temp file
     public class FileHandler {
         @JavascriptInterface
-        public void saveFile(String filename, String base64Data, String mimeType) {
+        public void beginSave(String filename, String mimeType) {
+            pendingFilename = filename;
+            pendingMimeType = mimeType;
+            pendingFileData = null;
+            cleanupTempFiles();
+            try {
+                pendingTempFile = File.createTempFile("pdf_save_", ".tmp", getCacheDir());
+            } catch (Exception e) {
+                pendingTempFile = null;
+            }
+        }
+
+        @JavascriptInterface
+        public void writeChunk(String base64Chunk) {
+            if (pendingTempFile == null) return;
+            try {
+                FileOutputStream fos = new FileOutputStream(pendingTempFile, true);
+                fos.write(Base64.decode(base64Chunk, Base64.DEFAULT));
+                fos.close();
+            } catch (Exception e) {
+                // Chunk write failed
+            }
+        }
+
+        @JavascriptInterface
+        public void endSave() {
+            if (pendingTempFile == null || pendingFilename == null) return;
             runOnUiThread(() -> {
                 try {
-                    // Decode base64 data
-                    pendingFileData = Base64.decode(base64Data, Base64.DEFAULT);
-                    pendingFilename = filename;
-                    pendingMimeType = mimeType;
+                    // Kill WebView on low/mid tier devices to free memory for SAF dialog
+                    if (memoryTier <= 2 && webView != null) {
+                        webViewKilledForSave = true;
+                        webView.destroy();
+                        webView = null;
+                        setContentView(new android.view.View(MainActivity.this));
+                    }
 
-                    // Create file save intent
                     Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
                     intent.addCategory(Intent.CATEGORY_OPENABLE);
-                    intent.setType(mimeType);
-                    intent.putExtra(Intent.EXTRA_TITLE, filename);
-
-                    // Suggest Downloads directory
+                    intent.setType(pendingMimeType);
+                    intent.putExtra(Intent.EXTRA_TITLE, pendingFilename);
                     intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI,
                         Uri.parse("content://com.android.externalstorage.documents/document/primary:Download"));
-
                     fileSaverLauncher.launch(intent);
                 } catch (Exception e) {
                     Toast.makeText(MainActivity.this, "Error preparing file: " + e.getMessage(),
                         Toast.LENGTH_SHORT).show();
+                    cleanupTempFiles();
                 }
             });
+        }
+
+        @JavascriptInterface
+        public int getMemoryTier() {
+            return memoryTier;
+        }
+
+        @JavascriptInterface
+        public void saveFile(String filename, String base64Data, String mimeType) {
+            beginSave(filename, mimeType);
+            writeChunk(base64Data);
+            endSave();
         }
     }
 
@@ -380,8 +590,390 @@ public class MainActivity extends ComponentActivity {
         }
     }
 
+    // JS interface: signals that the probe HTML has started executing
+    public class ProbeSignalInterface {
+        @JavascriptInterface
+        public void ready() {
+            final int id = probeId;
+            runOnUiThread(() -> {
+                if (id != probeId || probeTimerStarted) return;
+                probeTimerStarted = true;
+                Log.i(TAG, "JS ready signal received, starting phase 1 (8s)");
+                // Phase 1: WebView-only for 8 seconds
+                probeHandler.postDelayed(() -> {
+                    if (id != probeId) return;
+                    onPhase1Done(id);
+                }, 8000);
+            });
+        }
+    }
+
+    private ProgressBar probeSpinner;
+
+    private void onPhase1Done(int id) {
+        if (id != probeId) return;
+        Log.i(TAG, "Phase 1 done, rendererDied=" + probeRendererDied);
+
+        if (probeRendererDied) {
+            // WebView already died — no point allocating Java memory, just wait 2s
+            Log.i(TAG, "Renderer already dead, skipping phase 2, waiting 2s");
+            probeHandler.postDelayed(() -> {
+                if (id != probeId) return;
+                onPhase2Done();
+            }, 2000);
+            return;
+        }
+
+        Log.i(TAG, "Starting phase 2 (Java heap allocation)");
+        // Make the spinner larger to visually indicate phase 2
+        if (probeSpinner != null) {
+            FrameLayout.LayoutParams lp2 = new FrameLayout.LayoutParams(180, 180);
+            lp2.gravity = Gravity.CENTER;
+            probeSpinner.setLayoutParams(lp2);
+        }
+        // Phase 2: gradually add sacrificial Java memory on top of WebView
+        // Allocation takes ~16s, then hold for 10s more = 26s total
+        sacrificialStop = false;
+        sacrificialThread = new Thread(() -> {
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
+            allocateSacrificialMemory();
+        });
+        sacrificialThread.start();
+        probeHandler.postDelayed(() -> {
+            if (id != probeId) return;
+            onPhase2Done();
+        }, PHASE2_DURATION_MS + 10000);
+    }
+
+    private void onPhase2Done() {
+        boolean failed = probeRendererDied || probeJavaFailed || probeTrimMemoryFired;
+        Log.i(TAG, "Phase 2 done: rendererDied=" + probeRendererDied +
+            " javaFailed=" + probeJavaFailed + " trimFired=" + probeTrimMemoryFired +
+            " → " + (failed ? "FAIL" : "PASS"));
+
+        // Free probe resources but keep the calibration frame + dots
+        freeSacrificialMemory();
+        if (webView != null) {
+            if (probeFrame != null) probeFrame.removeView(webView);
+            webView.destroy();
+            webView = null;
+        }
+        System.gc();
+
+        probeHandler.removeCallbacksAndMessages(null);
+        probeId++;
+        startSquareTimer(); // keep dots going
+
+        String state = getProbeState();
+        if ("testing_1400".equals(state)) {
+            if (failed) {
+                setProbeState("testing_800");
+                Log.i(TAG, "Waiting 5s before starting 800MB probe");
+                ensureCalibrationScreen(0xFF888888); // grey spinner during wait
+                probeHandler.postDelayed(() -> runProbe(800, 0xFFFF69B4), 5000);
+            } else {
+                saveMemoryTier(3);
+            }
+        } else if ("testing_800".equals(state)) {
+            saveMemoryTier(failed ? 1 : 2);
+        }
+    }
+
+    private FrameLayout probeFrame;
+    private java.util.Random squareRng = new java.util.Random();
+    private long squareStartTime;
+    private java.util.ArrayList<View> squareDots = new java.util.ArrayList<>();
+    private boolean squareTimerRunning = false;
+
+    private void ensureCalibrationScreen(int spinnerColor) {
+        if (probeFrame != null) {
+            // Reuse existing frame — just update the spinner color
+            if (probeSpinner != null) {
+                probeSpinner.getIndeterminateDrawable().setColorFilter(spinnerColor, PorterDuff.Mode.SRC_IN);
+            }
+            return;
+        }
+
+        probeFrame = new FrameLayout(this);
+        probeFrame.setBackgroundColor(Color.WHITE);
+
+        TextView label = new TextView(this);
+        label.setText(R.string.calibrating);
+        label.setTextColor(0xFF666666);
+        label.setTextSize(16);
+        label.setGravity(Gravity.CENTER);
+        FrameLayout.LayoutParams labelLp = new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT);
+        labelLp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+        labelLp.topMargin = 80;
+        probeFrame.addView(label, labelLp);
+
+        probeSpinner = new ProgressBar(this);
+        probeSpinner.getIndeterminateDrawable().setColorFilter(spinnerColor, PorterDuff.Mode.SRC_IN);
+        FrameLayout.LayoutParams spinnerLp = new FrameLayout.LayoutParams(120, 120);
+        spinnerLp.gravity = Gravity.CENTER;
+        probeFrame.addView(probeSpinner, spinnerLp);
+
+        squareStartTime = System.currentTimeMillis();
+        squareDots.clear();
+        setContentView(probeFrame);
+        startSquareTimer();
+    }
+
+    private void addRandomSquare(boolean black) {
+        if (probeFrame == null) return;
+        int screenW = probeFrame.getWidth();
+        int screenH = probeFrame.getHeight();
+        if (screenW <= 0 || screenH <= 0) return;
+
+        int cols = 20, rows = 50;
+        int cellW = screenW / cols;
+        int cellH = screenH / rows;
+        int sqW = (int)(cellW * 0.3);
+        int sqH = (int)(cellH * 0.3);
+        if (sqW < 2) sqW = 2;
+        if (sqH < 2) sqH = 2;
+
+        int col = squareRng.nextInt(cols);
+        int row = squareRng.nextInt(rows);
+        int x = col * cellW + (cellW - sqW) / 2;
+        int y = row * cellH + (cellH - sqH) / 2;
+
+        View sq = new View(this);
+        sq.setBackgroundColor(black ? Color.BLACK : Color.WHITE);
+        FrameLayout.LayoutParams sqLp = new FrameLayout.LayoutParams(sqW, sqH);
+        sqLp.leftMargin = x;
+        sqLp.topMargin = y;
+        probeFrame.addView(sq, sqLp);
+        if (black) squareDots.add(sq);
+    }
+
+    private android.os.Handler squareHandler;
+
+    private void removeRandomDot() {
+        if (squareDots.isEmpty() || probeFrame == null) return;
+        int idx = squareRng.nextInt(squareDots.size());
+        View dot = squareDots.remove(idx);
+        probeFrame.removeView(dot);
+    }
+
+    private void startSquareTimer() {
+        if (squareTimerRunning) return;
+        if (squareHandler == null) squareHandler = new android.os.Handler(getMainLooper());
+        squareTimerRunning = true;
+        squareHandler.postDelayed(squareTick, 300);
+    }
+
+    private final Runnable squareTick = new Runnable() {
+        @Override
+        public void run() {
+            if (!squareTimerRunning || probeFrame == null) return;
+            addRandomSquare(true);
+            if (squareDots.size() > 60) removeRandomDot();
+            squareHandler.postDelayed(this, 300);
+        }
+    };
+
+    private void stopSquareTimer() {
+        squareTimerRunning = false;
+        if (squareHandler != null) squareHandler.removeCallbacksAndMessages(null);
+    }
+
+    private void showGreySpinner() {
+        ensureCalibrationScreen(0xFF888888);
+    }
+
+    private void runProbe(int megabytes, int spinnerColor) {
+        Log.i(TAG, "runProbe: " + megabytes + " MB");
+        if (probeHandler == null) {
+            probeHandler = new android.os.Handler(getMainLooper());
+        }
+        probeHandler.removeCallbacksAndMessages(null);
+        probeId++;
+
+        probeRendererDied = false;
+        probeJavaFailed = false;
+        probeTrimMemoryFired = false;
+        probeTimerStarted = false;
+        final int id = probeId;
+
+        ensureCalibrationScreen(spinnerColor);
+
+        // WebView behind everything (index 0)
+        webView = new WebView(this);
+        probeFrame.addView(webView, 0, new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+
+        WebSettings s = webView.getSettings();
+        s.setJavaScriptEnabled(true);
+        webView.addJavascriptInterface(new ProbeSignalInterface(), "ProbeSignal");
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+                Log.w(TAG, "Renderer died during probe");
+                probeRendererDied = true;
+                // If phase 2 is running, abort immediately
+                if (probeTimerStarted) {
+                    probeHandler.removeCallbacksAndMessages(null);
+                    freeSacrificialMemory();
+                    probeHandler.postDelayed(() -> {
+                        if (id == probeId) onPhase2Done();
+                    }, 2000);
+                }
+                return true;
+            }
+        });
+
+        webView.loadDataWithBaseURL(null, makeProbeHtml(megabytes), "text/html", "utf-8", null);
+
+        // Fallback: if JS never signals ready within 60s, treat as failure
+        probeHandler.postDelayed(() -> {
+            if (id == probeId && !probeTimerStarted) {
+                probeRendererDied = true;
+                onPhase2Done();
+            }
+        }, 60000);
+    }
+
+    private long getAvailableMemoryMB() {
+        try {
+            ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+            ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
+            am.getMemoryInfo(mi);
+            return mi.availMem / (1024L * 1024L);
+        } catch (Throwable e) {
+            Log.w(TAG, "getAvailableMemoryMB failed: " + e.getMessage());
+            return -1;
+        }
+    }
+
+    private void startMemoryProbe() {
+        probing = true;
+        String state = getProbeState();
+        Log.i(TAG, "startMemoryProbe: state=" + state);
+
+        if ("testing_1400".equals(state)) {
+            Log.i(TAG, "App was killed during 1400MB test → fail, trying 800MB");
+            setProbeState("testing_800");
+            runProbe(800, 0xFFFF69B4);
+        } else if ("testing_800".equals(state)) {
+            Log.i(TAG, "App was killed during 800MB test → both failed → tier 1");
+            saveMemoryTier(1);
+        } else {
+            // Fresh start — try quick detection via availMem first
+            long availMB = getAvailableMemoryMB();
+            Log.i(TAG, "Available memory: " + availMB + " MB");
+
+            if (availMB >= 100 && availMB <= 4 * 1024 * 1024) {
+                // Value looks sane — use it directly
+                int tier;
+                if (availMB >= 2000) {
+                    tier = 3;
+                } else if (availMB >= 800) {
+                    tier = 2;
+                } else {
+                    tier = 1;
+                }
+                Log.i(TAG, "Quick detection: availMem=" + availMB + " MB → tier " + tier);
+                saveMemoryTierImmediate(tier);
+            } else {
+                // Value out of range or API failed — fall back to full probe
+                Log.i(TAG, "availMem out of range or unavailable, running full probe");
+                setProbeState("testing_1400");
+                runProbe(1400, 0xFF764BA2);
+            }
+        }
+    }
+
+    private void saveMemoryTier(int tier) {
+        Log.i(TAG, "Saving memory tier: " + tier);
+        memoryTier = tier;
+        setProbeState("done");
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .edit().putInt(PREF_TIER, tier).commit();
+        probing = false;
+        // Delay to let OS reclaim probe memory before loading the full app
+        Log.i(TAG, "Waiting 3s before loading main app");
+        showGreySpinner();
+        if (probeHandler == null) probeHandler = new android.os.Handler(getMainLooper());
+        probeHandler.postDelayed(() -> loadMainApp(), 3000);
+    }
+
+    private void saveMemoryTierImmediate(int tier) {
+        Log.i(TAG, "Saving memory tier: " + tier + " (immediate)");
+        memoryTier = tier;
+        setProbeState("done");
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .edit().putInt(PREF_TIER, tier).commit();
+        probing = false;
+        loadMainApp();
+    }
+
+    private void loadMainApp() {
+        stopSquareTimer();
+        probeFrame = null;
+        squareDots.clear();
+        if (webView != null) {
+            webView.destroy();
+            webView = null;
+        }
+        setupWebView();
+        webView.loadUrl("file:///android_asset/index.html");
+    }
+
+    private void showSaveResultAnimation(boolean success) {
+        // SVG diskette with download arrow, overlaid by animated check or cross
+        String checkColor = success ? "#4CAF50" : "#F44336";
+        String markPath = success
+            ? "M 20,50 L 40,70 L 75,25" // checkmark
+            : "M 25,25 L 75,75 M 75,25 L 25,75"; // X cross
+        String svgHtml = "<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width,initial-scale=1.0'>" +
+            "<style>*{margin:0;padding:0}body{display:flex;align-items:center;justify-content:center;" +
+            "min-height:100vh;background:#fff}" +
+            "svg{width:70vmin;height:70vmin;max-width:400px;max-height:400px}" +
+            ".mark{stroke-dasharray:150;stroke-dashoffset:150;animation:draw 0.8s ease-out 0.5s forwards}" +
+            "@keyframes draw{to{stroke-dashoffset:0}}" +
+            "</style></head><body>" +
+            "<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'>" +
+            // Diskette body
+            "<rect x='10' y='10' width='80' height='80' rx='4' fill='#607D8B' stroke='#455A64' stroke-width='2'/>" +
+            // Diskette metal slider
+            "<rect x='30' y='10' width='30' height='25' rx='2' fill='#B0BEC5'/>" +
+            "<rect x='40' y='13' width='10' height='19' rx='1' fill='#607D8B'/>" +
+            // Diskette label area
+            "<rect x='20' y='50' width='60' height='35' rx='2' fill='#ECEFF1'/>" +
+            // Download arrow on label
+            "<path d='M 50,55 L 50,72 M 42,65 L 50,73 L 58,65' fill='none' stroke='#455A64' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/>" +
+            // Animated check/cross mark
+            "<path class='mark' d='" + markPath + "' fill='none' stroke='" + checkColor + "' " +
+            "stroke-width='8' stroke-linecap='round' stroke-linejoin='round'/>" +
+            "</svg></body></html>";
+
+        WebView animView = new WebView(this);
+        animView.getSettings().setJavaScriptEnabled(false);
+        animView.setBackgroundColor(Color.WHITE);
+        setContentView(animView);
+        animView.loadDataWithBaseURL(null, svgHtml, "text/html", "utf-8", null);
+
+        new android.os.Handler(getMainLooper()).postDelayed(() -> {
+            animView.destroy();
+            recreateWebView();
+        }, 4000);
+    }
+
+    private void recreateWebView() {
+        if (webView != null) {
+            webView.destroy();
+            webView = null;
+        }
+        Intent intent = getIntent();
+        finish();
+        startActivity(intent);
+    }
+
     @Override
     protected void onDestroy() {
+        cleanupTempFiles();
         if (webView != null) {
             webView.destroy();
         }
@@ -394,6 +986,7 @@ cat > "app/src/main/res/values/strings.xml" << 'STRINGS_EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">PDF G4 Compressor</string>
+    <string name="calibrating">First launch, calibrating…</string>
 </resources>
 STRINGS_EOF
 
@@ -657,10 +1250,12 @@ fi
 echo ""
 
 # Function to create AVD
+# Usage: create_avd name device tag [ram_mb]
 create_avd() {
     local name=$1
     local device=$2
     local tag=$3
+    local ram=${4:-2048}
 
     echo "Creating AVD: $name"
 
@@ -685,12 +1280,12 @@ create_avd() {
         echo "hw.gpu.enabled=yes" >> "$avd_dir/config.ini"
         echo "hw.gpu.mode=auto" >> "$avd_dir/config.ini"
         # Set RAM
-        echo "hw.ramSize=2048" >> "$avd_dir/config.ini"
+        echo "hw.ramSize=$ram" >> "$avd_dir/config.ini"
         # Enable keyboard
         echo "hw.keyboard=yes" >> "$avd_dir/config.ini"
     fi
 
-    echo "✓ Created: $name ($device)"
+    echo "✓ Created: $name ($device, ${ram}MB RAM)"
     echo ""
 }
 
@@ -720,6 +1315,19 @@ create_avd "screenshot_tablet_7" "Nexus 7" "google_apis"
 # Using Pixel Tablet - 10.95" display, 1600x2560, 280 DPI
 create_avd "screenshot_tablet_10" "pixel_tablet" "google_apis"
 
+# 4-12. RAM tier testing emulators
+echo "Creating RAM tier AVDs for memory testing..."
+echo ""
+create_avd "ram_500mb" "pixel_3a" "google_apis" 500
+create_avd "ram_700mb" "pixel_3a" "google_apis" 700
+create_avd "ram_1000mb" "pixel_3a" "google_apis" 1000
+create_avd "ram_1500mb" "pixel_3a" "google_apis" 1500
+create_avd "ram_2000mb" "pixel_3a" "google_apis" 2048
+create_avd "ram_4gb" "pixel_6" "google_apis" 4096
+create_avd "ram_6gb" "pixel_6" "google_apis" 6144
+create_avd "ram_8gb" "pixel_6" "google_apis" 8192
+create_avd "ram_10gb" "pixel_6" "google_apis" 10240
+
 echo "========================================="
 echo "Setup Complete!"
 echo "========================================="
@@ -731,6 +1339,15 @@ echo "To run emulators, use the provided run scripts:"
 echo "  ./run-emulator-phone.sh       # Phone (Pixel 6)"
 echo "  ./run-emulator-tablet-7.sh    # 7-inch tablet (Nexus 7)"
 echo "  ./run-emulator-tablet-10.sh   # 10-inch tablet (Pixel Tablet)"
+echo "  ./run-emulator-ram500m.sh     # Pixel 3a, 500MB RAM"
+echo "  ./run-emulator-ram700m.sh     # Pixel 3a, 700MB RAM"
+echo "  ./run-emulator-ram1000m.sh    # Pixel 3a, 1000MB RAM"
+echo "  ./run-emulator-ram1500m.sh    # Pixel 3a, 1500MB RAM"
+echo "  ./run-emulator-ram2000m.sh    # Pixel 3a, 2000MB RAM"
+echo "  ./run-emulator-ram4.sh        # Pixel 6, 4GB RAM"
+echo "  ./run-emulator-ram6.sh        # Pixel 6, 6GB RAM"
+echo "  ./run-emulator-ram8.sh        # Pixel 6, 8GB RAM"
+echo "  ./run-emulator-ram10.sh       # Pixel 6, 10GB RAM"
 echo ""
 echo "Each script will:"
 echo "  1. Start the emulator"
@@ -1110,6 +1727,191 @@ echo "  Stop emulator:    adb emu kill"
 echo "  Reinstall app:    adb install -r $APK_PATH"
 echo ""
 TABLET10_EOF
+
+# Generate RAM tier run scripts (4GB, 6GB, 8GB, 10GB)
+for RAM_TIER in 4:4096:ram_4gb 6:6144:ram_6gb 8:8192:ram_8gb 10:10240:ram_10gb; do
+    IFS=':' read -r GB MB AVD_NAME <<< "$RAM_TIER"
+    cat > "run-emulator-ram${GB}.sh" << RAMEOF
+#!/bin/bash
+set -e
+
+echo "========================================="
+echo "RAM Tier Emulator - Pixel 6 (${GB}GB RAM)"
+echo "========================================="
+echo ""
+
+# Setup environment
+if [ -z "\$ANDROID_HOME" ]; then
+    export ANDROID_HOME="\$HOME/Android"
+fi
+export PATH="\$ANDROID_HOME/cmdline-tools/latest/bin:\$ANDROID_HOME/platform-tools:\$ANDROID_HOME/emulator:\$PATH"
+
+# Configuration
+AVD_NAME="${AVD_NAME}"
+APK_PATH="app/build/outputs/apk/release/app-release.apk"
+EXAMPLE_PDF="../example document.pdf"
+SCRIPT_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+
+cd "\$SCRIPT_DIR"
+
+# Check if AVD exists
+if ! avdmanager list avd | grep -q "Name: \$AVD_NAME"; then
+    echo "❌ AVD '\$AVD_NAME' not found."
+    echo "Please run ./setup-emulators.sh first"
+    exit 1
+fi
+
+# Check if APK exists
+if [ ! -f "\$APK_PATH" ]; then
+    echo "❌ APK not found at: \$APK_PATH"
+    echo "Please build the APK first (./gradlew assembleRelease)"
+    exit 1
+fi
+
+# Check if example PDF exists
+if [ ! -f "\$EXAMPLE_PDF" ]; then
+    echo "❌ Example PDF not found at: \$EXAMPLE_PDF"
+    exit 1
+fi
+
+echo "✓ AVD: \$AVD_NAME"
+echo "✓ APK: \$APK_PATH (\$(du -h "\$APK_PATH" | cut -f1))"
+echo "✓ PDF: \$EXAMPLE_PDF (\$(du -h "\$EXAMPLE_PDF" | cut -f1))"
+echo ""
+
+# Start emulator in background
+echo "Starting ${GB}GB RAM emulator..."
+nohup emulator -avd "\$AVD_NAME" -no-snapshot-save -qemu -m ${MB} > emulator-ram${GB}.log 2>&1 &
+EMULATOR_PID=\$!
+echo "Emulator PID: \$EMULATOR_PID"
+echo "Log file: emulator-ram${GB}.log"
+echo ""
+
+# Wait for device to boot
+echo "Waiting for device to boot..."
+adb wait-for-device
+echo "✓ Device detected"
+echo ""
+
+echo "Waiting for boot to complete..."
+while [ "\$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" != "1" ]; do
+    echo -n "."
+    sleep 2
+done
+echo ""
+echo "✓ Boot completed"
+echo ""
+
+sleep 5
+
+# Install APK
+echo "Installing APK..."
+adb install -r "\$APK_PATH"
+echo "✓ APK installed"
+echo ""
+
+# Push example PDF to Downloads
+echo "Pushing example PDF to device..."
+adb push "\$EXAMPLE_PDF" "/sdcard/Download/example document.pdf"
+echo "✓ PDF available in Downloads folder"
+echo ""
+
+echo "========================================="
+echo "${GB}GB RAM Emulator Ready!"
+echo "========================================="
+echo ""
+echo "Device: Pixel 6 (6.4\", 1080x2400, Android 14)"
+echo "RAM: ${GB}GB"
+echo "Package: com.svobodajakub.pdfg4compressor"
+echo ""
+echo "MEMORY MONITORING:"
+echo ""
+echo "  adb shell dumpsys meminfo com.svobodajakub.pdfg4compressor"
+echo "  adb shell cat /proc/meminfo | head -5"
+echo ""
+echo "COMMANDS:"
+echo ""
+echo "  Stop emulator:    adb emu kill"
+echo "  Reinstall app:    adb install -r \$APK_PATH"
+echo ""
+RAMEOF
+done
+
+# Generate ultra-low-memory run scripts (700MB, 1000MB, 1500MB)
+for ULM_TIER in 500:500:ram_500mb 700:700:ram_700mb 1000:1000:ram_1000mb 1500:1500:ram_1500mb 2000:2048:ram_2000mb; do
+    IFS=':' read -r MB_LABEL MB AVD_NAME <<< "$ULM_TIER"
+    cat > "run-emulator-ram${MB_LABEL}m.sh" << ULMEOF
+#!/bin/bash
+set -e
+
+echo "========================================="
+echo "Ultra-Low-Memory Emulator (${MB_LABEL}MB RAM)"
+echo "========================================="
+echo ""
+echo "⚠ This emulator has extremely constrained memory."
+echo "  Use for testing memory probe and OOM behavior."
+echo ""
+
+# Setup environment
+if [ -z "\$ANDROID_HOME" ]; then
+    export ANDROID_HOME="\$HOME/Android"
+fi
+export PATH="\$ANDROID_HOME/cmdline-tools/latest/bin:\$ANDROID_HOME/platform-tools:\$ANDROID_HOME/emulator:\$PATH"
+
+AVD_NAME="${AVD_NAME}"
+APK_PATH="app/build/outputs/apk/release/app-release.apk"
+EXAMPLE_PDF="../example document.pdf"
+SCRIPT_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+
+cd "\$SCRIPT_DIR"
+
+if ! avdmanager list avd | grep -q "Name: \$AVD_NAME"; then
+    echo "❌ AVD '\$AVD_NAME' not found. Run ./setup-emulators.sh first"
+    exit 1
+fi
+
+[ ! -f "\$APK_PATH" ] && echo "❌ APK not found" && exit 1
+[ ! -f "\$EXAMPLE_PDF" ] && echo "❌ Example PDF not found" && exit 1
+
+echo "✓ AVD: \$AVD_NAME"
+echo "✓ APK: \$APK_PATH (\$(du -h "\$APK_PATH" | cut -f1))"
+echo ""
+
+echo "Starting ${MB_LABEL}MB RAM emulator..."
+nohup emulator -avd "\$AVD_NAME" -no-snapshot-save -qemu -m ${MB} > emulator-ram${MB_LABEL}m.log 2>&1 &
+echo "Emulator PID: \$!"
+echo ""
+
+echo "Waiting for device..."
+adb wait-for-device
+echo "✓ Device detected"
+
+echo "Waiting for boot..."
+while [ "\$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" != "1" ]; do
+    echo -n "."
+    sleep 2
+done
+echo ""
+echo "✓ Boot completed"
+sleep 5
+
+echo "Installing APK..."
+adb install -r "\$APK_PATH"
+echo "✓ APK installed"
+
+echo "Pushing example PDF..."
+adb push "\$EXAMPLE_PDF" "/sdcard/Download/example document.pdf"
+echo "✓ Ready"
+echo ""
+echo "TIPS:"
+echo "  - First launch will run memory probe (expect crashes — that's intentional)"
+echo "  - Watch: adb logcat | grep -i 'oom\|kill\|lowmem\|WebView\|mem_probe'"
+echo "  - Memory: adb shell dumpsys meminfo com.svobodajakub.pdfg4compressor"
+echo "  - Stop: adb emu kill"
+echo "  - Clear probe data: adb shell pm clear com.svobodajakub.pdfg4compressor"
+echo ""
+ULMEOF
+done
 
 cat > "change-locale.sh" << 'LOCALE_EOF'
 #!/bin/bash
@@ -1554,7 +2356,7 @@ To create localized screenshots:
 - Google Play Console will automatically resize screenshots if needed
 SCREENSHOTS_EOF
 
-chmod +x setup-emulators.sh run-emulator-phone.sh run-emulator-tablet-7.sh run-emulator-tablet-10.sh change-locale.sh
+chmod +x setup-emulators.sh run-emulator-phone.sh run-emulator-tablet-7.sh run-emulator-tablet-10.sh run-emulator-ram4.sh run-emulator-ram6.sh run-emulator-ram8.sh run-emulator-ram10.sh run-emulator-ram500m.sh run-emulator-ram700m.sh run-emulator-ram1000m.sh run-emulator-ram1500m.sh run-emulator-ram2000m.sh change-locale.sh
 
 echo "✓ Created emulator setup and screenshot scripts"
 echo ""
@@ -1928,6 +2730,86 @@ def extract_languages_from_i18n(i18n_dir):
 
     return languages
 
+calibrating_strings = {
+    'en': 'First launch, calibrating…',
+    'de': 'Erster Start, Kalibrierung…',
+    'es': 'Primer inicio, calibrando…',
+    'fr': 'Premier lancement, calibrage…',
+    'it': 'Primo avvio, calibrazione…',
+    'pt': 'Primeiro início, calibrando…',
+    'nl': 'Eerste start, kalibreren…',
+    'pl': 'Pierwszy start, kalibracja…',
+    'cs': 'První spuštění, kalibrace…',
+    'sk': 'Prvé spustenie, kalibrácia…',
+    'ru': 'Первый запуск, калибровка…',
+    'uk': 'Перший запуск, калібрування…',
+    'ar': 'أول إطلاق، جارٍ المعايرة…',
+    'he': 'הפעלה ראשונה, מכייל…',
+    'ja': '初回起動、キャリブレーション中…',
+    'ko': '첫 실행, 보정 중…',
+    'zh-Hans': '首次启动，正在校准…',
+    'zh-Hant': '首次啟動，正在校準…',
+    'tr': 'İlk başlatma, kalibrasyon…',
+    'hi': 'पहला लॉन्च, कैलिब्रेशन…',
+    'bn': 'প্রথম লঞ্চ, ক্যালিব্রেশন…',
+    'th': 'เปิดครั้งแรก กำลังปรับเทียบ…',
+    'vi': 'Lần đầu khởi chạy, đang hiệu chuẩn…',
+    'id': 'Peluncuran pertama, kalibrasi…',
+    'ms': 'Pelancaran pertama, penentukuran…',
+    'tl': 'Unang paglulunsad, nagkakalibrate…',
+    'sv': 'Första start, kalibrerar…',
+    'da': 'Første start, kalibrerer…',
+    'nb': 'Første start, kalibrerer…',
+    'nn': 'Første start, kalibrerer…',
+    'fi': 'Ensimmäinen käynnistys, kalibroi…',
+    'el': 'Πρώτη εκκίνηση, βαθμονόμηση…',
+    'bg': 'Първо стартиране, калибриране…',
+    'ro': 'Prima lansare, calibrare…',
+    'hu': 'Első indítás, kalibrálás…',
+    'hr': 'Prvo pokretanje, kalibracija…',
+    'sr': 'Прво покретање, калибрација…',
+    'sr-Latn': 'Prvo pokretanje, kalibracija…',
+    'sl': 'Prvi zagon, kalibracija…',
+    'et': 'Esmakäivitus, kalibreerimine…',
+    'lv': 'Pirmā palaišana, kalibrēšana…',
+    'lt': 'Pirmas paleidimas, kalibravimas…',
+    'ka': 'პირველი გაშვება, კალიბრაცია…',
+    'hy': 'Առաջին գործարկում, չափաբերում…',
+    'fa': 'اولین اجرا، در حال کالیبراسیون…',
+    'ur': 'پہلی لانچ، کیلیبریشن…',
+    'sw': 'Uzinduzi wa kwanza, urekebishaji…',
+    'af': 'Eerste bekendstelling, kalibrering…',
+    'ca': 'Primer llançament, calibrant…',
+    'eu': 'Lehen abiatzea, kalibratzen…',
+    'gl': 'Primeiro lanzamento, calibrando…',
+    'is': 'Fyrsta ræsing, kvörðun…',
+    'mk': 'Прво стартување, калибрирање…',
+    'bs': 'Prvo pokretanje, kalibracija…',
+    'sq': 'Lëshimi i parë, kalibrimi…',
+    'mn': 'Анхны ачаалт, тохируулж байна…',
+    'az': 'İlk başlatma, kalibrləmə…',
+    'uz': 'Birinchi ishga tushirish, kalibrlash…',
+    'kk': 'Алғашқы іске қосу, калибрлеу…',
+    'ky': 'Биринчи иштетүү, калибрлөө…',
+    'be': 'Першы запуск, каліброўка…',
+    'am': 'የመጀመሪያ ማስጀመር፣ ማስተካከል…',
+    'ne': 'पहिलो लन्च, क्यालिब्रेसन…',
+    'si': 'පළමු දියත්, ක්‍රමාංකනය…',
+    'km': 'ការបើកដំណើរការដំបូង កំពុងកែតម្រូវ…',
+    'lo': 'ເປີດຄັ້ງທຳອິດ, ກຳລັງປັບຕັ້ງ…',
+    'my': 'ပထမဆုံးအကြိမ် စတင်ခြင်း၊ ချိန်ညှိနေသည်…',
+    'ta': 'முதல் துவக்கம், அளவுத்திருத்தம்…',
+    'te': 'మొదటి ప్రారంభం, కాలిబ్రేషన్…',
+    'kn': 'ಮೊದಲ ಪ್ರಾರಂಭ, ಮಾಪನಾಂಕ ನಿರ್ಣಯ…',
+    'ml': 'ആദ്യ ലോഞ്ച്, കാലിബ്രേഷൻ…',
+    'mr': 'पहिले लॉन्च, कॅलिब्रेशन…',
+    'gu': 'પ્રથમ લોન્ચ, કેલિબ્રેશન…',
+    'pa': 'ਪਹਿਲੀ ਲਾਂਚ, ਕੈਲੀਬ੍ਰੇਸ਼ਨ…',
+    'or': 'ପ୍ରଥମ ଲଞ୍ଚ, କ୍ୟାଲିବ୍ରେସନ୍…',
+    'zu': 'Ukuqaliswa kokuqala, ukulinganisa…',
+    'jv': 'Bukak pisanan, kalibrasi…',
+}
+
 def js_to_android_locale(js_code):
     """Convert JavaScript locale code to Android resource directory name."""
     return LOCALE_MAPPING.get(js_code, js_code)
@@ -1958,9 +2840,11 @@ def create_android_resources(languages, res_dir):
         # Create strings.xml
         strings_xml = os.path.join(values_dir, 'strings.xml')
 
+        cal = calibrating_strings.get(js_code, calibrating_strings.get(js_code.split('-')[0], 'First launch, calibrating…'))
         xml_content = f'''<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">{app_name}</string>
+    <string name="calibrating">{cal}</string>
 </resources>
 '''
 
