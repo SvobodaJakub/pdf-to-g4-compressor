@@ -82,9 +82,19 @@ def parse_dict(dict_data):
     filter_match = re.search(r'/Filter\s+(/\w+|\[[^\]]+\])', dict_str)
     current_filter = filter_match.group(1) if filter_match else None
 
+    # Extract /Type value
+    type_match = re.search(r'/Type\s+/(\w+)', dict_str)
+    obj_type = type_match.group(1) if type_match else None
+
+    # Extract /Subtype value
+    subtype_match = re.search(r'/Subtype\s+/(\w+)', dict_str)
+    subtype = subtype_match.group(1) if subtype_match else None
+
     return {
         'length': length,
         'filter': current_filter,
+        'type': obj_type,
+        'subtype': subtype,
         'raw': dict_data
     }
 
@@ -182,6 +192,12 @@ def compress_pdf_streams(input_pdf, output_pdf):
 
         # Parse dictionary
         dict_info = parse_dict(dict_part)
+
+        # Skip XMP Metadata streams (must remain uncompressed for PDF/A-1b)
+        if dict_info['type'] == 'Metadata' or dict_info['subtype'] == 'XML':
+            compressed_objects.append(obj['data'])
+            compression_stats['skipped'] += 1
+            continue
 
         # Compress stream data
         original_size = len(stream_data)

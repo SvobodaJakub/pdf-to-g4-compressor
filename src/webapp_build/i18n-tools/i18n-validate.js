@@ -94,32 +94,100 @@ function extractTranslationsFromFile(filepath) {
     }
 }
 
-function checkDuplicateKeys(translations) {
-    const issues = [];
+function checkDuplicateKeysFromSource(filepath) {
+    const content = fs.readFileSync(filepath, 'utf-8');
+    const varMatch = content.match(/const\s+(TRANSLATIONS|ADDITIONAL_TRANSLATIONS)\s*=\s*\{/);
+    if (!varMatch) return [];
 
-    for (const [lang, fields] of Object.entries(translations)) {
-        // Check if fields is actually an object
-        if (typeof fields !== 'object' || fields === null) {
-            issues.push(`${lang}: Translation is not an object (got ${typeof fields})`);
+    const objStart = varMatch.index + varMatch[0].length;
+    const issues = [];
+    let depth = 1;
+    let inString = false;
+    let escaped = false;
+    let inLineComment = false;
+    let currentLang = null;
+    const langKeys = {};
+    let ident = '';
+    let quotedName = '';
+    let stringStart = -1;
+
+    for (let i = objStart; i < content.length; i++) {
+        const ch = content[i];
+
+        if (inLineComment) {
+            if (ch === '\n') inLineComment = false;
             continue;
         }
 
-        // Check for duplicate keys by comparing keys array length to Set size
-        const keys = Object.keys(fields);
-        const uniqueKeys = new Set(keys);
+        if (escaped) {
+            escaped = false;
+            continue;
+        }
 
-        if (keys.length !== uniqueKeys.size) {
-            // Find which keys are duplicated
-            const keyCounts = {};
-            keys.forEach(k => keyCounts[k] = (keyCounts[k] || 0) + 1);
-            const duplicated = Object.entries(keyCounts)
-                .filter(([k, count]) => count > 1)
-                .map(([k, count]) => `${k}(x${count})`);
+        if (inString) {
+            if (ch === '\\') { escaped = true; continue; }
+            if (ch === inString) {
+                quotedName = content.substring(stringStart + 1, i);
+                inString = false;
+            }
+            continue;
+        }
 
-            issues.push(`${lang}: Duplicate keys: ${duplicated.join(', ')}`);
+        if (ch === '/' && i + 1 < content.length && content[i + 1] === '/') {
+            inLineComment = true;
+            ident = '';
+            continue;
+        }
+
+        if (ch === '"' || ch === "'") {
+            inString = ch;
+            stringStart = i;
+            ident = '';
+            quotedName = '';
+            continue;
+        }
+
+        if (ch === '{') { depth++; ident = ''; quotedName = ''; continue; }
+        if (ch === '}') {
+            if (depth === 2) currentLang = null;
+            depth--;
+            if (depth === 0) break;
+            ident = ''; quotedName = '';
+            continue;
+        }
+
+        if (ch === ':') {
+            const key = ident.trim() || quotedName;
+            if (key) {
+                if (depth === 1) {
+                    currentLang = key;
+                    if (!langKeys[currentLang]) langKeys[currentLang] = [];
+                } else if (depth === 2 && currentLang) {
+                    langKeys[currentLang].push(key);
+                }
+            }
+            ident = ''; quotedName = '';
+            continue;
+        }
+
+        if (/[a-zA-Z0-9_$]/.test(ch)) {
+            ident += ch;
+            quotedName = '';
+        } else if (ch === ',') {
+            ident = ''; quotedName = '';
         }
     }
 
+    for (const [lang, keys] of Object.entries(langKeys)) {
+        const counts = {};
+        keys.forEach(k => counts[k] = (counts[k] || 0) + 1);
+        const dupes = Object.entries(counts)
+            .filter(([, c]) => c > 1)
+            .map(([k, c]) => `${k}(x${c})`);
+        if (dupes.length > 0) {
+            issues.push(`${lang}: Duplicate keys: ${dupes.join(', ')}`);
+        }
+    }
     return issues;
 }
 
@@ -224,11 +292,17 @@ function main() {
 
     let totalIssues = 0;
 
-    // Check for duplicate keys
+    // Check for duplicate keys (scans raw source text, not the eval'd object)
     console.log('\n' + '='.repeat(80));
     console.log('Checking for duplicate keys...');
     console.log('='.repeat(80));
-    const duplicates = checkDuplicateKeys(allTranslations);
+    const duplicates = [];
+    for (const filename of ['i18n.js', 'i18n-languages.js']) {
+        const filepath = path.join(parentDir, filename);
+        if (fs.existsSync(filepath)) {
+            duplicates.push(...checkDuplicateKeysFromSource(filepath));
+        }
+    }
     if (duplicates.length > 0) {
         duplicates.forEach(issue => console.log(`  ❌ ${issue}`));
         totalIssues += duplicates.length;

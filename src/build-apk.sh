@@ -19,8 +19,8 @@ KEYSTORE_DIR="$PROJECT_ROOT/android-private"
 # Increment these for each Google Play release:
 #   versionCode: Integer, must increase with each release (1, 2, 3, ...)
 #   versionName: User-visible version string (e.g., "1.0", "1.1.0", "2.0")
-VERSION_CODE=18
-VERSION_NAME="1.2.8"
+VERSION_CODE=19
+VERSION_NAME="1.2.9"
 
 echo "Script directory: $SCRIPT_DIR"
 echo "Source directory: $SRC_DIR"
@@ -171,10 +171,13 @@ import androidx.activity.OnBackPressedCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -195,6 +198,15 @@ public class MainActivity extends ComponentActivity {
 
     // Track modal state
     private volatile boolean modalIsOpen = false;
+
+    // State preservation across WebView kills (instance variables — lost when process dies)
+    private String savedFormStateJson = null;
+    private Uri savedInputFileUri = null;
+    private String savedInputFileName = null;
+    private long savedInputFileSize = 0;
+    private boolean savedIsZipMode = false;
+    private byte[] restoredFileBytes = null;
+    private boolean skipIntroOnReload = false;
 
     // Memory probe — persistent state
     // probe_state: "none" → "testing_1400" → "testing_800" → "done"
@@ -326,6 +338,16 @@ public class MainActivity extends ComponentActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // Release any persisted URI permissions from previous sessions
+        try {
+            for (android.content.UriPermission perm : getContentResolver().getPersistedUriPermissions()) {
+                getContentResolver().releasePersistableUriPermission(
+                    perm.getUri(), Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Error releasing persisted URI permissions: " + e.getMessage());
+        }
+
         // Clean leftover temp files from previous runs
         cleanupTempFiles();
 
@@ -339,9 +361,16 @@ public class MainActivity extends ComponentActivity {
                 if (filePathCallback != null) {
                     Uri[] results = null;
                     if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                        String dataString = result.getData().getDataString();
-                        if (dataString != null) {
-                            results = new Uri[]{Uri.parse(dataString)};
+                        Uri uri = result.getData().getData();
+                        if (uri != null) {
+                            results = new Uri[]{uri};
+                            savedInputFileUri = uri;
+                            try {
+                                getContentResolver().takePersistableUriPermission(
+                                    uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            } catch (SecurityException e) {
+                                Log.w(TAG, "Could not take persistable URI permission: " + e.getMessage());
+                            }
                         }
                     }
                     filePathCallback.onReceiveValue(results);
@@ -409,6 +438,7 @@ public class MainActivity extends ComponentActivity {
                             "var aboutModal = document.getElementById('aboutModal');" +
                             "var licenseModal = document.getElementById('licenseModal');" +
                             "var languageModal = document.getElementById('languageModal');" +
+                            "var privacyModal = document.getElementById('privacyModal');" +
                             "if (aboutModal && aboutModal.classList.contains('show')) {" +
                                 "aboutModal.classList.remove('show');" +
                             "}" +
@@ -417,6 +447,9 @@ public class MainActivity extends ComponentActivity {
                             "}" +
                             "if (languageModal && languageModal.classList.contains('show')) {" +
                                 "languageModal.classList.remove('show');" +
+                            "}" +
+                            "if (privacyModal && privacyModal.classList.contains('show')) {" +
+                                "privacyModal.classList.remove('show');" +
                             "}" +
                         "})()",
                         null
@@ -482,6 +515,7 @@ public class MainActivity extends ComponentActivity {
                 if (view == webView) {
                     view.destroy();
                     webView = null;
+                    skipIntroOnReload = true;
                     setupWebView();
                     modalIsOpen = false;
                     webView.loadUrl("file:///android_asset/index.html");
@@ -495,13 +529,13 @@ public class MainActivity extends ComponentActivity {
             public boolean onShowFileChooser(WebView wv, ValueCallback<Uri[]> cb,
                                             FileChooserParams params) {
                 filePathCallback = cb;
-                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                 intent.setType("*/*");
                 intent.putExtra(Intent.EXTRA_MIME_TYPES,
                     new String[]{"application/pdf", "application/zip"});
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
                 try {
-                    fileChooserLauncher.launch(Intent.createChooser(intent, "Select file"));
+                    fileChooserLauncher.launch(intent);
                 } catch (Exception e) {
                     cb.onReceiveValue(null);
                     filePathCallback = null;
@@ -579,6 +613,86 @@ public class MainActivity extends ComponentActivity {
             beginSave(filename, mimeType);
             writeChunk(base64Data);
             endSave();
+        }
+
+        @JavascriptInterface
+        public void saveFormState(String jsonState) {
+            savedFormStateJson = jsonState;
+        }
+
+        @JavascriptInterface
+        public void saveInputFileMeta(String filename, long fileSize, boolean isZip) {
+            savedInputFileName = filename;
+            savedInputFileSize = fileSize;
+            savedIsZipMode = isZip;
+        }
+
+        @JavascriptInterface
+        public boolean hasRestoredState() {
+            boolean result = skipIntroOnReload && savedFormStateJson != null && savedInputFileUri != null;
+            Log.d(TAG, "hasRestoredState: " + result);
+            return result;
+        }
+
+        @JavascriptInterface
+        public String getRestoredFormState() {
+            return savedFormStateJson;
+        }
+
+        @JavascriptInterface
+        public String getRestoredFileName() {
+            return savedInputFileName;
+        }
+
+        @JavascriptInterface
+        public long getRestoredFileSize() {
+            return savedInputFileSize;
+        }
+
+        @JavascriptInterface
+        public boolean getRestoredIsZipMode() {
+            return savedIsZipMode;
+        }
+
+        @JavascriptInterface
+        public boolean prepareRestoredFile() {
+            if (savedInputFileUri == null) return false;
+            try {
+                InputStream is = getContentResolver().openInputStream(savedInputFileUri);
+                if (is == null) return false;
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                byte[] buf = new byte[65536];
+                int n;
+                while ((n = is.read(buf)) != -1) {
+                    bos.write(buf, 0, n);
+                }
+                is.close();
+                restoredFileBytes = bos.toByteArray();
+                Log.i(TAG, "Prepared restored file: " + restoredFileBytes.length + " bytes");
+                return true;
+            } catch (Exception e) {
+                Log.w(TAG, "Cannot re-read file from URI: " + e.getMessage());
+                restoredFileBytes = null;
+                return false;
+            }
+        }
+
+        @JavascriptInterface
+        public int getRestoredFileLength() {
+            return restoredFileBytes != null ? restoredFileBytes.length : 0;
+        }
+
+        @JavascriptInterface
+        public String readRestoredFileChunk(int offset, int length) {
+            if (restoredFileBytes == null) return "";
+            int end = Math.min(offset + length, restoredFileBytes.length);
+            return Base64.encodeToString(
+                Arrays.copyOfRange(restoredFileBytes, offset, end), Base64.NO_WRAP);
+        }
+
+        @JavascriptInterface
+        public void clearRestoredFile() {
+            restoredFileBytes = null;
         }
     }
 
@@ -865,7 +979,7 @@ public class MainActivity extends ComponentActivity {
             Log.i(TAG, "Available memory: " + availMB + " MB");
 
             if (availMB >= 100 && availMB <= 4 * 1024 * 1024) {
-                // Value looks sane — use it directly
+                // Value looks sane — use it for this session only, don't persist
                 int tier;
                 if (availMB >= 2000) {
                     tier = 3;
@@ -874,8 +988,10 @@ public class MainActivity extends ComponentActivity {
                 } else {
                     tier = 1;
                 }
-                Log.i(TAG, "Quick detection: availMem=" + availMB + " MB → tier " + tier);
-                saveMemoryTierImmediate(tier);
+                Log.i(TAG, "Quick detection: availMem=" + availMB + " MB → tier " + tier + " (transient, not saved)");
+                memoryTier = tier;
+                probing = false;
+                loadMainApp();
             } else {
                 // Value out of range or API failed — fall back to full probe
                 Log.i(TAG, "availMem out of range or unavailable, running full probe");
@@ -897,16 +1013,6 @@ public class MainActivity extends ComponentActivity {
         showGreySpinner();
         if (probeHandler == null) probeHandler = new android.os.Handler(getMainLooper());
         probeHandler.postDelayed(() -> loadMainApp(), 3000);
-    }
-
-    private void saveMemoryTierImmediate(int tier) {
-        Log.i(TAG, "Saving memory tier: " + tier + " (immediate)");
-        memoryTier = tier;
-        setProbeState("done");
-        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .edit().putInt(PREF_TIER, tier).commit();
-        probing = false;
-        loadMainApp();
     }
 
     private void loadMainApp() {
@@ -966,9 +1072,10 @@ public class MainActivity extends ComponentActivity {
             webView.destroy();
             webView = null;
         }
-        Intent intent = getIntent();
-        finish();
-        startActivity(intent);
+        skipIntroOnReload = true;
+        setupWebView();
+        modalIsOpen = false;
+        webView.loadUrl("file:///android_asset/index.html");
     }
 
     @Override
@@ -3114,6 +3221,6 @@ echo ""
 # GOOGLE PLAY STORE:
 # ------------------
 #
-# See ANDROID_BUILD.md for complete Play Store publishing guide.
+# See 🤡spec.md for complete documentation.
 #
 # ============================================================================

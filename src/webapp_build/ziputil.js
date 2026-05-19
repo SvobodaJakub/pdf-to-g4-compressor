@@ -80,8 +80,8 @@ function parseZip(arrayBuffer) {
 
             var data;
             if (method === 0) {
-                // Stored (no compression)
-                data = compressedData;
+                // Stored — copy to decouple from parent ArrayBuffer for GC
+                data = compressedData.slice();
             } else if (method === 8) {
                 // Deflated
                 data = pako.inflateRaw(compressedData);

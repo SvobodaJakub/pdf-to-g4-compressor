@@ -14,107 +14,6 @@
  */
 
 /**
- * Parse JBIG2 file header to extract page dimensions
- * @param {Uint8Array} jbig2Data - JBIG2 file data
- * @returns {{width: number|null, height: number|null}}
- */
-function readJBIG2Metadata(jbig2Data) {
-    if (jbig2Data.length < 13) {
-        return { width: null, height: null };
-    }
-
-    // JBIG2 file header: 0x97 0x4A 0x42 0x32 0x0D 0x0A 0x1A 0x0A
-    const magic = [0x97, 0x4a, 0x42, 0x32, 0x0d, 0x0a, 0x1a, 0x0a];
-    let offset = 0;
-
-    // Check for JBIG2 file header
-    let hasHeader = true;
-    for (let i = 0; i < 8; i++) {
-        if (jbig2Data[i] !== magic[i]) {
-            hasHeader = false;
-            break;
-        }
-    }
-
-    if (hasHeader) {
-        // Skip header (13 bytes: 8 magic + 1 flags + 4 page count)
-        offset = 13;
-    }
-
-    // Read segments to find page information segment (type 48 or 49)
-    let width = null;
-    let height = null;
-
-    while (offset < jbig2Data.length - 11) {
-        if (offset + 5 > jbig2Data.length) break;
-
-        // Segment header: 4 bytes segment number, 1 byte flags
-        const segNum = (jbig2Data[offset] << 24) | (jbig2Data[offset + 1] << 16) |
-                       (jbig2Data[offset + 2] << 8) | jbig2Data[offset + 3];
-        const flags = jbig2Data[offset + 4];
-        const segType = flags & 0x3f;
-
-        offset += 5;
-
-        // Read referenced segment count
-        if (offset >= jbig2Data.length) break;
-        const refSegCountByte = jbig2Data[offset];
-        offset += 1;
-
-        let refCount;
-        if ((refSegCountByte >> 5) === 7) {
-            // Long form
-            if (offset + 4 > jbig2Data.length) break;
-            refCount = ((jbig2Data[offset] << 24) | (jbig2Data[offset + 1] << 16) |
-                       (jbig2Data[offset + 2] << 8) | jbig2Data[offset + 3]) & 0x1fffffff;
-            offset += 4;
-        } else {
-            // Short form
-            refCount = refSegCountByte >> 5;
-        }
-
-        // Skip referenced segment numbers
-        if (segNum > 256) {
-            offset += refCount * 4;
-        } else {
-            offset += refCount;
-        }
-
-        // Skip retention flags
-        if (refCount > 0) {
-            const retentionBytes = Math.floor((refCount + 7) / 8);
-            offset += retentionBytes;
-        }
-
-        // Page association field size
-        const pageAssocSize = (flags & 0x40) ? 1 : 4;
-        offset += pageAssocSize;
-
-        if (offset + 4 > jbig2Data.length) break;
-
-        // Data length
-        const dataLength = (jbig2Data[offset] << 24) | (jbig2Data[offset + 1] << 16) |
-                          (jbig2Data[offset + 2] << 8) | jbig2Data[offset + 3];
-        offset += 4;
-
-        // Page information segment (type 48 = intermediate, 49 = end)
-        if (segType === 48 || segType === 49) {
-            if (offset + 8 <= jbig2Data.length) {
-                width = (jbig2Data[offset] << 24) | (jbig2Data[offset + 1] << 16) |
-                       (jbig2Data[offset + 2] << 8) | jbig2Data[offset + 3];
-                height = (jbig2Data[offset + 4] << 24) | (jbig2Data[offset + 5] << 16) |
-                        (jbig2Data[offset + 6] << 8) | jbig2Data[offset + 7];
-                break;
-            }
-        }
-
-        offset += dataLength;
-    }
-
-    return { width, height };
-}
-
-/**
  * Create PDF/A-1B from JBIG2 encoded pages.
  * Uses single-pass Uint8Array assembly to minimize memory usage.
  */
@@ -334,8 +233,5 @@ function md5(str) {
 
 // Export functions
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        readJBIG2Metadata,
-        createJBIG2PDF
-    };
+    module.exports = { createJBIG2PDF };
 }

@@ -700,13 +700,18 @@ var autoSetterJustFinished = false;
 // Track which box is currently shown so language changes can re-render it
 var progressBoxState = null;  // null, 'result', or 'cancelled'
 
+// Saved app state — survives resetAppState() and bfcache.
+// Populated on every form change; used to restore after reset or WebView restart.
+var _lastKnownState = null;  // {{ form: {{...}}, file: File|null, isZip: bool }}
+
 // Detect navigation back from browser cache (bfcache)
 // This can leave the app in a weird state - reset state instead of reload
 // (reload breaks offline PWA on iOS/Android pull-to-refresh)
 window.addEventListener('pageshow', function(event) {{
     if (event.persisted) {{
-        console.log('Page loaded from bfcache - resetting state to avoid corruption');
+        console.log('Page loaded from bfcache - resetting and restoring state');
         resetAppState();
+        restoreAppState();
     }}
 }});
 
@@ -979,6 +984,7 @@ document.addEventListener('DOMContentLoaded', function() {{
             if (oldAi) {{ var wasShown = oldAi.classList.contains('show'); oldAi.remove(); if (wasShown && selectedFile && !fileError) showAutoSetterOrRefresh(); }}
         }}
         updateInputHint();
+        saveAppState();
     }});
 
     // Handle Mongolian script switch
@@ -1036,6 +1042,7 @@ document.addEventListener('DOMContentLoaded', function() {{
             if (oldAi) {{ var wasShown = oldAi.classList.contains('show'); oldAi.remove(); if (wasShown && selectedFile && !fileError) showAutoSetterOrRefresh(); }}
         }}
         updateInputHint();
+        saveAppState();
     }});
 
     // selectedFile is now a global variable (declared above)
@@ -1103,6 +1110,10 @@ document.addEventListener('DOMContentLoaded', function() {{
         if (tier === 1) RAM_LIMIT = 350 * 1048576;
         console.log('Memory tier:', tier, '→ RAM_LIMIT:', RAM_LIMIT / 1048576, 'MB');
     }}
+    var isLowMemoryTier = (typeof AndroidFileHandler !== 'undefined' &&
+        typeof AndroidFileHandler.getMemoryTier === 'function' &&
+        AndroidFileHandler.getMemoryTier() <= 2);
+    var restoringState = false;
     const JBIG2_MAX_MPIX = 475;
 
     function estimateRAMBytes(numPages, dpi, pageSize, useJBIG2, fileSizeBytes) {{
@@ -1133,6 +1144,7 @@ document.addEventListener('DOMContentLoaded', function() {{
     }}
 
     function autoAdjustDPI() {{
+        if (restoringState) return;
         if (totalPageCount === null || totalPageCount === 0) return;
         const pageSize = getCurrentPageSize();
         if (estimateRAMBytes(totalPageCount, 310, pageSize, false, inputFileSize) <= RAM_LIMIT) {{
@@ -1192,6 +1204,104 @@ document.addEventListener('DOMContentLoaded', function() {{
         }}
     }}
 
+    function getCurrentFormState() {{
+        return {{
+            ditherMode: (document.querySelector('input[name="mode"]:checked') || {{}}).value || 'nodither',
+            pageRange: (pageRangeInput && pageRangeInput.value) || '',
+            dpiMode: dpiStandardRadio && dpiStandardRadio.checked ? 'standard' : 'custom',
+            dpiValue: parseInt(dpiSlider ? dpiSlider.value : 310) || 310,
+            pageSize: (document.querySelector('input[name="pageSize"]:checked') || {{}}).value || 'a4-portrait',
+            useJBIG2: document.getElementById('useJBIG2') ? document.getElementById('useJBIG2').checked : false,
+            jbig2Threshold: parseFloat((document.querySelector('input[name="jbig2Threshold"]:checked') || {{}}).value || '0.97'),
+            preserveRotation: document.getElementById('preserveRotation') ? document.getElementById('preserveRotation').checked : false,
+            includeProducer: document.getElementById('includeProducer') ? document.getElementById('includeProducer').checked : true,
+            includeTimestamp: document.getElementById('includeTimestamp') ? document.getElementById('includeTimestamp').checked : true,
+            currentLang: currentLang,
+            useEnglish: useEnglishCheckbox ? useEnglishCheckbox.checked : false
+        }};
+    }}
+
+    // ── State save/restore ────────────────────────────────────────────
+    // _lastKnownState (declared above resetAppState) holds the last form
+    // state and file reference.  It is NOT cleared by resetAppState().
+    //
+    // saveAppState()   — snapshot current form + file into _lastKnownState
+    //                    and mirror to Android wrapper (for WebView restart).
+    // restoreAppState() — apply _lastKnownState: set form controls, re-open
+    //                    file, show Advanced Tricks.  Single code path for
+    //                    every restore trigger (Android save, OOM, bfcache).
+
+    function saveAppState() {{
+        var form = getCurrentFormState();
+        if (selectedFile) {{
+            _lastKnownState = {{ form: form, file: selectedFile, isZip: isZipMode }};
+        }} else if (_lastKnownState) {{
+            _lastKnownState.form = form;
+        }}
+        if (typeof AndroidFileHandler !== 'undefined' && typeof AndroidFileHandler.saveFormState === 'function') {{
+            try {{ AndroidFileHandler.saveFormState(JSON.stringify(form)); }} catch (e) {{}}
+        }}
+    }}
+
+    function restoreAppState() {{
+        if (!_lastKnownState) return;
+        var form = _lastKnownState.form;
+        document.documentElement.classList.remove('intro-mode-loading');
+
+        // 1. Language
+        if (form.useEnglish && useEnglishCheckbox) {{
+            useEnglishCheckbox.checked = true;
+            useEnglishCheckbox.dispatchEvent(new Event('change'));
+        }}
+
+        // 2. Basic form controls (dither, DPI, page size)
+        var ditherRadioId = form.ditherMode === 'dither' ? 'dither' :
+            form.ditherMode === 'dither-selected' ? 'ditherSelected' : 'noDither';
+        var ditherRadio = document.getElementById(ditherRadioId);
+        if (ditherRadio) ditherRadio.checked = true;
+        if (form.ditherMode === 'dither-selected' && pageRangeInput) {{
+            pageRangeContainer.classList.add('show');
+            pageRangeInput.value = form.pageRange || '';
+        }}
+        if (form.dpiMode === 'custom') {{
+            dpiCustomRadio.checked = true;
+            dpiSliderContainer.classList.add('show');
+            dpiSlider.value = form.dpiValue || 310;
+            dpiValue.value = form.dpiValue || 310;
+        }} else {{
+            dpiStandardRadio.checked = true;
+        }}
+        var psRadio = document.querySelector('input[name="pageSize"][value="' + (form.pageSize || 'a4-portrait') + '"]');
+        if (psRadio) psRadio.checked = true;
+
+        // 3. Re-open file, then show Advanced Tricks
+        if (_lastKnownState.file) {{
+            restoringState = true;
+            handleFileSelected(_lastKnownState.file).then(function() {{
+                restoringState = false;
+                // handleFileSelected resets resultSettings, so repopulate from saved state
+                resultSettings.useJBIG2 = form.useJBIG2 || false;
+                resultSettings.jbig2Threshold = form.jbig2Threshold || 0.97;
+                resultSettings.preserveRotation = form.preserveRotation || false;
+                resultSettings.includeProducer = form.includeProducer !== false;
+                resultSettings.includeTimestamp = form.includeTimestamp !== false;
+                // buildAdvancedTricksHTML reads resultSettings for checkbox states
+                if (progressDiv && !fileError) {{
+                    progressBoxState = 'cancelled';
+                    progressDiv.classList.add('cancelled');
+                    progressDiv.innerHTML = '<div style="margin-top: 0;">' + buildAdvancedTricksHTML(false) + '</div>';
+                    progressDiv.style.display = 'block';
+                    attachAdvancedTricksListeners(false);
+                }}
+                if (!fileError) showAutoSetterOrRefresh();
+                saveAppState();
+            }}).catch(function(e) {{
+                restoringState = false;
+                console.warn('File restore failed:', e);
+            }});
+        }}
+    }}
+
     // Single source of truth for compress button, file info warnings, and override checkbox.
     // Called on every relevant state change: file select, DPI, page size, JBIG2 toggle, override toggle.
     function updateCompressButton() {{
@@ -1200,6 +1310,7 @@ document.addEventListener('DOMContentLoaded', function() {{
             if (fileInfoDiv) fileInfoDiv.textContent = '';
             return;
         }}
+        saveAppState();
 
         const currentT = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
         const dpi = getCurrentDPI();
@@ -1724,6 +1835,10 @@ document.addEventListener('DOMContentLoaded', function() {{
         autoAdjustDPI();
         updateCompressButton();
         updateInputHint();
+        if (typeof AndroidFileHandler !== 'undefined' && typeof AndroidFileHandler.saveInputFileMeta === 'function') {{
+            AndroidFileHandler.saveInputFileMeta(file.name, file.size, isZipMode);
+        }}
+        saveAppState();
     }}
 
     // Allow re-selecting the same file (clear value so change event fires)
@@ -1829,6 +1944,9 @@ document.addEventListener('DOMContentLoaded', function() {{
         let errorRecoveryNeeded = false;
         document.body.classList.add('converting');
 
+        // Save form state while DOM elements still exist (OOM during conversion would lose them)
+        saveAppState();
+
         // Free all prior results, canvases, WASM state before allocating new ones
         deepCleanMemory();
 
@@ -1918,7 +2036,7 @@ document.addEventListener('DOMContentLoaded', function() {{
         progressText.textContent = 'Reading PDF file...';
 
         // Read file as ArrayBuffer (passed directly to PDF.js, no Uint8Array copy needed)
-        const pdfData = await file.arrayBuffer();
+        let pdfData = await file.arrayBuffer();
         const originalSize = pdfData.byteLength;
 
         progressText.textContent = 'Loading PDF with PDF.js...';
@@ -1939,6 +2057,7 @@ document.addEventListener('DOMContentLoaded', function() {{
             // Render pages — each page's bilevel data is written to WASM FS
             // and immediately discarded from JS. Only metadata is kept.
             const pages = await renderPDFPages(pdfData, ditherConfig, targetDPI, pageSize, useJBIG2, preserveRotation, encoder);
+            if (isLowMemoryTier) {{ pdfData = null; }}
 
             if (!pages || pages.length === 0) {{
                 throw new Error('No pages rendered from PDF');
@@ -1985,6 +2104,7 @@ document.addEventListener('DOMContentLoaded', function() {{
         }} else {{
             // CCITT G4 path: each page is G4-compressed inline during rendering
             const pages = await renderPDFPages(pdfData, ditherConfig, targetDPI, pageSize, useJBIG2, preserveRotation);
+            if (isLowMemoryTier) {{ pdfData = null; }}
 
             if (!pages || pages.length === 0) {{
                 throw new Error('No pages rendered from PDF');
@@ -2030,7 +2150,7 @@ document.addEventListener('DOMContentLoaded', function() {{
         progressText.textContent = 'Reading ZIP file...';
 
         // Read ZIP into ArrayBuffer
-        const arrayBuffer = await file.arrayBuffer();
+        let arrayBuffer = await file.arrayBuffer();
 
         progressText.textContent = 'Parsing ZIP structure...';
         const allEntries = parseZip(arrayBuffer);
@@ -2042,6 +2162,7 @@ document.addEventListener('DOMContentLoaded', function() {{
         if (pdfEntries.length === 0) {{
             throw new Error('No PDF files found in ZIP');
         }}
+        if (isLowMemoryTier) {{ arrayBuffer = null; allEntries.length = 0; }}
 
         // Initialize JBIG2 encoder if needed (once for all files)
         let jbig2Encoder = null;
@@ -2072,6 +2193,7 @@ document.addEventListener('DOMContentLoaded', function() {{
 
                 progressText.textContent = fileLabel + ': Loading PDF...';
                 var pages = await renderPDFPages(entry.data, ditherConfig, targetDPI, pageSize, useJBIG2, preserveRotation, jbig2Encoder);
+                if (isLowMemoryTier) {{ entry.data = null; }}
 
                 if (!pages || pages.length === 0) {{
                     console.warn('No pages rendered from ' + entry.path + ', skipping');
@@ -2113,6 +2235,7 @@ document.addEventListener('DOMContentLoaded', function() {{
                 // CCITT G4 path
                 progressText.textContent = fileLabel + ': Loading PDF...';
                 var pages = await renderPDFPages(entry.data, ditherConfig, targetDPI, pageSize, useJBIG2, preserveRotation);
+                if (isLowMemoryTier) {{ entry.data = null; }}
 
                 if (!pages || pages.length === 0) {{
                     console.warn('No pages rendered from ' + entry.path + ', skipping');
@@ -2743,6 +2866,19 @@ document.addEventListener('DOMContentLoaded', function() {{
             data = null;
             bytes = null;
 
+            if (isLowMemoryTier) {{
+                selectedFile = null;
+                window.resultFilename = null;
+                window.originalSize = null;
+                window.resultSize = null;
+                window.ditherMode = null;
+                resultUsedJBIG2 = false;
+                totalPageCount = null;
+                maxPagesPerPDF = null;
+                inputFileSize = 0;
+            }}
+            saveAppState();
+
             AndroidFileHandler.endSave();
         }} else {{
             // Standard browser download — Blob takes the typed array directly
@@ -3210,9 +3346,73 @@ document.addEventListener('DOMContentLoaded', function() {{
 
     console.log('PDF Monochrome CCITT G4 Compressor - Ready!');
 
-    // Start intro animation immediately
-    if (typeof IntroAnimation !== 'undefined') {{
-        IntroAnimation.start();
+    // Check for state restoration from Android (WebView was killed and recreated)
+    if (typeof AndroidFileHandler !== 'undefined' &&
+        typeof AndroidFileHandler.hasRestoredState === 'function' &&
+        AndroidFileHandler.hasRestoredState()) {{
+        try {{
+            var rFormJson = AndroidFileHandler.getRestoredFormState();
+            var rForm = JSON.parse(rFormJson);
+            var rFile = null;
+
+            if (AndroidFileHandler.prepareRestoredFile()) {{
+                var fileLen = AndroidFileHandler.getRestoredFileLength();
+                var fileName = AndroidFileHandler.getRestoredFileName();
+                var rIsZip = AndroidFileHandler.getRestoredIsZipMode();
+                var CHUNK = 768 * 1024;
+                var chunks = [];
+                for (var off = 0; off < fileLen; off += CHUNK) {{
+                    var b64 = AndroidFileHandler.readRestoredFileChunk(off, CHUNK);
+                    var binStr = atob(b64);
+                    var chunkBytes = new Uint8Array(binStr.length);
+                    for (var j = 0; j < binStr.length; j++) {{
+                        chunkBytes[j] = binStr.charCodeAt(j);
+                    }}
+                    chunks.push(chunkBytes);
+                }}
+                AndroidFileHandler.clearRestoredFile();
+
+                var totalLen = 0;
+                for (var ci = 0; ci < chunks.length; ci++) totalLen += chunks[ci].length;
+                var combined = new Uint8Array(totalLen);
+                var pos = 0;
+                for (var ci = 0; ci < chunks.length; ci++) {{
+                    combined.set(chunks[ci], pos);
+                    pos += chunks[ci].length;
+                }}
+                chunks = null;
+                var mimeType = rIsZip ? 'application/zip' : 'application/pdf';
+                rFile = new File([combined], fileName, {{ type: mimeType }});
+                combined = null;
+            }}
+
+            _lastKnownState = {{ form: rForm, file: rFile, isZip: rIsZip || false }};
+        }} catch (e) {{
+            console.warn('Android state restore failed:', e);
+        }}
+    }}
+
+    if (_lastKnownState) {{
+        restoreAppState();
+    }} else {{
+        if (typeof IntroAnimation !== 'undefined') {{
+            IntroAnimation.start();
+        }}
+        // Only check for browser-restored form state on fresh loads (no saved state).
+        // When restoring from _lastKnownState (Android or bfcache), skip this entirely.
+        setTimeout(function() {{
+            var browserRestoredForm =
+                (pdfFileInput && pdfFileInput.files && pdfFileInput.files.length > 0) ||
+                (dpiValue && dpiValue.value !== '310') ||
+                (pageRangeInput && pageRangeInput.value !== '') ||
+                Array.from(document.querySelectorAll('input[name="mode"]')).some(function(r, i) {{ return r.checked && i !== 0; }}) ||
+                Array.from(document.querySelectorAll('input[name="dpiMode"]')).some(function(r, i) {{ return r.checked && i !== 0; }}) ||
+                Array.from(document.querySelectorAll('input[name="pageSize"]')).some(function(r, i) {{ return r.checked && i !== 0; }});
+            if (browserRestoredForm) {{
+                console.log('Browser restored form state - resetting to defaults');
+                resetAppState();
+            }}
+        }}, 100);
     }}
 
     // Help/Demo replay button
@@ -3598,6 +3798,9 @@ document.addEventListener('DOMContentLoaded', function() {{
 
         document.body.classList.add('ai-running');
         setFormControlsEnabled(false);
+
+        // Save form state while DOM elements still exist (OOM during conversion would lose them)
+        saveAppState();
 
         // Free all prior results before starting trials
         deepCleanMemory();
@@ -4030,22 +4233,6 @@ document.addEventListener('DOMContentLoaded', function() {{
         }}
     }})();
 
-    // Check if browser restored form state (desktop Chrome back button)
-    // This doesn't trigger bfcache event but still restores form values
-    setTimeout(function() {{
-        const hasRestoredState =
-            (pdfFileInput && pdfFileInput.files && pdfFileInput.files.length > 0) ||
-            (dpiValue && dpiValue.value !== '310') ||
-            (pageRangeInput && pageRangeInput.value !== '') ||
-            Array.from(document.querySelectorAll('input[name="mode"]')).some((r, i) => r.checked && i !== 0) ||
-            Array.from(document.querySelectorAll('input[name="dpiMode"]')).some((r, i) => r.checked && i !== 0) ||
-            Array.from(document.querySelectorAll('input[name="pageSize"]')).some((r, i) => r.checked && i !== 0);
-
-        if (hasRestoredState) {{
-            console.log('Browser restored form state - resetting to defaults');
-            resetAppState();
-        }}
-    }}, 100);  // Small delay to let browser finish restoring
 }});
 </script>
 """

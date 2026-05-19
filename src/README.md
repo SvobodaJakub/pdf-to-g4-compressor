@@ -123,10 +123,8 @@ See `LICENSES.md` for complete license texts and attribution.
 
 ## Documentation
 
-- **BUILD_SUMMARY.md** - Build process and compression details
+- **🤡spec.md** - Complete application specification
 - **LICENSES.md** - Complete license compliance
-- **LESSONS_LEARNED.md** - CCITT G4 algorithm insights
-- **SELF_EXTRACTING_HTML.md** - Self-extracting loader implementation
 
 ---
 

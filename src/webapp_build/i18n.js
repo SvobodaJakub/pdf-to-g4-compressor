@@ -41,6 +41,11 @@ const LOCALE_FALLBACK = {
     'pa-IN': 'pa', 'pa-PK': 'pa',
     // Indonesian variants
     'id-ID': 'id',
+    // Deprecated Android locale codes: Java Locale rewrites he→iw, id→in, yi→ji
+    // and WebView's navigator.language inherits these deprecated codes
+    'iw': 'he', 'iw-IL': 'he',
+    'in': 'id', 'in-ID': 'id',
+    'ji': 'yi',
     // Tagalog/Filipino variants
     'tl-PH': 'tl', 'fil-PH': 'tl', 'fil': 'tl',  // Android uses 'fil' but we have 'tl' translation
     // Vietnamese variants
